@@ -1,0 +1,17 @@
+plugins {
+    id 'java' // java support
+    id 'scala' // scala support
+}
+
+ext {
+    //version (changing these should be considered thoroughly!)
+    javaVersion = JavaVersion.VERSION_17
+
+    scalaVersion = '2.13'
+    scalaBinaryVersion = '2.13.12'
+}
+
+java {
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+}
