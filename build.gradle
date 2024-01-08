@@ -60,6 +60,7 @@ dependencies {
         exclude group: 'edu.ie3'
     }
 
+
     implementation files('C:/Users/Johannes/Documents/3_ie3/IDEA/simonaAPI_dev/simosaik/libs/mosaik-api-java-3.0.jar')
 
     /* logging */
