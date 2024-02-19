@@ -6,6 +6,7 @@ import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.exceptions.FactoryException;
 import edu.ie3.datamodel.io.factory.FactoryData;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
+import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.timeseries.individual.TimeBasedValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.datamodel.utils.Try;
@@ -27,6 +28,8 @@ public class SimonaSimulator extends Simulator {
     private Map<UUID, ColumnScheme> uuidToColumnScheme;
 
     private ObjectMapper mapper = new ObjectMapper();
+
+    private long deltaT = 15*60;
     private static final JSONObject meta = (JSONObject) JSONValue.parse(("{"
             + "    'api_version': " + Simulator.API_VERSION + ","
             + "    'models': {"
@@ -78,17 +81,18 @@ public class SimonaSimulator extends Simulator {
             long maxAdvance
     ) throws Exception {
         Map<UUID, Value> inputsConverted = createEntityMap(inputs);                // UUID -> String, Object -> Value
-        mosaikSimulation.extPrimaryData.putPrimaryDataInQueue(time, inputsConverted);
-        long nextTick = mosaikSimulation.extPrimaryData.receiveFinishMessageFromSimona();
-        return nextTick;
+        mosaikSimulation.extPrimaryData.providePrimaryData(time, inputsConverted);
+        return time + deltaT;
     }
 
     @Override
     public Map<String, Object> getData(
-            Map<String, List<String>> map
+            Map<String, List<String>> outputs
     ) throws Exception {
-        // Schicke Results an mosaik
-        return null;
+        List<ResultEntity> resultsFromSimona = mosaikSimulation.extResultsData.requestResults();
+        Map<String, Object> resultMap = new HashMap<>();
+        /* Konvertierung ... */
+        return resultMap;
     }
 
 

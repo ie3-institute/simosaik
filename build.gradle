@@ -1,18 +1,18 @@
 plugins {
     id 'java' // java support
-    id 'scala' // scala support
+    id 'groovy' // groovy support
     id 'maven-publish' // publish to a maven repo (local or mvn central, has to be defined)
 }
 
 ext {
     //version (changing these should be considered thoroughly!)
     javaVersion = JavaVersion.VERSION_17
+    scriptsLocation = 'gradle' + File.separator + 'scripts' + File.separator // location of script plugins
 
     scalaVersion = '2.13'
     scalaBinaryVersion = '2.13.12'
     pekkoVersion = '1.0.1'
 
-    scriptsLocation = 'gradle' + File.separator + 'scripts' + File.separator // location of script plugins
 }
 
 group = 'com.github.ie3-institute'
@@ -23,14 +23,24 @@ java {
     targetCompatibility = javaVersion
 }
 
-configurations {
-    scalaCompilerPlugin
-}
+/*
+apply from: scriptsLocation + 'spotless.gradle'
+apply from: scriptsLocation + 'pmd.gradle'
+apply from: scriptsLocation + 'spotbugs.gradle'
+apply from: scriptsLocation + 'sonarqube.gradle'
+apply from: scriptsLocation + 'checkJavaVersion.gradle'
+apply from: scriptsLocation + 'semVer.gradle'
+apply from: scriptsLocation + 'mavenCentralPublish.gradle'
+apply from: scriptsLocation + 'jacoco.gradle'
+apply from: scriptsLocation + 'documentation.gradle'
+apply from: scriptsLocation + 'test.gradle'
+
+ */
 
 repositories {
     mavenCentral() // searches in Sonatype's central repository
-    maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' } // sonatype snapshot repo
-    maven { url 'https://packages.confluent.io/maven' } // confluent repo (kafka)
+    //maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' } // sonatype snapshot repo
+    //maven { url 'https://packages.confluent.io/maven' } // confluent repo (kafka)
 }
 
 dependencies {
@@ -42,6 +52,7 @@ dependencies {
     }
 
      */
+    implementation 'tech.units:indriya:2.2' // quantities
 
     /* Mosaik dependencies */
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.9.3'
@@ -68,7 +79,14 @@ dependencies {
     }
 
 
-    implementation files('C:/Users/Johannes/Documents/3_ie3/IDEA/simonaAPI_dev/simosaik/libs/mosaik-api-java-3.0.jar')
+    implementation files('C:/Users/Johannes/Documents/ie3/IDEA/simonaAPI_dev/simosaik/libs/mosaik-api-java-3.0.jar')
+
+    // pekko
+    implementation "org.apache.pekko:pekko-actor_${scalaVersion}:${pekkoVersion}"
+    testImplementation "org.apache.pekko:pekko-testkit_${scalaVersion}:${pekkoVersion}" // pekko testkit
+
+    // TESTING
+    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
 
     /* logging */
     implementation "com.typesafe.scala-logging:scala-logging_${scalaVersion}:3.9.5" // pekko scala logging
@@ -77,10 +95,4 @@ dependencies {
     /* --- Scala libs --- */
     /* CORE Scala */
     implementation "org.scala-lang:scala-library:${scalaBinaryVersion}"
-
-    /* CORE Pekko */
-    implementation "org.apache.pekko:pekko-actor_${scalaVersion}:${pekkoVersion}"
-    implementation "org.apache.pekko:pekko-actor-typed_${scalaVersion}:${pekkoVersion}"
-    implementation "org.apache.pekko:pekko-slf4j_${scalaVersion}:${pekkoVersion}"
-    implementation "org.apache.pekko:pekko-connectors-csv_${scalaVersion}:${pekkoVersion}"
 }
