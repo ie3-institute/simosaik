@@ -4,12 +4,8 @@ import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.datamodel.models.value.PValue;
-import edu.ie3.simona.api.simulation.datasupport.ExtPrimaryDataSupport;
-import edu.ie3.simona.api.simulation.datasupport.ExtResultDataSupport;
 import edu.ie3.simona.api.data.ExtDataSimulation;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
-import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
 import edu.ie3.simona.api.exceptions.ConvertionException;
 import edu.ie3.simona.api.simulation.ExtSimulation;
@@ -22,7 +18,7 @@ import java.util.*;
  * Simple example for an external simulation, that calculates power for two loads, and gets power for two pv plants from SIMONA.
  */
 
-public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryDataSupport, ExtResultDataSupport {
+public class SimpleExtSimulation extends ExtSimulation {
 
     private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulation");
 
@@ -164,16 +160,6 @@ public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryData
 
     public ExtResultDataSimulation getExtResultDataSimulation() {
         return extResultDataSimulation;
-    }
-
-    @Override
-    public void setExtPrimaryData(ExtPrimaryData extPrimaryData) {
-        extPrimaryDataSimulation.setExtPrimaryData(extPrimaryData);
-    }
-
-    @Override
-    public void setExtResultData(ExtResultData extResultData) {
-        extResultDataSimulation.setExtResultData(extResultData);
     }
 
     public List<ExtDataSimulation> getDataConnections() {
