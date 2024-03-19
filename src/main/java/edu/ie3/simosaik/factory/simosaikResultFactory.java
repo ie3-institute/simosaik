@@ -8,11 +8,17 @@ import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantWithHeatResult;
 import edu.ie3.datamodel.models.result.thermal.ThermalUnitResult;
 import edu.ie3.simona.api.data.results.ResultDataFactory;
+import edu.ie3.simona.api.exceptions.ConvertionException;
 
 public class simosaikResultFactory implements ResultDataFactory {
-
     @Override
-    public Object convertResultToString(ResultEntity entity) throws Exception {
+    public Object convert(ResultEntity entity) throws ConvertionException {
+        return null;
+    }
+
+    /*
+    @Override
+    public Object convert(ResultEntity entity) throws ConvertionException {
         String resultObject;
         if (entity instanceof SystemParticipantWithHeatResult systemParticipantWithHeatResult) {
             resultObject =
@@ -60,4 +66,6 @@ public class simosaikResultFactory implements ResultDataFactory {
         }
         return resultObject;
     }
+
+     */
 }

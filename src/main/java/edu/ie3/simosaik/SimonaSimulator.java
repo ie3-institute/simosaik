@@ -3,14 +3,8 @@ package edu.ie3.simosaik;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
-import edu.ie3.datamodel.exceptions.FactoryException;
-import edu.ie3.datamodel.io.factory.FactoryData;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
-import edu.ie3.datamodel.models.result.ResultEntity;
-import edu.ie3.datamodel.models.timeseries.individual.TimeBasedValue;
 import edu.ie3.datamodel.models.value.Value;
-import edu.ie3.datamodel.utils.Try;
-import edu.ie3.simosaik.data.PrimaryDataValueData;
 
 import java.io.IOException;
 import java.util.*;
@@ -28,8 +22,6 @@ public class SimonaSimulator extends Simulator {
     private Map<UUID, ColumnScheme> uuidToColumnScheme;
 
     private ObjectMapper mapper = new ObjectMapper();
-
-    private long deltaT = 15*60;
     private static final JSONObject meta = (JSONObject) JSONValue.parse(("{"
             + "    'api_version': " + Simulator.API_VERSION + ","
             + "    'models': {"
@@ -80,19 +72,21 @@ public class SimonaSimulator extends Simulator {
             Map<String, Object> inputs,
             long maxAdvance
     ) throws Exception {
+        /*
         Map<UUID, Value> inputsConverted = createEntityMap(inputs);                // UUID -> String, Object -> Value
-        mosaikSimulation.extPrimaryData.providePrimaryData(time, inputsConverted);
-        return time + deltaT;
+        mosaikSimulation.extPrimaryData.putPrimaryDataInQueue(time, inputsConverted);
+        long nextTick = mosaikSimulation.extPrimaryData.receiveFinishMessageFromSimona();
+        return nextTick;
+         */
+        return 0;
     }
 
     @Override
     public Map<String, Object> getData(
-            Map<String, List<String>> outputs
+            Map<String, List<String>> map
     ) throws Exception {
-        List<ResultEntity> resultsFromSimona = mosaikSimulation.extResultsData.requestResults();
-        Map<String, Object> resultMap = new HashMap<>();
-        /* Konvertierung ... */
-        return resultMap;
+        // Schicke Results an mosaik
+        return null;
     }
 
 
