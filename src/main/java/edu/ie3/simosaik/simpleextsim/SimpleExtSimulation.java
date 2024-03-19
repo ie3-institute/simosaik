@@ -4,12 +4,13 @@ import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.datamodel.models.value.PValue;
+import edu.ie3.simona.api.simulation.datasupport.ExtPrimaryDataSupport;
+import edu.ie3.simona.api.simulation.datasupport.ExtResultDataSupport;
+import edu.ie3.simona.api.data.ExtDataSimulation;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
-import edu.ie3.simona.api.data.primarydata.PrimaryDataFactory;
 import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
-import edu.ie3.simona.api.data.results.ResultDataFactory;
 import edu.ie3.simona.api.exceptions.ConvertionException;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import org.slf4j.LoggerFactory;
@@ -21,16 +22,14 @@ import java.util.*;
  * Simple example for an external simulation, that calculates power for two loads, and gets power for two pv plants from SIMONA.
  */
 
-public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryDataSimulation, ExtResultDataSimulation {
+public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryDataSupport, ExtResultDataSupport {
 
     private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulation");
 
-    private ExtPrimaryData extPrimaryData;
-    private ExtResultData extResultData;
+    private ExtPrimaryDataSimulation extPrimaryDataSimulation;
+    private ExtResultDataSimulation extResultDataSimulation;
 
-    private final SimplePrimaryDataFactory primaryDataFactory;
-    private final SimpleResultDataFactory resultDataFactory;
-
+    private List<ExtDataSimulation> dataConnections;
 
     private final UUID load1 = UUID.fromString("fd1a8de9-722a-4304-8799-e1e976d9979c");
     private final UUID load2 = UUID.fromString("ff0b995a-86ff-4f4d-987e-e475a64f2180");
@@ -73,8 +72,21 @@ public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryData
     }
 
     public SimpleExtSimulation() {
-        this.primaryDataFactory = new SimplePrimaryDataFactory();
-        this.resultDataFactory = new SimpleResultDataFactory();
+        dataConnections = new ArrayList<>();
+        this.extPrimaryDataSimulation =  new ExtPrimaryDataSimulation(
+                new SimplePrimaryDataFactory(),
+                primaryDataAssets
+        );
+        this.extResultDataSimulation = new ExtResultDataSimulation(
+                new SimpleResultDataFactory(),
+                resultDataAssets
+        );
+        dataConnections.add(
+           this.extPrimaryDataSimulation
+        );
+        dataConnections.add(
+            this.extResultDataSimulation
+        );
     }
 
 
@@ -102,7 +114,7 @@ public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryData
             );
 
             // send primary data for load1 and load2 to SIMONA
-            extPrimaryData.providePrimaryData(tick, primaryDataFromExt);
+            extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(tick, primaryDataFromExt);
             log.info("Provide Primary Data to SIMONA for load1 ("
                             + load1
                             + ") with "
@@ -115,7 +127,7 @@ public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryData
 
             log.debug("Request Results from SIMONA!");
             // request results for pv1 and pv2 from SIMONA
-            Map<String, Object> resultsFromSimona = extResultData.requestResultObjects(tick);
+            Map<String, Object> resultsFromSimona = extResultDataSimulation.getExtResultData().requestResultObjects(tick);
 
             log.debug("Received results from SIMONA!");
 
@@ -146,34 +158,25 @@ public class SimpleExtSimulation extends ExtSimulation implements ExtPrimaryData
         }
     }
 
+    public ExtPrimaryDataSimulation getExtPrimaryDataSimulation() {
+        return extPrimaryDataSimulation;
+    }
+
+    public ExtResultDataSimulation getExtResultDataSimulation() {
+        return extResultDataSimulation;
+    }
+
     @Override
     public void setExtPrimaryData(ExtPrimaryData extPrimaryData) {
-        this.extPrimaryData = extPrimaryData;
+        extPrimaryDataSimulation.setExtPrimaryData(extPrimaryData);
     }
-
-    @Override
-    public PrimaryDataFactory getPrimaryDataFactory() {
-        return primaryDataFactory;
-    }
-
-    @Override
-    public List<UUID> getPrimaryDataAssets() {
-        return primaryDataAssets;
-    }
-
 
     @Override
     public void setExtResultData(ExtResultData extResultData) {
-        this.extResultData = extResultData;
+        extResultDataSimulation.setExtResultData(extResultData);
     }
 
-    @Override
-    public ResultDataFactory getResultDataFactory() {
-        return resultDataFactory;
-    }
-
-    @Override
-    public List<UUID> getResultDataAssets() {
-        return resultDataAssets;
+    public List<ExtDataSimulation> getDataConnections() {
+        return dataConnections;
     }
 }

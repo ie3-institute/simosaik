@@ -16,8 +16,6 @@ public class ExtLink implements ExtLinkInterface {
 
     @Override
     public List<ExtDataSimulation> getExtDataSimulations() {
-        ArrayList<ExtDataSimulation> list = new ArrayList<>();
-        list.add(simpleExtSim);
-        return list;
+        return simpleExtSim.getDataConnections();
     }
 }
