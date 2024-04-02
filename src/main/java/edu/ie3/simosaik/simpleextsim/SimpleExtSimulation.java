@@ -22,10 +22,10 @@ public class SimpleExtSimulation extends ExtSimulation {
 
     private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulation");
 
-    private ExtPrimaryDataSimulation extPrimaryDataSimulation;
-    private ExtResultDataSimulation extResultDataSimulation;
+    private final ExtPrimaryDataSimulation extPrimaryDataSimulation;
+    private final ExtResultDataSimulation extResultDataSimulation;
 
-    private List<ExtDataSimulation> dataConnections;
+    private final List<ExtDataSimulation> dataConnections;
 
     private final UUID load1 = UUID.fromString("fd1a8de9-722a-4304-8799-e1e976d9979c");
     private final UUID load2 = UUID.fromString("ff0b995a-86ff-4f4d-987e-e475a64f2180");
@@ -36,6 +36,8 @@ public class SimpleExtSimulation extends ExtSimulation {
     private final UUID pv2 = UUID.fromString("2560c371-f420-4c2a-b4e6-e04c11b64c03");
 
     private final List<UUID> resultDataAssets = Arrays.asList(pv1, pv2);
+
+    private final long deltaT = 900L;
 
     private final SimpleLoadModel loadModel1 = new SimpleLoadModel(
             load1,
@@ -85,7 +87,6 @@ public class SimpleExtSimulation extends ExtSimulation {
         );
     }
 
-
     @Override
     protected Optional<Long> initialize() {
         log.info("Main args handed over to external simulation: {}", Arrays.toString(getMainArgs()));
@@ -93,63 +94,70 @@ public class SimpleExtSimulation extends ExtSimulation {
     }
 
     @Override
-    protected Optional<Long> doActivity(long tick) {
+    protected Optional<Long> doPreActivity(long tick) {
+        log.info("+++++++++++++++++++++++++++ PreActivities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
+
+        // Primary Data that should be provided to SIMONA
+        Map<String, Object> primaryDataFromExt = new HashMap<>();
+
+        long phase = (tick / 2000) % 4;
+
+        long nextTick = tick + deltaT;
+
+        primaryDataFromExt.put(
+                load1.toString(), loadModel1.getPower(phase)
+        );
+        primaryDataFromExt.put(
+                load2.toString(), loadModel2.getPower(phase)
+        );
+
+        // send primary data for load1 and load2 to SIMONA
+        extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(tick, primaryDataFromExt);
+        log.info("Provide Primary Data to SIMONA for load1 ("
+                + load1
+                + ") with "
+                + loadModel1.getPower(phase)
+                + " and load2 ("
+                + load2
+                + ") with "
+                + loadModel2.getPower(phase)
+                + ".");
+        return Optional.of(nextTick);
+    }
+
+    @Override
+    protected Optional<Long> doPostActivity(long tick) {
+        log.info("+++++++++++++++++++++++++++ PostActivities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
+
+        log.info("Request Results from SIMONA!");
+        // request results for pv1 and pv2 from SIMONA
         try {
-            log.info("+++++++++++++++++++++++++++ External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
-
-            // Primary Data that should be provided to SIMONA
-            Map<String, Object> primaryDataFromExt = new HashMap<>();
-
-            long phase = (tick / 2000) % 4;
-
-            primaryDataFromExt.put(
-                    load1.toString(), loadModel1.getPower(phase)
-            );
-            primaryDataFromExt.put(
-                    load2.toString(), loadModel2.getPower(phase)
-            );
-
-            // send primary data for load1 and load2 to SIMONA
-            extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(tick, primaryDataFromExt);
-            log.info("Provide Primary Data to SIMONA for load1 ("
-                            + load1
-                            + ") with "
-                            + loadModel1.getPower(phase)
-                            + " and load2 ("
-                            + load2
-                            + ") with "
-                            + loadModel2.getPower(phase)
-                            + ".");
-
-            log.debug("Request Results from SIMONA!");
-            // request results for pv1 and pv2 from SIMONA
             Map<String, Object> resultsFromSimona = extResultDataSimulation.getExtResultData().requestResultObjects(tick);
 
-            log.debug("Received results from SIMONA!");
+            log.info("Received results from SIMONA!");
 
             resultsFromSimona.forEach(
-                (uuid, result) -> {
-                    if (result instanceof PvResult spResult) {
-                        if (pv1.equals(UUID.fromString(uuid))) {
-                            log.debug("Tick " + tick + ": SIMONA calculated the power of pv1 (" + pv1 + ") with " + spResult);
-                            log.info("SIMONA calculated the power of pv1 (" + pv1 + ") with p = " + spResult.getP());
-                        } else if (pv2.equals(UUID.fromString(uuid))) {
-                            log.debug("Tick " + tick + ": SIMONA calculated the power of pv2 (" + pv2 + ") with " + spResult);
-                            log.info("SIMONA calculated the power of pv2 (" + pv2 + ") with p = " + spResult.getP());
+                    (uuid, result) -> {
+                        if (result instanceof PvResult spResult) {
+                            if (pv1.equals(UUID.fromString(uuid))) {
+                                log.debug("Tick " + tick + ": SIMONA calculated the power of pv1 (" + pv1 + ") with " + spResult);
+                                log.info("SIMONA calculated the power of pv1 (" + pv1 + ") with p = " + spResult.getP());
+                            } else if (pv2.equals(UUID.fromString(uuid))) {
+                                log.debug("Tick " + tick + ": SIMONA calculated the power of pv2 (" + pv2 + ") with " + spResult);
+                                log.info("SIMONA calculated the power of pv2 (" + pv2 + ") with p = " + spResult.getP());
+                            } else {
+                                log.error("Received a result from SIMONA for uuid {}, but I don't expect this entity!", uuid);
+                            }
                         } else {
-                            log.error("Received a result from SIMONA for uuid {}, but I don't expect this entity!", uuid);
+                            log.error("Received wrong results from SIMONA!");
                         }
-                    } else {
-                        log.error("Received wrong results from SIMONA!");
                     }
-                }
             );
-
-            long nextTick = tick + 900;
+            long nextTick = tick + deltaT;
 
             log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
             return Optional.of(nextTick);
-        } catch (InterruptedException | ConvertionException e) {
+        } catch (ConvertionException | InterruptedException e) {
             throw new RuntimeException(e);
         }
     }

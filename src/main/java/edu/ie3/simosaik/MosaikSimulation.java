@@ -20,7 +20,12 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
     }
 
     @Override
-    protected Optional<Long> doActivity(long tick) {
+    protected Optional<Long> doPreActivity(long tick) {
+        return Optional.empty();
+    }
+
+    @Override
+    protected Optional<Long> doPostActivity(long tick) {
         return Optional.empty();
     }
 }
