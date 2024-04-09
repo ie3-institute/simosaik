@@ -88,9 +88,9 @@ public class SimpleExtSimulation extends ExtSimulation {
     }
 
     @Override
-    protected Optional<Long> initialize() {
+    protected Long initialize() {
         log.info("Main args handed over to external simulation: {}", Arrays.toString(getMainArgs()));
-        return Optional.of(0L);
+        return 0L;
     }
 
     @Override

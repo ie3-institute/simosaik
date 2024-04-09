@@ -15,8 +15,8 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
     public ExtResultData extResultsData;
 
     @Override
-    protected Optional<Long> initialize() {
-        return Optional.empty();
+    protected Long initialize() {
+        return 0L;
     }
 
     @Override
