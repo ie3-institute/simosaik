@@ -4,11 +4,13 @@ import de.fhg.iee.opsim.client.Client;
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
 import edu.ie3.simona.api.data.em.ExtEmDataSimulation;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
 import edu.ie3.simona.api.exceptions.ConvertionException;
 import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simopsim.data.*;
+import edu.ie3.simopsim.data.OpsimEmDataFactory;
+import edu.ie3.simopsim.data.OpsimResultDataFactory;
+import edu.ie3.simopsim.data.SimopsimPrimaryDataWrapper;
+import edu.ie3.simopsim.data.SimopsimResultWrapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -23,12 +25,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-public class OpsimSimulator extends ExtSimulation {
+public class OpsimEmSimulator extends ExtSimulation {
 
     private final Logger log = LogManager.getLogger("OpsimSimulator");
 
     private final ExtResultDataSimulation extResultDataSimulation;
-    private final ExtPrimaryDataSimulation extPrimaryDataSimulation;
+    private final ExtEmDataSimulation extEmDataSimulation;
 
     private final long deltaT = 900L;
 
@@ -42,19 +44,19 @@ public class OpsimSimulator extends ExtSimulation {
                 UUID.fromString("a1eb7fc1-3bee-4b65-a387-ef3046644bf0"), "EM_HH_Bus_110",
                 UUID.fromString("2560c371-f420-4c2a-b4e6-e04c11b64c03"), "EM_HH_Bus_25");
 
-    private final Map<String, UUID> primaryDataAssetMapping
+    private final Map<String, UUID> emAgentMapping
             = Map.of(
-            "EM_HH_Bus_81/Schedule", UUID.fromString("ec57d629-040a-46a6-b4dc-7d1db9378516"),
-            "EM_HH_Bus_110/Schedule", UUID.fromString("976eb5ba-3f07-4c8e-96d9-8453d822b910"),
-            "EM_HH_Bus_25/Schedule", UUID.fromString("30a27765-27e0-4488-b2a0-a9268db85a53"));
+                    "EM_HH_Bus_81/Schedule", UUID.fromString("f9dc7ce6-658c-4101-a12f-d58bb889286b"),
+                    "EM_HH_Bus_110/Schedule", UUID.fromString("957938b7-0476-4fab-a1b3-6ce8615857b3"),
+                    "EM_HH_Bus_25/Schedule", UUID.fromString("c3a7e9f5-b492-4c85-af2d-1e93f6a25443"));
 
-    public OpsimSimulator(
+    public OpsimEmSimulator(
             String urlString
     ) {
         this.urlToOpsim = urlString;
-        this.extPrimaryDataSimulation = new ExtPrimaryDataSimulation(
-                new OpsimPrimaryDataFactory(),
-                this.primaryDataAssetMapping.values().stream().toList()
+        this.extEmDataSimulation = new ExtEmDataSimulation(
+                new OpsimEmDataFactory(),
+                this.emAgentMapping.values().stream().toList()
         );
         this.extResultDataSimulation = new ExtResultDataSimulation(
                 new OpsimResultDataFactory(),
@@ -84,13 +86,13 @@ public class OpsimSimulator extends ExtSimulation {
             log.info("Received Primary from OpSim... now convert them to PSDM-Value");
 
             // Primary Data that should be provided to SIMONA
-            Map<String, Object> primaryDataFromExt = new HashMap<>();
+            Map<String, Object> emDataFromExt = new HashMap<>();
 
             rawPrimaryData.ossm().forEach(
                     (id, msg) -> {
-                        if (primaryDataAssetMapping.containsKey(id)) {
-                            primaryDataFromExt.put(
-                                    primaryDataAssetMapping.get(id).toString(),
+                        if (emAgentMapping.containsKey(id)) {
+                            emDataFromExt.put(
+                                    emAgentMapping.get(id).toString(),
                                     msg
                             );
                         }
@@ -98,8 +100,8 @@ public class OpsimSimulator extends ExtSimulation {
             );
 
             // send primary data for load1 and load2 to SIMONA
-            extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(tick, primaryDataFromExt);
-            log.info("Provide Primary Data to SIMONA");
+            extEmDataSimulation.getExtEmData().provideEmData(tick, emDataFromExt);
+            log.info("Provide Em Data to SIMONA");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -158,7 +160,7 @@ public class OpsimSimulator extends ExtSimulation {
     public ExtResultDataSimulation getExtResultDataSimulation() {
         return extResultDataSimulation;
     }
-    public ExtPrimaryDataSimulation getExtPrimaryDataSimulation() {
-        return extPrimaryDataSimulation;
+    public ExtEmDataSimulation getExtEmDataSimulation() {
+        return extEmDataSimulation;
     }
 }

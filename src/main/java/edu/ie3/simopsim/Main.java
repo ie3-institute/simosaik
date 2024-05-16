@@ -11,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeoutException;
 
 public class Main {
+    /*
     public static void main(String[] args) {
         try {
             String urlString = "amqp://guest:guest@localhost:5672/myvhost";
@@ -29,4 +30,6 @@ public class Main {
             throw new RuntimeException(e);
         }
     }
+
+     */
 }

@@ -1,4 +1,4 @@
-package edu.ie3.simosaik.simpleextsim;
+package edu.ie3.simpleextsim;
 
 import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.StandardUnits;

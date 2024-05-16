@@ -1,4 +1,4 @@
-package edu.ie3.simosaik.simpleextsim;
+package edu.ie3.simpleextsim;
 
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;

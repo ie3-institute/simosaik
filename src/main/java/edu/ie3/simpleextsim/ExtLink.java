@@ -1,9 +1,9 @@
-package edu.ie3.simosaik.simpleextsim;
+package edu.ie3.simpleextsim;
 
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.ExtDataSimulation;
 import edu.ie3.simona.api.simulation.ExtSimulation;
-import java.util.ArrayList;
+
 import java.util.List;
 
 public class ExtLink implements ExtLinkInterface {

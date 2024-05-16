@@ -6,15 +6,14 @@ import de.fhg.iwes.opsim.datamodel.generated.realtimedata.SetPointValueType;
 import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.data.em.EmDataFactory;
 import edu.ie3.simona.api.data.primarydata.PrimaryDataFactory;
 import edu.ie3.simona.api.exceptions.ConvertionException;
-import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
-import javax.measure.quantity.Power;
 import java.util.Iterator;
 
-public class OpsimPrimaryDataFactory implements PrimaryDataFactory {
+public class OpsimEmDataFactory implements EmDataFactory {
     @Override
     public Value convert(Object entity) throws ConvertionException {
         if (entity instanceof OpSimScheduleMessage ossm) {
