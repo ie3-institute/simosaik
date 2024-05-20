@@ -7,10 +7,7 @@ import edu.ie3.simona.api.data.em.ExtEmDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
 import edu.ie3.simona.api.exceptions.ConvertionException;
 import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simopsim.data.OpsimEmDataFactory;
-import edu.ie3.simopsim.data.OpsimResultDataFactory;
-import edu.ie3.simopsim.data.SimopsimPrimaryDataWrapper;
-import edu.ie3.simopsim.data.SimopsimResultWrapper;
+import edu.ie3.simopsim.data.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,15 +31,15 @@ public class OpsimEmSimulator extends ExtSimulation {
 
     private final long deltaT = 900L;
 
-    private SimonaProxy simonaProxy;
+    private SimonaEmProxy simonaProxy;
 
     private final String urlToOpsim;
 
     private final Map<UUID, String> resultAssetMapping
             = Map.of(
-                UUID.fromString("de8cfef5-7620-4b9e-9a10-1faebb5a80c0"),"EM_HH_Bus_81",
-                UUID.fromString("a1eb7fc1-3bee-4b65-a387-ef3046644bf0"), "EM_HH_Bus_110",
-                UUID.fromString("2560c371-f420-4c2a-b4e6-e04c11b64c03"), "EM_HH_Bus_25");
+                UUID.fromString("f9dc7ce6-658c-4101-a12f-d58bb889286b"),"EM_HH_Bus_81",
+                UUID.fromString("957938b7-0476-4fab-a1b3-6ce8615857b3"), "EM_HH_Bus_110",
+                UUID.fromString("c3a7e9f5-b492-4c85-af2d-1e93f6a25443"), "EM_HH_Bus_25");
 
     private final Map<String, UUID> emAgentMapping
             = Map.of(
@@ -80,15 +77,15 @@ public class OpsimEmSimulator extends ExtSimulation {
         }
         log.info("+++++++++++++++++++++++++++ PreActivities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
         log.info("Current Simulation Time: " + extResultDataSimulation.getExtResultData().getSimulationTime(tick));
-        log.info("Look for new PrimaryData from OpSim...");
+        log.info("Look for new EmData from OpSim...");
         try {
-            SimopsimPrimaryDataWrapper rawPrimaryData = simonaProxy.receiveTriggerQueueForPrimaryData.take();
-            log.info("Received Primary from OpSim... now convert them to PSDM-Value");
+            SimopsimEmDataWrapper rawEmData = simonaProxy.receiveTriggerQueueForEmData.take();
+            log.info("Received Em from OpSim... now convert them to PSDM-Value");
 
             // Primary Data that should be provided to SIMONA
             Map<String, Object> emDataFromExt = new HashMap<>();
 
-            rawPrimaryData.ossm().forEach(
+            rawEmData.ossm().forEach(
                     (id, msg) -> {
                         if (emAgentMapping.containsKey(id)) {
                             emDataFromExt.put(
@@ -105,8 +102,6 @@ public class OpsimEmSimulator extends ExtSimulation {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-
-
         return Optional.of( tick + deltaT);
     }
 
@@ -147,7 +142,7 @@ public class OpsimEmSimulator extends ExtSimulation {
         try {
             Logger logger = LogManager.getLogger(Client.class);
             Client client = new Client(logger);
-            SimonaProxy proxy = new SimonaProxy(client, logger);
+            SimonaEmProxy proxy = new SimonaEmProxy(client, logger);
             this.simonaProxy = proxy;
             client.addProxy(proxy);
             client.reconnect(this.urlToOpsim);

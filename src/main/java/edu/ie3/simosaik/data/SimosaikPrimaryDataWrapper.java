@@ -1,7 +1,5 @@
 package edu.ie3.simosaik.data;
 
-import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimScheduleMessage;
-
 import java.util.HashMap;
 import java.util.Map;
 

@@ -15,7 +15,7 @@ import java.util.Iterator;
 
 public class OpsimEmDataFactory implements EmDataFactory {
     @Override
-    public Value convert(Object entity) throws ConvertionException {
+    public PValue convert(Object entity) throws ConvertionException {
         if (entity instanceof OpSimScheduleMessage ossm) {
             Iterator var6 = ossm.getScheduleElements().iterator();
             while(var6.hasNext()) {
