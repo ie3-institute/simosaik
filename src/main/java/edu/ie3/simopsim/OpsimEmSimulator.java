@@ -112,7 +112,7 @@ public class OpsimEmSimulator extends ExtSimulation {
         log.info("Request Results from SIMONA!");
         try {
             Map<String, Object> resultsFromSimona = extResultDataSimulation.getExtResultData().requestResultObjects(tick);
-            log.info("Received results from SIMONA!");
+            log.info("Received results from SIMONA! " + resultsFromSimona);
 
             Map<String, ResultEntity> resultsToBeSend = new HashMap<>();
 

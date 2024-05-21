@@ -119,18 +119,30 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
                 // Wait for results from SIMONA!
                 SimopsimResultWrapper results = receiveTriggerQueueForResults.take();
 
+                logger.info("Results from SIMONA: " + results);
+
                 List<OpSimAggregatedSetPoints> osmAggSetPoints = new ArrayList<>(Collections.emptyList());
                 logger.debug("Send Aggregated SetPoints for " + this.cli.getCurrentSimulationTime().toString());
                 writable.forEach(
                     asset -> {
                         List<OpSimSetPoint> osmSetPoints = new ArrayList<>(Collections.emptyList());
                         for (MeasurementValueType valueType : asset.getMeasurableQuantities()) {
-                            osmSetPoints.add(
-                                    new OpSimSetPoint(
-                                            results.getActivePower(asset.getGridAssetId()),
-                                            SetPointValueType.fromValue(valueType.value())
-                                    )
-                            );
+                            if (valueType.equals(MeasurementValueType.ACTIVE_POWER)) {
+                                osmSetPoints.add(
+                                        new OpSimSetPoint(
+                                                results.getActivePower(asset.getGridAssetId()),
+                                                SetPointValueType.fromValue(valueType.value())
+                                        )
+                                );
+                            }
+                            if (valueType.equals(MeasurementValueType.REACTIVE_POWER)) {
+                                osmSetPoints.add(
+                                        new OpSimSetPoint(
+                                                results.getReactivePower(asset.getGridAssetId()),
+                                                SetPointValueType.fromValue(valueType.value())
+                                        )
+                                );
+                            }
                         }
                         osmAggSetPoints.add(
                                 new OpSimAggregatedSetPoints(

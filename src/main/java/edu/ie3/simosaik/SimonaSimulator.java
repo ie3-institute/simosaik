@@ -29,7 +29,7 @@ import javax.measure.Quantity;
 import javax.measure.quantity.Angle;
 import javax.measure.quantity.Dimensionless;
 
-public class SimonaSimulator extends Simulator implements Runnable {
+public class SimonaSimulator extends Simulator {
     private int stepSize = 900;
     private Logger logger = SimProcess.logger;
 
@@ -193,9 +193,9 @@ public class SimonaSimulator extends Simulator implements Runnable {
     ) throws Exception {
         logger.info("Got a request from MOSAIK to provide data!");
 
-        SimosaikResultWrapper results = new SimosaikResultWrapper(resultDummy.getTime(), Map.of("Node_HS_2", resultDummy));
+        //SimosaikResultWrapper results = new SimosaikResultWrapper(resultDummy.getTime(), Map.of("Node_HS_2", resultDummy));
 
-        //SimosaikResultWrapper results = receiveTriggerQueueForResults.take();
+        SimosaikResultWrapper results = receiveTriggerQueueForResults.take();
 
         logger.info("Got results from SIMONA for MOSAIK! Now try to convert them...");
 
@@ -226,8 +226,4 @@ public class SimonaSimulator extends Simulator implements Runnable {
         this.receiveTriggerQueueForResults.put(data);
     }
 
-    @Override
-    public void run() {
-
-    }
 }

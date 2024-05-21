@@ -33,6 +33,8 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
     public ExtPrimaryData extPrimaryData;
     public ExtResultData extResultsData;
 
+    private String mosaikIP;
+
     private SimonaSimulator simonaSimulator; //extends Simulator
 
 /*
@@ -59,18 +61,24 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
                 new MosaikResultDataFactory(),
                 this.resultAssetMapping.keySet().stream().toList()
         );
-        runSimosaik(mosaikIP);
+        this.mosaikIP = mosaikIP;
     }
 
 
     @Override
     protected Long initialize() {
         log.info("+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
+        startMosaikSimulation(mosaikIP);
         return 0L;
     }
 
     @Override
     protected Optional<Long> doPreActivity(long tick) {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         try {
             log.info("Current Simulation Time: " + extResultDataSimulation.getExtResultData().getSimulationTime(tick));
             log.info("Look for new PrimaryData from Mosaik...");
@@ -151,10 +159,13 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
         return extResultDataSimulation;
     }
 
-    public void runSimosaik(String mosaikIP) {
+    public void startMosaikSimulation(String mosaikIP) {
         try {
             this.simonaSimulator = new SimonaSimulator();
-            SimProcess.startSimulation(new String[]{mosaikIP}, simonaSimulator);
+            RunSimosaik simosaikRunner = new RunSimosaik(
+                    mosaikIP, simonaSimulator
+            );
+            new Thread(simosaikRunner, "Simosaik").start();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
