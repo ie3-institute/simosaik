@@ -35,7 +35,7 @@ public class SimpleExtSimulation extends ExtSimulation {
     private final UUID pv1 = UUID.fromString("de8cfef5-7620-4b9e-9a10-1faebb5a80c0");
     private final UUID pv2 = UUID.fromString("2560c371-f420-4c2a-b4e6-e04c11b64c03");
 
-    private final List<UUID> resultDataAssets = Arrays.asList(pv1, pv2);
+    private final List<UUID> participantResultDataAssets = Arrays.asList(pv1, pv2);
 
     private final long deltaT = 900L;
 
@@ -77,7 +77,8 @@ public class SimpleExtSimulation extends ExtSimulation {
         );
         this.extResultDataSimulation = new ExtResultDataSimulation(
                 new SimpleResultDataFactory(),
-                resultDataAssets
+                participantResultDataAssets,
+                Collections.emptyList()
         );
         dataConnections.add(
            this.extPrimaryDataSimulation

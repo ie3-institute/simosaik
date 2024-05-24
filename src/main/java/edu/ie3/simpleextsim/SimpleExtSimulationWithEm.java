@@ -89,7 +89,8 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
         );
         this.extResultDataSimulation = new ExtResultDataSimulation(
                 new SimpleResultDataFactory(),
-                resultDataAssets
+                resultDataAssets,
+                Collections.emptyList()
         );
         dataConnections.add(
            this.extEmDataSimulation

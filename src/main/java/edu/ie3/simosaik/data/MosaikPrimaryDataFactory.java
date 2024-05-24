@@ -12,7 +12,7 @@ public class MosaikPrimaryDataFactory implements PrimaryDataFactory {
     @Override
     public Value convert(Object entity) throws ConvertionException {
         if (entity.getClass() == Double.class) {
-            return new PValue(Quantities.getQuantity((Double) entity/100, StandardUnits.ACTIVE_POWER_IN));
+            return new PValue(Quantities.getQuantity((Double) entity*1000, StandardUnits.ACTIVE_POWER_IN));
         } else {
             throw new ConvertionException("This factory can only convert PValue entities.");
         }

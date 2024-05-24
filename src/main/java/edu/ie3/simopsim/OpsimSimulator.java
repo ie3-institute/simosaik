@@ -17,10 +17,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class OpsimSimulator extends ExtSimulation {
@@ -36,7 +33,8 @@ public class OpsimSimulator extends ExtSimulation {
 
     private final String urlToOpsim;
 
-    private final Map<UUID, String> resultAssetMapping
+    private boolean startedOpsim = false;
+    private final Map<UUID, String> participantResultAssetMapping
             = Map.of(
                 UUID.fromString("de8cfef5-7620-4b9e-9a10-1faebb5a80c0"),"EM_HH_Bus_81",
                 UUID.fromString("a1eb7fc1-3bee-4b65-a387-ef3046644bf0"), "EM_HH_Bus_110",
@@ -48,6 +46,9 @@ public class OpsimSimulator extends ExtSimulation {
             "EM_HH_Bus_110/Schedule", UUID.fromString("976eb5ba-3f07-4c8e-96d9-8453d822b910"),
             "EM_HH_Bus_25/Schedule", UUID.fromString("30a27765-27e0-4488-b2a0-a9268db85a53"));
 
+    private final Map<UUID, String> gridResultAssetMapping
+            = Collections.emptyMap();
+
     public OpsimSimulator(
             String urlString
     ) {
@@ -58,14 +59,18 @@ public class OpsimSimulator extends ExtSimulation {
         );
         this.extResultDataSimulation = new ExtResultDataSimulation(
                 new OpsimResultDataFactory(),
-                this.resultAssetMapping.keySet().stream().toList()
+                this.participantResultAssetMapping.keySet().stream().toList(),
+                this.gridResultAssetMapping.keySet().stream().toList()
         );
-        runSimopsim();
     }
 
     @Override
     protected Long initialize() {
-        log.info("+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
+        log.info("+++++++++++++++++++++++++++ initialization of the OpSim external simulation +++++++++++++++++++++++++++");
+        if (!startedOpsim) {
+            startedOpsim = true;
+            runSimopsim();
+        }
         return 0L;
     }
 
@@ -123,7 +128,7 @@ public class OpsimSimulator extends ExtSimulation {
                     (uuid, result) -> {
                         if (result instanceof SystemParticipantResult systemParticipantResult) {
                             resultsToBeSend.put(
-                                    resultAssetMapping.get(UUID.fromString(uuid)),
+                                    participantResultAssetMapping.get(UUID.fromString(uuid)),
                                     systemParticipantResult
                             );
                         } else {

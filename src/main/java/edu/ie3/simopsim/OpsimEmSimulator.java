@@ -16,10 +16,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 
 public class OpsimEmSimulator extends ExtSimulation {
@@ -35,11 +32,14 @@ public class OpsimEmSimulator extends ExtSimulation {
 
     private final String urlToOpsim;
 
-    private final Map<UUID, String> resultAssetMapping
+    private final Map<UUID, String> participantResultAssetMapping
             = Map.of(
                 UUID.fromString("f9dc7ce6-658c-4101-a12f-d58bb889286b"),"EM_HH_Bus_81",
                 UUID.fromString("957938b7-0476-4fab-a1b3-6ce8615857b3"), "EM_HH_Bus_110",
                 UUID.fromString("c3a7e9f5-b492-4c85-af2d-1e93f6a25443"), "EM_HH_Bus_25");
+
+    private final Map<UUID, String> gridResultAssetMapping
+            = Collections.emptyMap();
 
     private final Map<String, UUID> emAgentMapping
             = Map.of(
@@ -57,7 +57,8 @@ public class OpsimEmSimulator extends ExtSimulation {
         );
         this.extResultDataSimulation = new ExtResultDataSimulation(
                 new OpsimResultDataFactory(),
-                this.resultAssetMapping.keySet().stream().toList()
+                this.participantResultAssetMapping.keySet().stream().toList(),
+                this.gridResultAssetMapping.keySet().stream().toList()
         );
         runSimopsim();
     }
@@ -120,7 +121,7 @@ public class OpsimEmSimulator extends ExtSimulation {
                     (uuid, result) -> {
                         if (result instanceof SystemParticipantResult systemParticipantResult) {
                             resultsToBeSend.put(
-                                    resultAssetMapping.get(UUID.fromString(uuid)),
+                                    participantResultAssetMapping.get(UUID.fromString(uuid)),
                                     systemParticipantResult
                             );
                         } else {

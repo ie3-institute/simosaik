@@ -19,10 +19,7 @@ import edu.ie3.simosaik.data.SimosaikResultWrapper;
 import org.slf4j.LoggerFactory;
 
 import java.time.ZonedDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation {
 
@@ -37,20 +34,23 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
 
     private SimonaSimulator simonaSimulator; //extends Simulator
 
-/*
-    private final Map<UUID, String> resultAssetMapping
-            = Map.of(
-            UUID.fromString("dfae9806-9b44-4995-ba27-d66d8e4a43e0"),"Node_HS_2");
- */
-    private final Map<UUID, String> resultAssetMapping
-            = Map.of(
-            UUID.fromString("9abe950d-362e-4efe-b686-500f84d8f368"),"Node_HS_2");
+    private boolean startedMosasik = false;
 
 
+    private final Map<UUID, String> gridResultAssetMapping
+            = Map.of(
+            UUID.fromString("dfae9806-9b44-4995-ba27-d66d8e4a43e0"),"Node_HS_2",
+            UUID.fromString("33f29587-f63e-45b7-960b-037bda37a3cb"),"Node_HS_3"
+            );
+
+    private final Map<UUID, String> participantResultAssetMapping
+            = Collections.emptyMap();
 
     private final Map<String, UUID> primaryAssetMapping
             = Map.of(
-            "Load_HS_2", UUID.fromString("9c5991bc-24df-496b-b4ce-5ec27657454c"));
+            "Load_HS_2", UUID.fromString("9c5991bc-24df-496b-b4ce-5ec27657454c"),
+            "Load_HS_3", UUID.fromString("58b9f934-f7c4-4335-9894-3c80d9e6b852")
+    );
 
     public MosaikSimulation(String mosaikIP) {
         this.extPrimaryDataSimulation = new ExtPrimaryDataSimulation(
@@ -59,7 +59,8 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
         );
         this.extResultDataSimulation = new ExtResultDataSimulation(
                 new MosaikResultDataFactory(),
-                this.resultAssetMapping.keySet().stream().toList()
+                this.participantResultAssetMapping.keySet().stream().toList(),
+                this.gridResultAssetMapping.keySet().stream().toList()
         );
         this.mosaikIP = mosaikIP;
     }
@@ -67,8 +68,12 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
 
     @Override
     protected Long initialize() {
+        log.info("Main args handed over to external simulation: {}", Arrays.toString(getMainArgs()));
         log.info("+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
-        startMosaikSimulation(mosaikIP);
+        if (!startedMosasik) {
+            startedMosasik = true;
+            startMosaikSimulation(mosaikIP);
+        }
         return 0L;
     }
 
@@ -80,10 +85,9 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
             throw new RuntimeException(e);
         }
         try {
-            log.info("Current Simulation Time: " + extResultDataSimulation.getExtResultData().getSimulationTime(tick));
-            log.info("Look for new PrimaryData from Mosaik...");
+            log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
             SimosaikPrimaryDataWrapper rawPrimaryData = simonaSimulator.receiveTriggerQueueForPrimaryData.take();
-            log.info("Received Primary from OpSim... now convert them to PSDM-Value");
+            log.debug("Received Primary Data from Mosaik = " + rawPrimaryData);
 
             Map<String, Object> primaryDataFromExt = new HashMap<>();
             rawPrimaryData.dataMap().forEach(
@@ -97,57 +101,57 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
                     }
             );
 
-            log.info("New Map = " + primaryDataFromExt);
+            log.debug("New Map = " + primaryDataFromExt);
 
             // send primary data for load1 and load2 to SIMONA
             extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(tick, primaryDataFromExt);
-            log.info("Provide Primary Data to SIMONA");
+            log.info("Provided Primary Data to SIMONA");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        log.info("+++++ [Phase 1-Activity] Tick = " + tick + " finished +++++");
         return Optional.of( tick + deltaT);
     }
 
     @Override
     protected Optional<Long> doPostActivity(long tick) {
+        log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
         ZonedDateTime currentTime = extResultDataSimulation.getExtResultData().getSimulationTime(tick);
+        try {
+            log.info("Request results from SIMONA!");
+            Map<String, Object> resultsFromSimona = extResultDataSimulation.getExtResultData().requestResultObjects(tick);
+            log.debug("Received results from SIMONA! resultsFromSimona = " + resultsFromSimona);
+            log.info("Received results from SIMONA! Now convert them and send them to MOSAIK!");
 
-            try {
-                Map<String, Object> resultsFromSimona = extResultDataSimulation.getExtResultData().requestResultObjects(tick);
-                log.info("Received results from SIMONA!");
+            Map<String, ResultEntity> resultsToBeSend = new HashMap<>();
 
-                Map<String, ResultEntity> resultsToBeSend = new HashMap<>();
-
-                resultsFromSimona.forEach(
-                        (uuid, result) -> {
-                            if (result instanceof NodeResult nodeResult) {
-                                resultsToBeSend.put(
-                                        resultAssetMapping.get(UUID.fromString(uuid)),
-                                        nodeResult
-                                );
-                            } else if (result instanceof SystemParticipantResult systemParticipantResult) {
-                                resultsToBeSend.put(
-                                        resultAssetMapping.get(UUID.fromString(uuid)),
-                                        systemParticipantResult
-                                );
-                            }
-                                else {
-                                log.error("Got a wrong result entity from SIMONA!");
-                            }
+            resultsFromSimona.forEach(
+                    (uuid, result) -> {
+                        if (result instanceof NodeResult nodeResult) {
+                            resultsToBeSend.put(
+                                    gridResultAssetMapping.get(UUID.fromString(uuid)),
+                                    nodeResult
+                            );
+                        } else if (result instanceof SystemParticipantResult systemParticipantResult) {
+                            resultsToBeSend.put(
+                                    participantResultAssetMapping.get(UUID.fromString(uuid)),
+                                    systemParticipantResult
+                            );
                         }
-                );
-                log.info("Send converted results to SIMOSAIK!");
-                simonaSimulator.queueResultsFromSimona(new SimosaikResultWrapper(currentTime, resultsToBeSend));
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } catch (ConvertionException e) {
-                throw new RuntimeException(e);
-            }
-
-        long nextTick = tick + deltaT;
-
-        log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
-        return Optional.of(nextTick);
+                            else {
+                            log.error("Got a wrong result entity from SIMONA!");
+                        }
+                    }
+            );
+            log.info("Send converted results to SIMOSAIK!");
+            simonaSimulator.queueResultsFromSimona(new SimosaikResultWrapper(tick, currentTime, resultsToBeSend));
+            long nextTick = tick + deltaT;
+            log.info("+++++ [Phase 2-Activity] Tick = " + tick + " finished +++++");
+            log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
+            return Optional.of(nextTick);
+        } catch (InterruptedException | ConvertionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 

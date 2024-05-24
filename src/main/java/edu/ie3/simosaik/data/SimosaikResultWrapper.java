@@ -14,11 +14,13 @@ import java.util.Map;
 import static edu.ie3.util.quantities.PowerSystemUnits.PU;
 
 public record SimosaikResultWrapper(
+        Long tick,
         ZonedDateTime simulationTime,
         Map<String, ResultEntity> resultsFromSimona
 ) {
     public SimosaikResultWrapper() {
         this(
+                -1L,
                 null,
                 new HashMap<>()
         );
@@ -31,7 +33,7 @@ public record SimosaikResultWrapper(
                             .subtract(Quantities.getQuantity(1.0, PU)));
             return vMagDev.getValue().doubleValue();
         } else {
-            throw new RuntimeException("No ActivePower!");
+            throw new RuntimeException("No NodeResult!");
         }
     }
 
@@ -40,6 +42,14 @@ public record SimosaikResultWrapper(
             return systemParticipantResult.getP().getValue().doubleValue();
         } else {
             throw new RuntimeException("No ActivePower!");
+        }
+    }
+
+    public double getReactivePower(String assetId) {
+        if (resultsFromSimona().get(assetId) instanceof SystemParticipantResult systemParticipantResult) {
+            return systemParticipantResult.getQ().getValue().doubleValue();
+        } else {
+            throw new RuntimeException("No ReactivePower!");
         }
     }
 }

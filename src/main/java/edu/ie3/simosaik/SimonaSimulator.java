@@ -33,9 +33,6 @@ public class SimonaSimulator extends Simulator {
     private int stepSize = 900;
     private Logger logger = SimProcess.logger;
 
-    private Map<UUID, ColumnScheme> uuidToColumnScheme;
-
-    private ObjectMapper mapper = new ObjectMapper();
     private static final JSONObject meta = (JSONObject) JSONValue.parse(("{"
             + "    'api_version': " + Simulator.API_VERSION + ","
             + "    'models': {"
@@ -60,18 +57,8 @@ public class SimonaSimulator extends Simulator {
     public final LinkedBlockingQueue<SimosaikPrimaryDataWrapper> receiveTriggerQueueForPrimaryData = new LinkedBlockingQueue();
     public final LinkedBlockingQueue<SimosaikResultWrapper> receiveTriggerQueueForResults = new LinkedBlockingQueue();
 
-    private final String[] simonaPrimaryEntities = {"Load_HS_2"};
-    private final String[] simonaResultEntities = {"Node_HS_2"};
-
-
-    private final Quantity<Dimensionless> vMag = Quantities.getQuantity(0.95, PowerSystemUnits.PU);
-    private final Quantity<Angle> vAng = Quantities.getQuantity(45, StandardUnits.VOLTAGE_ANGLE);
-
-    private final NodeResult resultDummy = new NodeResult(
-            ZonedDateTime.parse("2020-01-30T17:26:44Z"),
-            UUID.fromString("dfae9806-9b44-4995-ba27-d66d8e4a43e0"),
-            (ComparableQuantity<Dimensionless>) vMag,
-            (ComparableQuantity<Angle>) vAng);
+    private final String[] simonaPrimaryEntities = {"Load_HS_2", "Load_HS_3"};
+    private final String[] simonaResultEntities = {"Node_HS_2", "Node_HS_3"};
 
     public SimonaSimulator() {
         super("SimonaPowerGrid");
@@ -93,7 +80,7 @@ public class SimonaSimulator extends Simulator {
             String model,
             Map<String, Object> modelParams
     ) throws Exception {
-        logger.info("Create SimaonaSimulator!");
+        //logger.info(this + "Create SimonaSimulator! Model = " + model);
         List<Map<String, Object>> entities = new ArrayList();
         if (Objects.equals(model, "SimonaPowerGridEnvironment")) {
             if (num > 1) {
@@ -116,7 +103,7 @@ public class SimonaSimulator extends Simulator {
                 entity.put("type", model);
                 entities.add(entity);
             }
-            logger.info("PrimaryInputEntities = " + entities);
+            //logger.info("PrimaryInputEntities = " + entities);
             return entities;
         } else if (Objects.equals(model, "ResultOutputEntities")) {
             if (num > simonaResultEntities.length) {
@@ -129,7 +116,6 @@ public class SimonaSimulator extends Simulator {
                 entities.add(entity);
             }
             return entities;
-
         } else {
             throw new RuntimeException("");
         }
@@ -141,11 +127,12 @@ public class SimonaSimulator extends Simulator {
             Map<String, Object> inputs,
             long maxAdvance
     ) throws Exception {
-        logger.info("Got inputs from Mosaik for time " + time + " = " + inputs);
+        logger.info("Got inputs from MOSAIK for tick = " + time);
         SimosaikPrimaryDataWrapper primaryDataForSimona = new SimosaikPrimaryDataWrapper();
 
         inputs.forEach(
                 (assetId, inputValue) -> {
+                    //logger.info("assetId = " + assetId + ", inputValue = " + inputValue);
                     Map<String, Float> valueMap = new HashMap<>();
                     Map<String, Object> attrs = (Map<String, Object>) inputValue;
                     //go through attrs of the entity
@@ -176,11 +163,11 @@ public class SimonaSimulator extends Simulator {
                     primaryDataForSimona.dataMap().put(assetId, valueMap);
                 }
         );
-        //logger.info("converted Input = " +  convertedInputMap);
-
-
+        //logger.info("Created primaryDataForSimona"+ primaryDataForSimona);
+        logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
         try {
             receiveTriggerQueueForPrimaryData.put(primaryDataForSimona);
+            logger.info("Sent converted input for tick " + time + " to SIMONA!");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -192,12 +179,8 @@ public class SimonaSimulator extends Simulator {
             Map<String, List<String>> map
     ) throws Exception {
         logger.info("Got a request from MOSAIK to provide data!");
-
-        //SimosaikResultWrapper results = new SimosaikResultWrapper(resultDummy.getTime(), Map.of("Node_HS_2", resultDummy));
-
         SimosaikResultWrapper results = receiveTriggerQueueForResults.take();
-
-        logger.info("Got results from SIMONA for MOSAIK! Now try to convert them...");
+        logger.info("Got results from SIMONA for MOSAIK!");
 
         Map<String, Object> data = new HashMap<>();
 
@@ -206,17 +189,24 @@ public class SimonaSimulator extends Simulator {
                     HashMap<String, Object> values = new HashMap<>();
                     for (String attr : attrs) {
                         if (attr.equals("deltaU[kV]")) {
-                            //values.put(attr, results.getVoltageDeviation(id) * 0.4);
-                            values.put(attr, results.getVoltageDeviation(id));
+                            if (results.tick() == 0L) {
+                                values.put(attr, 0d);
+                            } else {
+                                values.put(attr, results.getVoltageDeviation(id));
+                            }
+                        }
+                        if (attr.equals("P[MW]")) {
+                            values.put(attr, results.getActivePower(id));
+                        }
+                        if (attr.equals("Q[MVAr]")) {
+                            values.put(attr, results.getReactivePower(id));
                         }
                     }
                     data.put(id, values);
                 }
         );
-        logger.info("OutputMap = " + data);
+        logger.info("Converted results for MOSAIK! Now send it to MOSAIK!");
         return data;
-
-        //return new HashMap<>();
     }
 
 
@@ -225,5 +215,4 @@ public class SimonaSimulator extends Simulator {
     public void queueResultsFromSimona(SimosaikResultWrapper data) throws InterruptedException {
         this.receiveTriggerQueueForResults.put(data);
     }
-
 }
