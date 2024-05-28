@@ -34,7 +34,8 @@ public class SimonaSimulator extends Simulator {
     private Logger logger = SimProcess.logger;
 
     private static final JSONObject meta = (JSONObject) JSONValue.parse(("{"
-            + "    'api_version': " + Simulator.API_VERSION + ","
+            + "    'api_version': '" + Simulator.API_VERSION + "',"
+            + "    'type': 'time-based',"
             + "    'models': {"
             + "        'SimonaPowerGridEnvironment': {"
             + "            'public': true,"
