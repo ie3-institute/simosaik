@@ -1,0 +1,40 @@
+@startuml
+
+== Setup ==
+
+mosaik -> SIMONA: world.start("SimonaPowerGrid")
+SIMONA -> SIMONA: RunSimonaWithMosaik
+
+== Initialization ==
+
+SIMONA -> MosaikSimulation: initialize()
+MosaikSimulation -> MosaikSimulation: SimProcess.startSimulation(...)
+
+mosaik -> SimonaSimulator: init()
+SimonaSimulator --> mosaik: meta
+
+mosaik -> SimonaSimulator: SimonaPowerGridEnvironment.create()
+SimonaSimulator --> mosaik: entities
+
+mosaik -> SimonaSimulator: PrimaryInputEntities.create()
+SimonaSimulator --> mosaik: entities
+
+mosaik -> SimonaSimulator: ResultOutputEntities.create()
+SimonaSimulator --> mosaik: entities
+
+mosaik -> SimonaSimulator: setup_done()
+SimonaSimulator --> mosaik
+
+== Phase 1 ==
+Mosaik -> SIMOSAIK: ! Activation(tick)
+SIMOSAIK -> SIMONA: StateData(currentTick = Some(tick))
+
+activate SIMOSAIK
+
+SIMOSAIK -> SIMOSAIK: DoSomething()
+
+deactivate SIMOSAIK
+
+SIMOSAIK -> Mosaik: ! Completion(tick)
+
+@enduml

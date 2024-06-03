@@ -1,5 +1,6 @@
 package edu.ie3.simopsim.data;
 
+import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimMessage;
 import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimScheduleElement;
 import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimScheduleMessage;
 import de.fhg.iwes.opsim.datamodel.generated.realtimedata.SetPointValueType;
@@ -16,17 +17,23 @@ import java.util.Iterator;
 public class OpsimEmDataFactory implements EmDataFactory {
     @Override
     public PValue convert(Object entity) throws ConvertionException {
-        if (entity instanceof OpSimScheduleMessage ossm) {
-            Iterator var6 = ossm.getScheduleElements().iterator();
-            while(var6.hasNext()) {
-                OpSimScheduleElement ose = (OpSimScheduleElement) var6.next();
-                if (ose.getScheduledValueType() == SetPointValueType.ACTIVE_POWER) {
-                    return new PValue(Quantities.getQuantity(ose.getScheduledValue(), StandardUnits.ACTIVE_POWER_IN));
+        if (entity instanceof SimopsimValue simopsimValue) {
+            OpSimMessage osm = simopsimValue.getOpSimMessage();
+            if (osm instanceof OpSimScheduleMessage ossm) {
+                Iterator var6 = ossm.getScheduleElements().iterator();
+                while(var6.hasNext()) {
+                    OpSimScheduleElement ose = (OpSimScheduleElement) var6.next();
+                    if (ose.getScheduledValueType() == SetPointValueType.ACTIVE_POWER) {
+                        return new PValue(Quantities.getQuantity(ose.getScheduledValue(), StandardUnits.ACTIVE_POWER_IN));
+                    }
                 }
+                throw new ConvertionException("No ACTIVEPOWER was provided!");
+            } else {
+                throw new ConvertionException("The OpSimMessage" + osm.getClass() + " is not supported!");
             }
-            throw new ConvertionException("No ACTIVEPOWER was provided!");
         } else {
-            throw new ConvertionException("The message format" + entity.getClass() + "is not supported!");
+            throw new ConvertionException("Only SimopsimValue supported! " + entity.getClass() + " is not supported!");
         }
+
     }
 }

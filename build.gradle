@@ -35,6 +35,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.opencsv:opencsv:5.5.2'
     implementation 'tech.units:indriya:2.2' // quantities
 
     /* Mosaik dependencies */

@@ -7,15 +7,13 @@ import de.fhg.iee.opsim.interfaces.ClientInterface;
 import de.fhg.iwes.opsim.datamodel.dao.OpSimDataModelFileDao;
 import de.fhg.iwes.opsim.datamodel.generated.asset.Asset;
 import de.fhg.iwes.opsim.datamodel.generated.assetoperator.AssetOperator;
-import de.fhg.iwes.opsim.datamodel.generated.flexforecast.OpSimFlexibilityElement;
-import de.fhg.iwes.opsim.datamodel.generated.flexforecast.OpSimFlexibilityForecastMessage;
 import de.fhg.iwes.opsim.datamodel.generated.realtimedata.*;
 import de.fhg.iwes.opsim.datamodel.generated.scenarioconfig.ScenarioConfig;
-import edu.ie3.simopsim.data.SimopsimEmDataWrapper;
-import edu.ie3.simopsim.data.SimopsimPrimaryDataWrapper;
-import edu.ie3.simopsim.data.SimopsimResultWrapper;
+import edu.ie3.simona.api.data.ExtInputDataPackage;
+import edu.ie3.simona.api.data.results.ExtResultPackage;
+import edu.ie3.simopsim.data.SimopsimInputDataPackage;
+import edu.ie3.simopsim.data.SimopsimValue;
 import org.apache.logging.log4j.Logger;
-import org.joda.time.DateTime;
 
 import javax.xml.bind.JAXBException;
 import java.util.*;
@@ -30,14 +28,17 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
     private Set<Asset> readable = new TreeSet(new AssetComparator());
     private Set<Asset> writable = new TreeSet(new AssetComparator());
 
-    public final LinkedBlockingQueue<SimopsimEmDataWrapper> receiveTriggerQueueForEmData = new LinkedBlockingQueue();
-    public final LinkedBlockingQueue<SimopsimResultWrapper> receiveTriggerQueueForResults = new LinkedBlockingQueue();
+    public final LinkedBlockingQueue<ExtInputDataPackage> receiveTriggerQueueForInputData = new LinkedBlockingQueue();
+    public final LinkedBlockingQueue<ExtResultPackage> receiveTriggerQueueForResults = new LinkedBlockingQueue();
+
+    private final SimopsimUtils simopsimUtils;
 
     public SimonaEmProxy(
             ClientInterface client, Logger logger
     ) {
         this.logger = logger;
         this.cli = client;
+        this.simopsimUtils = new SimopsimUtils();
     }
 
     @Override
@@ -94,66 +95,40 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
         } else {
             // Get message from Netzbetriebsfuehrung
             this.lastTimeStep = timeStep;
-            Iterator var4 = inputFromClient.iterator();
             logger.info("Received messages for " + this.cli.getCurrentSimulationTime().toString());
 
-            SimopsimEmDataWrapper emDataForSimona = new SimopsimEmDataWrapper();
-
-            while(var4.hasNext()) {
-                OpSimMessage osm = (OpSimMessage) var4.next();
-                if (osm instanceof OpSimScheduleMessage ossm) {
-                    emDataForSimona.ossm().put(ossm.getAssetId(), ossm);
-                }
-                this.printMessage(osm);
-            }
+            Map<String, SimopsimValue> dataForSimona = simopsimUtils.createInputMap(inputFromClient);
 
             try {
-                receiveTriggerQueueForEmData.put(emDataForSimona);
+                queueDataFromOpsim(new SimopsimInputDataPackage(dataForSimona));
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
 
+            // --------------------------------------------------------------------------------------------------
+
             // Trigger OpSimSimulator to provide result edu.ie3.simopsim.data
 
             try {
+                logger.info("Wait for results from SIMONA!");
                 // Wait for results from SIMONA!
-                SimopsimResultWrapper results = receiveTriggerQueueForResults.take();
+                ExtResultPackage results = receiveTriggerQueueForResults.take();
+                logger.info("Received results from SIMONA!");
 
-                logger.info("Results from SIMONA: " + results);
-
-                List<OpSimAggregatedSetPoints> osmAggSetPoints = new ArrayList<>(Collections.emptyList());
                 logger.debug("Send Aggregated SetPoints for " + this.cli.getCurrentSimulationTime().toString());
-                writable.forEach(
-                    asset -> {
-                        List<OpSimSetPoint> osmSetPoints = new ArrayList<>(Collections.emptyList());
-                        for (MeasurementValueType valueType : asset.getMeasurableQuantities()) {
-                            if (valueType.equals(MeasurementValueType.ACTIVE_POWER)) {
-                                osmSetPoints.add(
-                                        new OpSimSetPoint(
-                                                results.getActivePower(asset.getGridAssetId()),
-                                                SetPointValueType.fromValue(valueType.value())
-                                        )
-                                );
-                            }
-                            if (valueType.equals(MeasurementValueType.REACTIVE_POWER)) {
-                                osmSetPoints.add(
-                                        new OpSimSetPoint(
-                                                results.getReactivePower(asset.getGridAssetId()),
-                                                SetPointValueType.fromValue(valueType.value())
-                                        )
-                                );
-                            }
-                        }
-                        osmAggSetPoints.add(
-                                new OpSimAggregatedSetPoints(
-                                        asset.getGridAssetId(),
-                                        cli.getClock().getActualTime().plus(delta).getMillis(),
-                                        osmSetPoints
-                                )
-                        );
-                    }
+                List<OpSimAggregatedSetPoints> osmAggSetPoints = simopsimUtils.createSimopsimOutputList(
+                        writable,
+                        cli.getClock().getActualTime().plus(delta).getMillis(),
+                        results
                 );
-                osmAggSetPoints.forEach(this::printMessage);
+
+                System.out.println();
+                System.out.println("--- Produced OpSim Messages --------------------------------------------");
+                osmAggSetPoints.forEach(
+                        msg -> simopsimUtils.printMessage(msg, this.cli.getCurrentSimulationTime())
+                        );
+                System.out.println("------------------------------------------------------------------------");
+                System.out.println();
                 sendToOpSim(osmAggSetPoints);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -172,79 +147,14 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
         logger.info("stop() received.");
     }
 
+    // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    private void printMessage(OpSimMessage osm) {
-        StringBuilder strb = new StringBuilder();
-        String topic = osm.getAssetId();
-        DateTime dt = new DateTime(osm.getDelta());
-        strb.append(this.cli.getCurrentSimulationTime().toString());
-        strb.append("|");
-        strb.append(dt.toString());
-        strb.append(" ");
-        strb.append(topic);
-        strb.append(";");
-        Iterator var6;
-        if (osm instanceof OpSimAggregatedMeasurements) {
-            OpSimAggregatedMeasurements osmms = (OpSimAggregatedMeasurements)osm;
-            var6 = osmms.getOpSimMeasurements().iterator();
-
-            while(var6.hasNext()) {
-                OpSimMeasurement osmm = (OpSimMeasurement)var6.next();
-                strb.append(osmm.getMeasurementType());
-                strb.append(";");
-                strb.append(osmm.getMeasurementValue());
-                strb.append(";");
-            }
-        } else if (osm instanceof OpSimAggregatedSetPoints) {
-            OpSimAggregatedSetPoints ossp = (OpSimAggregatedSetPoints)osm;
-            var6 = ossp.getOpSimSetPoints().iterator();
-
-            while(var6.hasNext()) {
-                OpSimSetPoint osp = (OpSimSetPoint)var6.next();
-                strb.append(osp.getSetPointValueType());
-                strb.append(";");
-                strb.append(osp.getSetPointValue());
-                strb.append(";");
-            }
-        } else if (osm instanceof OpSimFlexibilityForecastMessage) {
-            OpSimFlexibilityForecastMessage off = (OpSimFlexibilityForecastMessage)osm;
-            var6 = off.getForecastMessages().iterator();
-
-            while(var6.hasNext()) {
-                OpSimFlexibilityElement ofe = (OpSimFlexibilityElement)var6.next();
-                strb.append(ofe.getLeadTimeInUTC());
-                strb.append(";");
-                strb.append(ofe.getType());
-                strb.append(";");
-                strb.append(ofe.getMax());
-                strb.append(";");
-                strb.append(ofe.getMin());
-                strb.append(";");
-            }
-        } else if (osm instanceof OpSimScheduleMessage) {
-            OpSimScheduleMessage osme = (OpSimScheduleMessage)osm;
-            var6 = osme.getScheduleElements().iterator();
-
-            while(var6.hasNext()) {
-                OpSimScheduleElement ose = (OpSimScheduleElement)var6.next();
-                strb.append(ose.getScheduleTimeInUTC());
-                strb.append(";");
-                strb.append(ose.getScheduledValueType());
-                strb.append(";");
-                strb.append(ose.getScheduledValue());
-                strb.append(";");
-            }
-        }
-
-        System.out.println(strb.toString());
-    }
-
-    public void queueResultsFromSimona(SimopsimResultWrapper data) throws InterruptedException {
+    public void queueResultsFromSimona(ExtResultPackage data) throws InterruptedException {
         this.receiveTriggerQueueForResults.put(data);
     }
 
-    public void queueEmDataFromOpsim(SimopsimEmDataWrapper data) throws InterruptedException {
-        this.receiveTriggerQueueForEmData.put(data);
+    public void queueDataFromOpsim(SimopsimInputDataPackage data) throws InterruptedException {
+        this.receiveTriggerQueueForInputData.put(data);
     }
 
 
