@@ -26,15 +26,7 @@ mosaik -> SimonaSimulator: setup_done()
 SimonaSimulator --> mosaik
 
 == Phase 1 ==
-Mosaik -> SIMOSAIK: ! Activation(tick)
-SIMOSAIK -> SIMONA: StateData(currentTick = Some(tick))
+mosaik -> SimonaSimulator: step(...)
 
-activate SIMOSAIK
-
-SIMOSAIK -> SIMOSAIK: DoSomething()
-
-deactivate SIMOSAIK
-
-SIMOSAIK -> Mosaik: ! Completion(tick)
 
 @enduml

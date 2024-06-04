@@ -19,7 +19,6 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
@@ -69,7 +68,7 @@ public class OpsimEmSimulation extends ExtSimulation {
         try {
             log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
             log.info("Wait for new EmData from OpSim...");
-            ExtInputDataPackage rawEmData = simonaProxy.receiveTriggerQueueForInputData.take();
+            ExtInputDataPackage rawEmData = simonaProxy.dataQueueOpsimToSimona.takeData();
             log.info("Received Em from OpSim... now convert them to PSDM-Value");
             // send primary data for load1 and load2 to SIMONA
             extEmDataSimulation.getExtEmData().provideEmData(
@@ -92,7 +91,7 @@ public class OpsimEmSimulation extends ExtSimulation {
             Map<String, ResultEntity> resultsToBeSend = extResultDataSimulation.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
 
-            simonaProxy.queueResultsFromSimona(new ExtResultPackage(tick, resultsToBeSend));
+            simonaProxy.dataQueueSimonaToOpsim.queueData(new ExtResultPackage(tick, resultsToBeSend));
             long nextTick = tick + deltaT;
             log.info("+++++ [Phase 2-Activity] Tick = " + tick + " finished +++++");
             log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");

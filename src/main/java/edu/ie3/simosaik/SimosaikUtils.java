@@ -1,7 +1,7 @@
 package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.data.results.ExtResultPackage;
-import edu.ie3.simosaik.data.SimosaikPrimaryDataWrapper;
+import edu.ie3.simosaik.data.SimosaikInputDataPackage;
 import edu.ie3.simosaik.data.SimosaikValue;
 
 import java.util.HashMap;
@@ -11,13 +11,13 @@ import java.util.Map;
 import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 public class SimosaikUtils {
-    public SimosaikUtils() {}
+    private SimosaikUtils() {}
 
 
-    public SimosaikPrimaryDataWrapper createSimosaikPrimaryDataWrapper(
+    public static SimosaikInputDataPackage createSimosaikPrimaryDataWrapper(
             Map<String, Object> mosaikInput
     ) {
-        SimosaikPrimaryDataWrapper simosaikPrimaryDataWrapper = new SimosaikPrimaryDataWrapper();
+        SimosaikInputDataPackage simosaikPrimaryDataWrapper = new SimosaikInputDataPackage();
         mosaikInput.forEach(
                 (assetId, inputValue) -> {
                     simosaikPrimaryDataWrapper.addSimosaikValue(
@@ -29,7 +29,7 @@ public class SimosaikUtils {
         return simosaikPrimaryDataWrapper;
     }
 
-    private SimosaikValue getSimosaikValue(Object inputValue) {
+    private static SimosaikValue getSimosaikValue(Object inputValue) {
         Map<String, Float> convertedInputValueMap = new HashMap<>();
         Map<String, Object> attrs = (Map<String, Object>) inputValue;
         for (Map.Entry<String, Object> attr : attrs.entrySet()) {
@@ -46,7 +46,7 @@ public class SimosaikUtils {
         return new SimosaikValue(convertedInputValueMap);
     }
 
-    public Map<String, Object> createSimosaikOutputMap(
+    public static Map<String, Object> createSimosaikOutputMap(
             Map<String, List<String>> mosaikRequestedAttributes,
             ExtResultPackage simonaResults
     ) {
@@ -68,7 +68,7 @@ public class SimosaikUtils {
         return outputMap;
     }
 
-    private void addResult(ExtResultPackage results, String id, String attr, Map<String, Object> outputMap) {
+    private static void addResult(ExtResultPackage results, String id, String attr, Map<String, Object> outputMap) {
         if (attr.equals(MOSAIK_VOLTAGE_DEVIATION)) {
             if (results.getTick() == 0L) {
                 outputMap.put(attr, 0d);

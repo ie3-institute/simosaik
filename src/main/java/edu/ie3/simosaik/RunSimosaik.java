@@ -4,9 +4,9 @@ import de.offis.mosaik.api.SimProcess;
 
 public class RunSimosaik implements Runnable {
 
-    private SimonaSimulator simonaSimulator;
+    private final SimonaSimulator simonaSimulator;
 
-    private String mosaikIP;
+    private final String mosaikIP;
 
     public RunSimosaik(
             String mosaikIP,

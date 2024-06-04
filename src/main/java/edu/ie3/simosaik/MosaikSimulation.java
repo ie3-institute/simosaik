@@ -69,7 +69,7 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
         }
         try {
             log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
-            ExtInputDataPackage rawPrimaryData = simonaSimulator.receiveTriggerQueueForInputData.take();
+            ExtInputDataPackage rawPrimaryData = simonaSimulator.dataQueueMosaikToSimona.takeData();
             log.debug("Received Primary Data from Mosaik = " + rawPrimaryData);
 
             extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(
@@ -89,13 +89,12 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
     @Override
     protected Optional<Long> doPostActivity(long tick) {
         log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
-        ZonedDateTime currentTime = extResultDataSimulation.getExtResultData().getSimulationTime(tick);
         try {
             log.info("Request Results from SIMONA!");
             Map<String, ResultEntity> resultsToBeSend = extResultDataSimulation.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
 
-            simonaSimulator.queueResultsFromSimona(new ExtResultPackage(tick, resultsToBeSend));
+            simonaSimulator.dataQueueSimonaToMosaik.queueData(new ExtResultPackage(tick, resultsToBeSend));
             long nextTick = tick + deltaT;
             log.info("+++++ [Phase 2-Activity] Tick = " + tick + " finished +++++");
             log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");

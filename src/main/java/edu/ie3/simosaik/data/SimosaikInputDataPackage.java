@@ -6,17 +6,17 @@ import edu.ie3.simona.api.data.ExtInputDataValue;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SimosaikPrimaryDataWrapper implements ExtInputDataPackage {
+public class SimosaikInputDataPackage implements ExtInputDataPackage {
 
     private final Map<String, ExtInputDataValue> dataMap;
 
-    public SimosaikPrimaryDataWrapper(
+    public SimosaikInputDataPackage(
             Map<String, SimosaikValue> dataMap
     ) {
         this.dataMap = new HashMap<>(dataMap);
     }
 
-    public SimosaikPrimaryDataWrapper() {
+    public SimosaikInputDataPackage() {
         this(new HashMap<>());
     }
 

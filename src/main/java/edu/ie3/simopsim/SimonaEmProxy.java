@@ -7,8 +7,10 @@ import de.fhg.iee.opsim.interfaces.ClientInterface;
 import de.fhg.iwes.opsim.datamodel.dao.OpSimDataModelFileDao;
 import de.fhg.iwes.opsim.datamodel.generated.asset.Asset;
 import de.fhg.iwes.opsim.datamodel.generated.assetoperator.AssetOperator;
-import de.fhg.iwes.opsim.datamodel.generated.realtimedata.*;
+import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimAggregatedSetPoints;
+import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimMessage;
 import de.fhg.iwes.opsim.datamodel.generated.scenarioconfig.ScenarioConfig;
+import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simopsim.data.SimopsimInputDataPackage;
@@ -17,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.JAXBException;
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class SimonaEmProxy extends ConservativeSynchronizedProxy {
     private ClientInterface cli;
@@ -25,20 +26,19 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
     private Logger logger;
     private long delta = -1L;
     private long lastTimeStep = 0L;
-    private Set<Asset> readable = new TreeSet(new AssetComparator());
-    private Set<Asset> writable = new TreeSet(new AssetComparator());
+    private Set<Asset> readable = new TreeSet<>(new AssetComparator());
+    private Set<Asset> writable = new TreeSet<>(new AssetComparator());
 
-    public final LinkedBlockingQueue<ExtInputDataPackage> receiveTriggerQueueForInputData = new LinkedBlockingQueue();
-    public final LinkedBlockingQueue<ExtResultPackage> receiveTriggerQueueForResults = new LinkedBlockingQueue();
-
-    private final SimopsimUtils simopsimUtils;
+    public final DataQueueExtSimulationExtSimulator<ExtInputDataPackage> dataQueueOpsimToSimona;
+    public final DataQueueExtSimulationExtSimulator<ExtResultPackage> dataQueueSimonaToOpsim;
 
     public SimonaEmProxy(
             ClientInterface client, Logger logger
     ) {
         this.logger = logger;
         this.cli = client;
-        this.simopsimUtils = new SimopsimUtils();
+        this.dataQueueOpsimToSimona = new DataQueueExtSimulationExtSimulator<>();
+        this.dataQueueSimonaToOpsim = new DataQueueExtSimulationExtSimulator<>();
     }
 
     @Override
@@ -95,12 +95,10 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
         } else {
             // Get message from Netzbetriebsfuehrung
             this.lastTimeStep = timeStep;
-            logger.info("Received messages for " + this.cli.getCurrentSimulationTime().toString());
-
-            Map<String, SimopsimValue> dataForSimona = simopsimUtils.createInputMap(inputFromClient);
-
             try {
-                queueDataFromOpsim(new SimopsimInputDataPackage(dataForSimona));
+                logger.info("Received messages for " + this.cli.getCurrentSimulationTime().toString());
+                Map<String, SimopsimValue> dataForSimona = SimopsimUtils.createInputMap(inputFromClient);
+                dataQueueOpsimToSimona.queueData(new SimopsimInputDataPackage(dataForSimona));
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -112,11 +110,11 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
             try {
                 logger.info("Wait for results from SIMONA!");
                 // Wait for results from SIMONA!
-                ExtResultPackage results = receiveTriggerQueueForResults.take();
+                ExtResultPackage results = dataQueueSimonaToOpsim.takeData();
                 logger.info("Received results from SIMONA!");
 
                 logger.debug("Send Aggregated SetPoints for " + this.cli.getCurrentSimulationTime().toString());
-                List<OpSimAggregatedSetPoints> osmAggSetPoints = simopsimUtils.createSimopsimOutputList(
+                List<OpSimAggregatedSetPoints> osmAggSetPoints = SimopsimUtils.createSimopsimOutputList(
                         writable,
                         cli.getClock().getActualTime().plus(delta).getMillis(),
                         results
@@ -125,7 +123,7 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
                 System.out.println();
                 System.out.println("--- Produced OpSim Messages --------------------------------------------");
                 osmAggSetPoints.forEach(
-                        msg -> simopsimUtils.printMessage(msg, this.cli.getCurrentSimulationTime())
+                        msg -> SimopsimUtils.printMessage(msg, this.cli.getCurrentSimulationTime())
                         );
                 System.out.println("------------------------------------------------------------------------");
                 System.out.println();
@@ -148,15 +146,6 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-    public void queueResultsFromSimona(ExtResultPackage data) throws InterruptedException {
-        this.receiveTriggerQueueForResults.put(data);
-    }
-
-    public void queueDataFromOpsim(SimopsimInputDataPackage data) throws InterruptedException {
-        this.receiveTriggerQueueForInputData.put(data);
-    }
-
 
     private <T extends OpSimMessage> void sendToOpSim(
             List<T> inputFromComponent

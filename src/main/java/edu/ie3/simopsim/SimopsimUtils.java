@@ -12,9 +12,9 @@ import java.util.*;
 
 public class SimopsimUtils {
 
-    public SimopsimUtils() {}
+    private SimopsimUtils() {}
 
-    public void printMessage(OpSimMessage osm, DateTime simulationTime) {
+    public static void printMessage(OpSimMessage osm, DateTime simulationTime) {
         StringBuilder strb = new StringBuilder();
         String topic = osm.getAssetId();
         DateTime dt = new DateTime(osm.getDelta());
@@ -80,7 +80,7 @@ public class SimopsimUtils {
         System.out.println(strb.toString());
     }
 
-    public OpSimAggregatedSetPoints createAggregatedSetPoints(
+    public static OpSimAggregatedSetPoints createAggregatedSetPoints(
             ExtResultPackage results,
             Asset asset,
             Long delta
@@ -111,7 +111,7 @@ public class SimopsimUtils {
         );
     }
 
-    public Map<String, SimopsimValue> createInputMap(Queue<OpSimMessage> inputFromClient) {
+    public static Map<String, SimopsimValue> createInputMap(Queue<OpSimMessage> inputFromClient) {
         Iterator iteratorInput = inputFromClient.iterator();
         Map<String, SimopsimValue> dataForSimona = new HashMap<>();
         while(iteratorInput.hasNext()) {
@@ -123,7 +123,7 @@ public class SimopsimUtils {
         return dataForSimona;
     }
 
-    public List<OpSimAggregatedSetPoints> createSimopsimOutputList(
+    public static List<OpSimAggregatedSetPoints> createSimopsimOutputList(
             Set<Asset> writable,
             Long delta,
             ExtResultPackage simonaResults
