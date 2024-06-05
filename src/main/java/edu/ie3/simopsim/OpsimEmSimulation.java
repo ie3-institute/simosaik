@@ -2,9 +2,11 @@ package edu.ie3.simopsim;
 
 import de.fhg.iee.opsim.client.Client;
 import edu.ie3.datamodel.models.result.ResultEntity;
+import edu.ie3.simona.api.data.ExtData;
+import edu.ie3.simona.api.data.ExtDataSimulation;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
-import edu.ie3.simona.api.data.em.ExtEmDataSimulation;
-import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
+import edu.ie3.simona.api.data.em.ExtEmData;
+import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
@@ -19,16 +21,18 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
-public class OpsimEmSimulation extends ExtSimulation {
+public class OpsimEmSimulation extends ExtSimulation implements ExtDataSimulation {
 
     private final Logger log = LogManager.getLogger("OpsimEmSimulation");
 
-    private final ExtResultDataSimulation extResultDataSimulation;
-    private final ExtEmDataSimulation extEmDataSimulation;
+    private final ExtResultData extResultData;
+    private final ExtEmData extEmData;
 
     private final long deltaT = 900L;
 
@@ -41,11 +45,11 @@ public class OpsimEmSimulation extends ExtSimulation {
             Path mappingPath
     ) {
         this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(mappingPath);
-        this.extEmDataSimulation = new ExtEmDataSimulation(
+        this.extEmData = new ExtEmData(
                 new OpsimEmDataFactory(),
                 mapping.getExtIdUuidMapping(ExtEntityEntry.EXT_INPUT)
         );
-        this.extResultDataSimulation = new ExtResultDataSimulation(
+        this.extResultData = new ExtResultData(
                 mapping.getExtUuidIdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
                 mapping.getExtUuidIdMapping(ExtEntityEntry.EXT_RESULT_GRID)
         );
@@ -66,14 +70,14 @@ public class OpsimEmSimulation extends ExtSimulation {
             throw new RuntimeException(e);
         }
         try {
-            log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
+            log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
             log.info("Wait for new EmData from OpSim...");
             ExtInputDataPackage rawEmData = simonaProxy.dataQueueOpsimToSimona.takeData();
             log.info("Received Em from OpSim... now convert them to PSDM-Value");
             // send primary data for load1 and load2 to SIMONA
-            extEmDataSimulation.getExtEmData().provideEmData(
+            extEmData.provideEmData(
                     tick,
-                    extEmDataSimulation.createExtEmDataMap(
+                    extEmData.createExtEmDataMap(
                         rawEmData
             ));
             log.info("Provided Em Data to SIMONA");
@@ -85,10 +89,10 @@ public class OpsimEmSimulation extends ExtSimulation {
 
     @Override
     protected Optional<Long> doPostActivity(long tick) {
-        log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
+        log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
         try {
             log.info("Request Results from SIMONA!");
-            Map<String, ResultEntity> resultsToBeSend = extResultDataSimulation.requestResults(tick);
+            Map<String, ResultEntity> resultsToBeSend = extResultData.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
 
             simonaProxy.dataQueueSimonaToOpsim.queueData(new ExtResultPackage(tick, resultsToBeSend));
@@ -99,6 +103,11 @@ public class OpsimEmSimulation extends ExtSimulation {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public List<ExtData> getDataConnections() {
+        return Collections.emptyList();
     }
 
     public void runSimopsim(String urlToOpsim) {
@@ -115,10 +124,11 @@ public class OpsimEmSimulation extends ExtSimulation {
         }
     }
 
-    public ExtResultDataSimulation getExtResultDataSimulation() {
-        return extResultDataSimulation;
+    public ExtResultData getExtResultData() {
+        return extResultData;
     }
-    public ExtEmDataSimulation getExtEmDataSimulation() {
-        return extEmDataSimulation;
+
+    public ExtEmData getExtEmData() {
+        return extEmData;
     }
 }

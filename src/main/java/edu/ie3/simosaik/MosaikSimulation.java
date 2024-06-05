@@ -2,10 +2,11 @@ package edu.ie3.simosaik;
 
 import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ResultEntity;
+import edu.ie3.simona.api.data.ExtData;
 import edu.ie3.simona.api.data.ExtDataSimulation;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
-import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
+import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
+import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
@@ -15,15 +16,15 @@ import edu.ie3.simosaik.data.MosaikPrimaryDataFactory;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation {
 
     private final ch.qos.logback.classic.Logger log = (Logger) LoggerFactory.getLogger("MosaikSimulation");
-    private final ExtPrimaryDataSimulation extPrimaryDataSimulation;
-    private final ExtResultDataSimulation extResultDataSimulation;
+    private final ExtPrimaryData extPrimaryData;
+    private final ExtResultData extResultData;
     private final long deltaT = 900L;
     private final String mosaikIP;
 
@@ -38,17 +39,21 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
             Path mappingPath
     ) {
         this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(mappingPath);
-        this.extPrimaryDataSimulation = new ExtPrimaryDataSimulation(
+        this.extPrimaryData = new ExtPrimaryData(
                 new MosaikPrimaryDataFactory(),
                 mapping.getExtIdUuidMapping(ExtEntityEntry.EXT_INPUT)
         );
-        this.extResultDataSimulation = new ExtResultDataSimulation(
+        this.extResultData = new ExtResultData(
                 mapping.getExtUuidIdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
                 mapping.getExtUuidIdMapping(ExtEntityEntry.EXT_RESULT_GRID)
         );
         this.mosaikIP = mosaikIP;
     }
 
+    @Override
+    public List<ExtData> getDataConnections() {
+        return List.of(extPrimaryData, extResultData);
+    }
 
     @Override
     protected Long initialize() {
@@ -68,13 +73,13 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
             throw new RuntimeException(e);
         }
         try {
-            log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
+            log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
             ExtInputDataPackage rawPrimaryData = simonaSimulator.dataQueueMosaikToSimona.takeData();
             log.debug("Received Primary Data from Mosaik = " + rawPrimaryData);
 
-            extPrimaryDataSimulation.getExtPrimaryData().providePrimaryData(
+            extPrimaryData.providePrimaryData(
                     tick,
-                    extPrimaryDataSimulation.createExtPrimaryDataMap(
+                    extPrimaryData.createExtPrimaryDataMap(
                             rawPrimaryData
                     )
             );
@@ -88,10 +93,10 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
 
     @Override
     protected Optional<Long> doPostActivity(long tick) {
-        log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultDataSimulation.getExtResultData().getSimulationTime(tick) + " +++++");
+        log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
         try {
             log.info("Request Results from SIMONA!");
-            Map<String, ResultEntity> resultsToBeSend = extResultDataSimulation.requestResults(tick);
+            Map<String, ResultEntity> resultsToBeSend = extResultData.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
 
             simonaSimulator.dataQueueSimonaToMosaik.queueData(new ExtResultPackage(tick, resultsToBeSend));
@@ -104,13 +109,12 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
         }
     }
 
-
-    public ExtPrimaryDataSimulation getExtPrimaryDataSimulation() {
-        return extPrimaryDataSimulation;
+    public ExtPrimaryData getExtPrimaryData() {
+        return extPrimaryData;
     }
 
-    public ExtResultDataSimulation getExtResultDataSimulation() {
-        return extResultDataSimulation;
+    public ExtResultData getExtResultData() {
+        return extResultData;
     }
 
     public void startMosaikSimulation(String mosaikIP) {

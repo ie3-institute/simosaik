@@ -1,0 +1,40 @@
+@startuml
+
+participant mosaik
+box "simosaik" #LightBlue
+participant mosaikAPI
+participant simonaAPI
+end box
+participant SIMONA
+
+== Setup / Initialisierung ==
+
+mosaik -> SIMONA: Starte SIMONA als Anwendung (cmd)
+
+SIMONA -> SIMONA: Initialisierung von SIMONA
+SIMONA -> simonaAPI: Initialisierung
+simonaAPI -> mosaikAPI: Start des mosaikAPI-Simulators
+mosaikAPI -> mosaik: Verbindungsaufbau
+mosaik -> mosaikAPI: Initialisierung
+mosaikAPI --> mosaik: Meta-Daten
+
+mosaik -> mosaikAPI: Erstellung der Entities
+mosaikAPI --> mosaik: Entities
+
+
+== Simulation ==
+
+mosaik -> mosaikAPI: Aufruf von step() inkl. Input-Daten
+mosaikAPI --> simonaAPI: Input-Daten
+SIMONA -> simonaAPI: Aufruf von doPreActivity()
+simonaAPI --> SIMONA: Input-Daten
+SIMONA --> SIMONA: Verteilung der Input-Daten
+SIMONA -> SIMONA: Simulation im Multi-Agenten-System
+SIMONA -> simonaAPI: Aufruf von doPostActivity()
+simonaAPI -> SIMONA: Anfrage von Output-Daten
+SIMONA --> simonaAPI: Output-Daten
+simonaAPI --> mosaikAPI: Output-Daten
+mosaik -> mosaikAPI: Aufruf von getData()
+mosaikAPI --> mosaik: Output-Daten
+
+@enduml

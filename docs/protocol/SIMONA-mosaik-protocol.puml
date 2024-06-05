@@ -3,6 +3,7 @@
 == Setup ==
 
 mosaik -> SIMONA: world.start("SimonaPowerGrid")
+
 SIMONA -> SIMONA: RunSimonaWithMosaik
 
 == Initialization ==
@@ -26,7 +27,29 @@ mosaik -> SimonaSimulator: setup_done()
 SimonaSimulator --> mosaik
 
 == Phase 1 ==
-mosaik -> SimonaSimulator: step(...)
+mosaik -> SimonaSimulator: step(time, inputs)
 
+SimonaSimulator ->  dataQueueMosaikToSimona: queueData(inputs)
+SimonaSimulator -> mosaik: time + stepSize
+
+SIMONA -> MosaikSimulation: doPreActivity(tick)
+MosaikSimulation -> dataQueueMosaikToSimona: takeData()
+dataQueueMosaikToSimona -> MosaikSimulation: primaryData
+MosaikSimulation -> SIMONA: providePrimaryData(primaryData)
+MosaikSimulation -> SIMONA: tick + deltaT
+
+== Phase 2 ==
+
+SIMONA -> MosaikSimulation: doPostActivity(tick)
+MosaikSimulation -> SIMONA: requestResults(tick)
+SIMONA -> MosaikSimulation: results
+MosaikSimulation -> dataQueueSimonaToMosaik: queueData(results)
+MosaikSimulation -> SIMONA: tick + deltaT
+
+mosaik -> SimonaSimulator: getData(map)
+
+SimonaSimulator -> dataQueueSimonaToMosaik: takeData()
+dataQueueSimonaToMosaik -> SimonaSimulator: results
+SimonaSimulator -> mosaik: results
 
 @enduml
