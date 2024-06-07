@@ -2,11 +2,11 @@ package edu.ie3.simosaik;
 
 import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ResultEntity;
-import edu.ie3.simona.api.data.ExtData;
-import edu.ie3.simona.api.data.ExtDataSimulation;
-import edu.ie3.simona.api.data.ExtInputDataPackage;
+import edu.ie3.simona.api.data.*;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
+import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultData;
+import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation {
+public class MosaikSimulation extends ExtSimulation implements ExtPrimaryDataSimulation, ExtResultDataSimulation {
 
     private final ch.qos.logback.classic.Logger log = (Logger) LoggerFactory.getLogger("MosaikSimulation");
     private final ExtPrimaryData extPrimaryData;
@@ -107,14 +107,6 @@ public class MosaikSimulation extends ExtSimulation implements ExtDataSimulation
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public ExtPrimaryData getExtPrimaryData() {
-        return extPrimaryData;
-    }
-
-    public ExtResultData getExtResultData() {
-        return extResultData;
     }
 
     public void startMosaikSimulation(String mosaikIP) {

@@ -4,6 +4,7 @@ import de.fhg.iwes.opsim.datamodel.generated.asset.Asset;
 import de.fhg.iwes.opsim.datamodel.generated.flexforecast.OpSimFlexibilityElement;
 import de.fhg.iwes.opsim.datamodel.generated.flexforecast.OpSimFlexibilityForecastMessage;
 import de.fhg.iwes.opsim.datamodel.generated.realtimedata.*;
+import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simopsim.data.SimopsimValue;
 import org.joda.time.DateTime;
@@ -111,7 +112,7 @@ public class SimopsimUtils {
         );
     }
 
-    public static Map<String, SimopsimValue> createInputMap(Queue<OpSimMessage> inputFromClient) {
+    public static Map<String, ExtInputDataValue> createInputMap(Queue<OpSimMessage> inputFromClient) {
         Iterator iteratorInput = inputFromClient.iterator();
         Map<String, SimopsimValue> dataForSimona = new HashMap<>();
         while(iteratorInput.hasNext()) {
@@ -120,7 +121,7 @@ public class SimopsimUtils {
                 dataForSimona.put(ossm.getAssetId(), new SimopsimValue(ossm));
             }
         }
-        return dataForSimona;
+        return new HashMap<>(dataForSimona);
     }
 
     public static List<OpSimAggregatedSetPoints> createSimopsimOutputList(

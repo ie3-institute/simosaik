@@ -1,7 +1,7 @@
 package edu.ie3.simosaik;
 
+import edu.ie3.simona.api.data.ExtInputDataPackage;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
-import edu.ie3.simosaik.data.SimosaikInputDataPackage;
 import edu.ie3.simosaik.data.SimosaikValue;
 
 import java.util.HashMap;
@@ -14,19 +14,19 @@ public class SimosaikUtils {
     private SimosaikUtils() {}
 
 
-    public static SimosaikInputDataPackage createSimosaikPrimaryDataWrapper(
+    public static ExtInputDataPackage createSimosaikPrimaryDataWrapper(
             Map<String, Object> mosaikInput
     ) {
-        SimosaikInputDataPackage simosaikPrimaryDataWrapper = new SimosaikInputDataPackage();
+        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage();
         mosaikInput.forEach(
                 (assetId, inputValue) -> {
-                    simosaikPrimaryDataWrapper.addSimosaikValue(
+                    extInputDataPackage.addValue(
                             assetId,
                             getSimosaikValue(inputValue)
                     );
                 }
         );
-        return simosaikPrimaryDataWrapper;
+        return extInputDataPackage;
     }
 
     private static SimosaikValue getSimosaikValue(Object inputValue) {

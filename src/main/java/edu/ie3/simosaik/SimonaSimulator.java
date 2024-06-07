@@ -6,7 +6,6 @@ import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.data.SimosaikInputDataPackage;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
@@ -124,7 +123,7 @@ public class SimonaSimulator extends Simulator {
     ) throws Exception {
         try {
             logger.info("Got inputs from MOSAIK for tick = " + time);
-            SimosaikInputDataPackage primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
+            ExtInputDataPackage primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
                     inputs
             );
             logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");

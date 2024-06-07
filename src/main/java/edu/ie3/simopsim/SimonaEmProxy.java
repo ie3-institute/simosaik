@@ -12,9 +12,8 @@ import de.fhg.iwes.opsim.datamodel.generated.realtimedata.OpSimMessage;
 import de.fhg.iwes.opsim.datamodel.generated.scenarioconfig.ScenarioConfig;
 import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
+import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
-import edu.ie3.simopsim.data.SimopsimInputDataPackage;
-import edu.ie3.simopsim.data.SimopsimValue;
 import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.JAXBException;
@@ -97,8 +96,8 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
             this.lastTimeStep = timeStep;
             try {
                 logger.info("Received messages for " + this.cli.getCurrentSimulationTime().toString());
-                Map<String, SimopsimValue> dataForSimona = SimopsimUtils.createInputMap(inputFromClient);
-                dataQueueOpsimToSimona.queueData(new SimopsimInputDataPackage(dataForSimona));
+                Map<String, ExtInputDataValue> dataForSimona = SimopsimUtils.createInputMap(inputFromClient);
+                dataQueueOpsimToSimona.queueData(new ExtInputDataPackage(dataForSimona));
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

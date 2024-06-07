@@ -2,11 +2,11 @@ package edu.ie3.simopsim;
 
 import de.fhg.iee.opsim.client.Client;
 import edu.ie3.datamodel.models.result.ResultEntity;
-import edu.ie3.simona.api.data.ExtData;
-import edu.ie3.simona.api.data.ExtDataSimulation;
-import edu.ie3.simona.api.data.ExtInputDataPackage;
+import edu.ie3.simona.api.data.*;
 import edu.ie3.simona.api.data.em.ExtEmData;
+import edu.ie3.simona.api.data.em.ExtEmDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultData;
+import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
@@ -21,13 +21,12 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
-public class OpsimEmSimulation extends ExtSimulation implements ExtDataSimulation {
+public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulation, ExtResultDataSimulation {
 
     private final Logger log = LogManager.getLogger("OpsimEmSimulation");
 
@@ -107,7 +106,10 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtDataSimulatio
 
     @Override
     public List<ExtData> getDataConnections() {
-        return Collections.emptyList();
+        return List.of(
+                extResultData,
+                extEmData
+        );
     }
 
     public void runSimopsim(String urlToOpsim) {
@@ -122,13 +124,5 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtDataSimulatio
                 TimeoutException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public ExtResultData getExtResultData() {
-        return extResultData;
-    }
-
-    public ExtEmData getExtEmData() {
-        return extEmData;
     }
 }

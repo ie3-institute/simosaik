@@ -4,6 +4,7 @@ import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.primarydata.PrimaryDataFactory;
 import edu.ie3.simona.api.exceptions.ConvertionException;
 import tech.units.indriya.quantity.Quantities;
@@ -14,7 +15,7 @@ import static edu.ie3.simosaik.SimosaikTranslation.MOSAIK_REACTIVE_POWER;
 public class MosaikPrimaryDataFactory implements PrimaryDataFactory {
 
     @Override
-    public Value convert(Object entity) throws ConvertionException {
+    public Value convert(ExtInputDataValue entity) throws ConvertionException {
         if (entity instanceof SimosaikValue valueMap) {
             if (valueMap.getMosaikMap().containsKey(MOSAIK_ACTIVE_POWER) && valueMap.getMosaikMap().containsKey(MOSAIK_REACTIVE_POWER)) {
                 return new SValue(

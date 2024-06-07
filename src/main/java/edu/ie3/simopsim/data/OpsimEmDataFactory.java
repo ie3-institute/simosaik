@@ -7,6 +7,7 @@ import de.fhg.iwes.opsim.datamodel.generated.realtimedata.SetPointValueType;
 import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.em.EmDataFactory;
 import edu.ie3.simona.api.data.primarydata.PrimaryDataFactory;
 import edu.ie3.simona.api.exceptions.ConvertionException;
@@ -16,7 +17,7 @@ import java.util.Iterator;
 
 public class OpsimEmDataFactory implements EmDataFactory {
     @Override
-    public PValue convert(Object entity) throws ConvertionException {
+    public PValue convert(ExtInputDataValue entity) throws ConvertionException {
         if (entity instanceof SimopsimValue simopsimValue) {
             OpSimMessage osm = simopsimValue.getOpSimMessage();
             if (osm instanceof OpSimScheduleMessage ossm) {
