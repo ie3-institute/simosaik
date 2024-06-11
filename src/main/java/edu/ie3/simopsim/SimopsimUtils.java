@@ -9,11 +9,29 @@ import edu.ie3.simona.api.data.results.ExtResultPackage;
 import edu.ie3.simopsim.data.SimopsimValue;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
+/**
+ * Helpful methods to implement a SIMONA-OPSIM coupling.
+ */
 public class SimopsimUtils {
 
     private SimopsimUtils() {}
+
+    public static void runSimopsim(SimonaProxy simonaProxy, String urlToOpsim) {
+        try {
+            simonaProxy.getCli().addProxy(simonaProxy);
+            simonaProxy.getCli().reconnect(urlToOpsim);
+        } catch (URISyntaxException | IOException | NoSuchAlgorithmException | KeyManagementException |
+                 TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static void printMessage(OpSimMessage osm, DateTime simulationTime) {
         StringBuilder strb = new StringBuilder();
@@ -113,10 +131,10 @@ public class SimopsimUtils {
     }
 
     public static Map<String, ExtInputDataValue> createInputMap(Queue<OpSimMessage> inputFromClient) {
-        Iterator iteratorInput = inputFromClient.iterator();
+        Iterator<OpSimMessage> iteratorInput = inputFromClient.iterator();
         Map<String, SimopsimValue> dataForSimona = new HashMap<>();
         while(iteratorInput.hasNext()) {
-            OpSimMessage osm = (OpSimMessage) iteratorInput.next();
+            OpSimMessage osm = iteratorInput.next();
             if (osm instanceof OpSimScheduleMessage ossm) {
                 dataForSimona.put(ossm.getAssetId(), new SimopsimValue(ossm));
             }

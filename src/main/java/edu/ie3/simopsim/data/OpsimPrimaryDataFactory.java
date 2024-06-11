@@ -17,9 +17,7 @@ public class OpsimPrimaryDataFactory implements PrimaryDataFactory {
     @Override
     public Value convert(ExtInputDataValue entity) throws ConvertionException {
         if (entity instanceof OpSimScheduleMessage ossm) {
-            Iterator var6 = ossm.getScheduleElements().iterator();
-            while(var6.hasNext()) {
-                OpSimScheduleElement ose = (OpSimScheduleElement) var6.next();
+            for (OpSimScheduleElement ose : ossm.getScheduleElements()) {
                 if (ose.getScheduledValueType() == SetPointValueType.ACTIVE_POWER) {
                     return new PValue(Quantities.getQuantity(ose.getScheduledValue(), StandardUnits.ACTIVE_POWER_IN));
                 }

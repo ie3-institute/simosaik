@@ -19,9 +19,8 @@ import java.util.*;
 import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
 
 /**
- * Simple example for an external simulation, that calculates power for two loads, and gets power for two pv plants from SIMONA.
+ * Simple example for an external simulation, that calculates set points for two em agents, and gets power for two pv plants from SIMONA.
  */
-
 public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDataSimulation, ExtResultDataSimulation {
 
     private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulationWithEm");
@@ -46,6 +45,11 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
                 ),
                 Collections.emptyMap()
         );
+    }
+
+    @Override
+    public List<ExtData> getDataConnections() {
+        return List.of(extEmData, extResultData);
     }
 
     @Override
@@ -104,7 +108,6 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
         log.info("+++++++++++++++++++++++++++ PostActivities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
 
         log.info("Request Results from SIMONA!");
-        // request results for pv1 and pv2 from SIMONA
         try {
             Map<String, ResultEntity> resultsFromSimona = extResultData.requestResults(tick);
 
@@ -146,10 +149,5 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Override
-    public List<ExtData> getDataConnections() {
-        return List.of(extEmData, extResultData);
     }
 }

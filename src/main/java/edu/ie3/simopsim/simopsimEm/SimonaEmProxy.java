@@ -1,8 +1,7 @@
-package edu.ie3.simopsim;
+package edu.ie3.simopsim.simopsimEm;
 
 import de.fhg.iee.opsim.DAO.AssetComparator;
 import de.fhg.iee.opsim.DAO.ProxyConfigDAO;
-import de.fhg.iee.opsim.abstracts.ConservativeSynchronizedProxy;
 import de.fhg.iee.opsim.interfaces.ClientInterface;
 import de.fhg.iwes.opsim.datamodel.dao.OpSimDataModelFileDao;
 import de.fhg.iwes.opsim.datamodel.generated.asset.Asset;
@@ -14,15 +13,14 @@ import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
 import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.results.ExtResultPackage;
+import edu.ie3.simopsim.SimonaProxy;
+import edu.ie3.simopsim.SimopsimUtils;
 import org.apache.logging.log4j.Logger;
 
 import javax.xml.bind.JAXBException;
 import java.util.*;
 
-public class SimonaEmProxy extends ConservativeSynchronizedProxy {
-    private ClientInterface cli;
-    private String componentDescription = "SIMONA";
-    private Logger logger;
+public class SimonaEmProxy extends SimonaProxy {
     private long delta = -1L;
     private long lastTimeStep = 0L;
     private Set<Asset> readable = new TreeSet<>(new AssetComparator());
@@ -31,11 +29,8 @@ public class SimonaEmProxy extends ConservativeSynchronizedProxy {
     public final DataQueueExtSimulationExtSimulator<ExtInputDataPackage> dataQueueOpsimToSimona;
     public final DataQueueExtSimulationExtSimulator<ExtResultPackage> dataQueueSimonaToOpsim;
 
-    public SimonaEmProxy(
-            ClientInterface client, Logger logger
-    ) {
-        this.logger = logger;
-        this.cli = client;
+    public SimonaEmProxy() {
+        super();
         this.dataQueueOpsimToSimona = new DataQueueExtSimulationExtSimulator<>();
         this.dataQueueSimonaToOpsim = new DataQueueExtSimulationExtSimulator<>();
     }
