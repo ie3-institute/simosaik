@@ -1,6 +1,9 @@
 package edu.ie3.simopsim.simopsimEm;
 
+import edu.ie3.datamodel.models.StandardUnits;
+import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.ResultEntity;
+import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.simona.api.data.*;
 import edu.ie3.simona.api.data.em.ExtEmData;
 import edu.ie3.simona.api.data.em.ExtEmDataSimulation;
@@ -15,11 +18,13 @@ import edu.ie3.simopsim.SimopsimUtils;
 import edu.ie3.simopsim.data.OpsimEmDataFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import tech.units.indriya.quantity.Quantities;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulation, ExtResultDataSimulation {
 
@@ -54,8 +59,8 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulat
     @Override
     public List<ExtData> getDataConnections() {
         return List.of(
-                extResultData,
-                extEmData
+                extEmData,
+                extResultData
         );
     }
 
@@ -67,23 +72,23 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulat
 
     @Override
     protected Optional<Long> doPreActivity(long tick) {
+        /*
         try {
-            Thread.sleep(500);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        */
         try {
             log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
             log.info("Wait for new EmData from OpSim...");
             ExtInputDataPackage rawEmData = simonaProxy.dataQueueOpsimToSimona.takeData();
-            log.info("Received Em from OpSim... now convert them to PSDM-Value");
             // send primary data for load1 and load2 to SIMONA
             extEmData.provideEmData(
                     tick,
-                    extEmData.createExtEmDataMap(
-                        rawEmData
-            ));
-            log.info("Provided Em Data to SIMONA");
+                    extEmData.createExtEmDataMap(rawEmData)
+            );
+            log.info("Provided EmData to SIMONA!");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -95,7 +100,7 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulat
         log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
         try {
             log.info("Request Results from SIMONA!");
-            Map<String, ResultEntity> resultsToBeSend = extResultData.requestResults(tick);
+            Map<String, ModelResultEntity> resultsToBeSend = extResultData.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
 
             simonaProxy.dataQueueSimonaToOpsim.queueData(new ExtResultPackage(tick, resultsToBeSend));

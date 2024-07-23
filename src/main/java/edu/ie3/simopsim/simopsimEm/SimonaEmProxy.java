@@ -23,6 +23,8 @@ import java.util.*;
 public class SimonaEmProxy extends SimonaProxy {
     private long delta = -1L;
     private long lastTimeStep = 0L;
+
+    private long initTimeStep = 0L;
     private Set<Asset> readable = new TreeSet<>(new AssetComparator());
     private Set<Asset> writable = new TreeSet<>(new AssetComparator());
 
@@ -68,6 +70,8 @@ public class SimonaEmProxy extends SimonaProxy {
                         this.delta = ao.getOperationInterval();
                     }
                 }
+                this.initTimeStep = cli.getClock().getActualTime().getMillis();
+                this.lastTimeStep = cli.getClock().getActualTime().getMillis();
 
                 this.logger.info("Component {}, got Readables: {}, Writables: {} and Delta: {}", new Object[]{this.componentDescription, this.readable.size(), this.writable.size(), this.delta});
                 return true;
@@ -84,7 +88,7 @@ public class SimonaEmProxy extends SimonaProxy {
     public Queue<OpSimMessage> step(Queue<OpSimMessage> inputFromClient, long timeStep) {
         logger.info(
                 componentDescription + " step call at simulation time = " + cli.getClock().getActualTime().getMillis() + " present timezone = " + cli.getCurrentSimulationTime());
-        if (timeStep < this.lastTimeStep + this.delta && timeStep != this.lastTimeStep) {
+        if (timeStep == this.initTimeStep || (timeStep < this.lastTimeStep + this.delta && timeStep != this.lastTimeStep)) {
             return null;
         } else {
             // Get message from Netzbetriebsfuehrung

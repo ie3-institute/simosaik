@@ -1,8 +1,9 @@
 package edu.ie3.simosaik.simosaikElectrolyzer;
 
 import ch.qos.logback.classic.Logger;
-import edu.ie3.datamodel.models.result.ResultEntity;
-import edu.ie3.simona.api.data.*;
+import edu.ie3.datamodel.models.result.ModelResultEntity;
+import edu.ie3.simona.api.data.ExtData;
+import edu.ie3.simona.api.data.ExtInputDataPackage;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultData;
@@ -12,7 +13,6 @@ import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingCsvSource;
-import edu.ie3.simosaik.RunSimosaik;
 import edu.ie3.simosaik.SimosaikUtils;
 import edu.ie3.simosaik.data.MosaikPrimaryDataFactory;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation implements ExtPr
                 mapping.getExtUuidIdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
                 mapping.getExtUuidIdMapping(ExtEntityEntry.EXT_RESULT_GRID)
         );
-        this.mosaikIP = mosaikIP;       //TODO: Read main arguments in initialize()
+        this.mosaikIP = mosaikIP;
     }
 
     @Override
@@ -100,7 +100,7 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation implements ExtPr
         log.info("+++++ [Phase 2-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
         try {
             log.info("Request Results from SIMONA!");
-            Map<String, ResultEntity> resultsToBeSend = extResultData.requestResults(tick);
+            Map<String, ModelResultEntity> resultsToBeSend = extResultData.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
 
             simonaElectrolyzerSimulator.dataQueueSimonaToMosaik.queueData(new ExtResultPackage(tick, resultsToBeSend));

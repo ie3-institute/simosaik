@@ -1,7 +1,7 @@
 package edu.ie3.simpleextsim;
 
 import ch.qos.logback.classic.Logger;
-import edu.ie3.datamodel.models.result.ResultEntity;
+import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.simona.api.data.*;
@@ -109,7 +109,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
 
         log.info("Request Results from SIMONA!");
         try {
-            Map<String, ResultEntity> resultsFromSimona = extResultData.requestResults(tick);
+            Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
 
             log.info("Received results from SIMONA!");
 
