@@ -96,7 +96,7 @@ public class SimonaEmProxy extends SimonaProxy {
             try {
                 logger.info("Received messages for " + this.cli.getCurrentSimulationTime().toString());
                 Map<String, ExtInputDataValue> dataForSimona = SimopsimUtils.createInputMap(inputFromClient);
-                dataQueueOpsimToSimona.queueData(new ExtInputDataPackage(dataForSimona));
+                dataQueueOpsimToSimona.queueData(new ExtInputDataPackage(dataForSimona, Optional.empty()));
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

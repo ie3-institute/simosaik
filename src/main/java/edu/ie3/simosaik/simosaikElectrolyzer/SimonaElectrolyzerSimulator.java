@@ -117,10 +117,12 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
             Map<String, Object> inputs,
             long maxAdvance
     ) throws Exception {
+        long nextTick = time + this.stepSize;
         try {
             logger.info("Got inputs from MOSAIK for tick = " + time);
             ExtInputDataPackage primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
-                    inputs
+                    inputs,
+                    nextTick
             );
             logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
             dataQueueMosaikToSimona.queueData(primaryDataForSimona);
@@ -128,7 +130,7 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        return time + this.stepSize;
+        return nextTick;
     }
 
     @Override

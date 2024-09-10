@@ -71,14 +71,38 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulat
     }
 
     @Override
-    protected Optional<Long> doPreActivity(long tick) {
-        /*
+    protected Optional<Long> doActivity(long tick) {
         try {
-            Thread.sleep(1000);
+            log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
+            log.info("Wait for new EmData from OpSim...");
+            ExtInputDataPackage rawEmData = simonaProxy.dataQueueOpsimToSimona.takeData();
+            // send primary data for load1 and load2 to SIMONA
+            extEmData.provideEmData(
+                    tick,
+                    extEmData.createExtEmDataMap(rawEmData)
+            );
+            log.info("Provided EmData to SIMONA!");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        */
+        long nextTick = tick + deltaT;
+        try {
+            log.info("Request Results from SIMONA!");
+            Map<String, ModelResultEntity> resultsToBeSend = extResultData.requestResults(tick);
+            log.info("Received results from SIMONA! Now convert them and send them to OpSim!");
+
+            simonaProxy.dataQueueSimonaToOpsim.queueData(new ExtResultPackage(tick, resultsToBeSend));
+            //log.info("+++++ [Phase 2-Activity] Tick = " + tick + " finished +++++");
+            log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return Optional.of(nextTick);
+    }
+
+    /*
+    @Override
+    protected Optional<Long> doPreActivity(long tick) {
         try {
             log.info("+++++ [Phase 1-Activity] Tick = " + tick + ", current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
             log.info("Wait for new EmData from OpSim...");
@@ -112,4 +136,6 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulat
             throw new RuntimeException(e);
         }
     }
+
+     */
 }

@@ -54,13 +54,13 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
 
     @Override
     protected Long initialize() {
-        log.info("Main args handed over to external simulation: {}", Arrays.toString(getMainArgs()));
+        log.info("+++ Main args handed over to external simulation: {} +++", Arrays.toString(getMainArgs()));
         return 0L;
     }
 
     @Override
-    protected Optional<Long> doPreActivity(long tick) {
-        log.info("+++++++++++++++++++++++++++ PreActivities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
+    protected Optional<Long> doActivity(long tick) {
+        log.info("+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
 
         Map<String, ExtInputDataValue> extSimData = new HashMap<>();
 
@@ -79,7 +79,8 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
         );
 
         ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(
-                extSimData
+                extSimData,
+                Optional.of(nextTick)
         );
 
 
@@ -87,7 +88,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
         extEmData.provideEmData(tick, extEmData.createExtEmDataMap(
                 extInputDataPackage
         ));
-        log.info("Provide Primary Data to SIMONA for "
+        log.info("[" + tick + "] Provide Primary Data to SIMONA for "
                 + EM_CONTROLLER_3.getId()
                 + " ("
                 + EM_CONTROLLER_3.getUuid()
@@ -99,23 +100,19 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
                 + EM_CONTROLLER_4.getUuid()
                 + ") with "
                 + EM_CONTROLLER_4.getSetPoint(phase)
-                + ".");
-        return Optional.of(nextTick);
-    }
+                + ".\n");
 
-    @Override
-    protected Optional<Long> doPostActivity(long tick) {
-        log.info("+++++++++++++++++++++++++++ PostActivities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
 
-        log.info("Request Results from SIMONA!");
+        log.info("[" + tick + "] Request Results from SIMONA!");
+
         try {
             Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
 
-            log.info("Received results from SIMONA!");
+            log.info("[" + tick + "] Received results from SIMONA for " + resultsFromSimona.keySet());
 
             resultsFromSimona.forEach(
                     (id, result) -> {
-                        log.info("(uuid = " + id + ", result = " + result);
+                        log.info("uuid = " + id + ", result = " + result);
                         if (result instanceof PvResult spResult) {
                             if (PV_1.equals(id)) {
                                 log.debug("Tick " + tick + ": SIMONA calculated the power of pv1 (" + PV_1 + ") with " + spResult);
@@ -141,13 +138,10 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
                         }
                     }
             );
-
-            long nextTick = tick + deltaT;
-
-            log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
-            return Optional.of(nextTick);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
+        return Optional.of(nextTick);
     }
 }

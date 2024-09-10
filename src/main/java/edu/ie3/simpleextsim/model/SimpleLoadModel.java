@@ -22,6 +22,14 @@ public class SimpleLoadModel {
         this.timeSeries = timeSeries;
     }
 
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public String getId() {
+        return id;
+    }
+
     public PValue getPower(Long tick) {
         return timeSeries.get(tick);
     }

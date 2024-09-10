@@ -66,9 +66,49 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation implements ExtPr
             simonaElectrolyzerSimulator.setMapping(mapping);
             SimosaikUtils.startMosaikSimulation(simonaElectrolyzerSimulator, mosaikIP);
         }
+        log.info("+++++++++++++++++++++++++++ initialization of the external simulation completed +++++++++++++++++++++++++++");
         return 0L;
     }
 
+    @Override
+    protected Optional<Long> doActivity(long tick) {
+        log.info("+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            log.info("+++++ [Tick = " + tick + "] current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
+            ExtInputDataPackage rawPrimaryData = simonaElectrolyzerSimulator.dataQueueMosaikToSimona.takeData();
+            log.debug("Received Primary Data from Mosaik = " + rawPrimaryData);
+
+            extPrimaryData.providePrimaryData(
+                    tick,
+                    extPrimaryData.createExtPrimaryDataMap(
+                            rawPrimaryData
+                    ),
+                    rawPrimaryData.getMaybeNextTick()
+            );
+            log.info("Provided Primary Data to SIMONA");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        long nextTick = tick + deltaT;
+         try {
+            log.info("Request Results from SIMONA!");
+            Map<String, ModelResultEntity> resultsToBeSend = extResultData.requestResults(tick);
+            log.info("Received results from SIMONA! Now convert them and send them to Mosaik!");
+
+            simonaElectrolyzerSimulator.dataQueueSimonaToMosaik.queueData(new ExtResultPackage(tick, resultsToBeSend));
+            log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return Optional.of(nextTick);
+    }
+
+    /*
     @Override
     protected Optional<Long> doPreActivity(long tick) {
         try {
@@ -112,4 +152,6 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation implements ExtPr
             throw new RuntimeException(e);
         }
     }
+
+     */
 }
