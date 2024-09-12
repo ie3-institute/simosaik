@@ -83,12 +83,12 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
                 Optional.of(nextTick)
         );
 
+        extEmData.provideEmData(
+                tick,
+                extEmData.createExtEmDataMap(extInputDataPackage),
+                Optional.of(nextTick));
 
-        // send primary data for load1 and load2 to SIMONA
-        extEmData.provideEmData(tick, extEmData.createExtEmDataMap(
-                extInputDataPackage
-        ));
-        log.info("[" + tick + "] Provide Primary Data to SIMONA for "
+        log.info("[" + tick + "] Provide EmData to SIMONA for "
                 + EM_CONTROLLER_3.getId()
                 + " ("
                 + EM_CONTROLLER_3.getUuid()
@@ -100,8 +100,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
                 + EM_CONTROLLER_4.getUuid()
                 + ") with "
                 + EM_CONTROLLER_4.getSetPoint(phase)
-                + ".\n");
-
+                + ".");
 
         log.info("[" + tick + "] Request Results from SIMONA!");
 
