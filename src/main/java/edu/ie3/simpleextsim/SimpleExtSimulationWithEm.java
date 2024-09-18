@@ -79,6 +79,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
         );
 
         ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(
+                tick,
                 extSimData,
                 Optional.of(nextTick)
         );
