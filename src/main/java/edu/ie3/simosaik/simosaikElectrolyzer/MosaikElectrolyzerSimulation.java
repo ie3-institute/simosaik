@@ -79,7 +79,6 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation implements ExtPr
             throw new RuntimeException(e);
         }
         try {
-            log.info("+++++ [Tick = " + tick + "] current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
             ExtInputDataPackage rawPrimaryData = simonaElectrolyzerSimulator.dataQueueMosaikToSimona.takeData();
             log.debug("Received Primary Data from Mosaik = " + rawPrimaryData);
 

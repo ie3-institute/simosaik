@@ -74,7 +74,7 @@ public class OpsimEmSimulation extends ExtSimulation implements ExtEmDataSimulat
     protected Optional<Long> doActivity(long tick) {
         long nextTick = tick + deltaT;
         try {
-            log.info("+++++ [" + tick + "] current simulation time = " + extResultData.getSimulationTime(tick) + " +++++");
+            log.info("+++++ External simulation triggered for tick " + tick + " +++++");
             log.info("Wait for new EmData from OpSim...");
             ExtInputDataPackage rawEmData = simonaProxy.dataQueueOpsimToSimona.takeData();
             extEmData.provideEmData(

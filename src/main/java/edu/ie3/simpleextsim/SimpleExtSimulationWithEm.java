@@ -103,7 +103,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
                 + EM_CONTROLLER_4.getSetPoint(phase)
                 + ".");
 
-        log.info("[" + tick + "] Request Results from SIMONA!");
+        log.debug("[" + tick + "] Request Results from SIMONA!");
 
         try {
             Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
@@ -112,24 +112,23 @@ public class SimpleExtSimulationWithEm extends ExtSimulation implements ExtEmDat
 
             resultsFromSimona.forEach(
                     (id, result) -> {
-                        log.info("uuid = " + id + ", result = " + result);
                         if (result instanceof PvResult spResult) {
                             if (PV_1.equals(id)) {
                                 log.debug("Tick " + tick + ": SIMONA calculated the power of pv1 (" + PV_1 + ") with " + spResult);
-                                log.info("SIMONA calculated the power of pv1 (" + PV_1 + ") with p = " + spResult.getP());
+                                log.info("[" + tick + "] SIMONA calculated the power of " + PV_1 + " with p = " + spResult.getP());
                             } else if (PV_2.equals(id)) {
                                 log.debug("Tick " + tick + ": SIMONA calculated the power of pv2 (" + PV_2 + ") with " + spResult);
-                                log.info("SIMONA calculated the power of pv2 (" + PV_2 + ") with p = " + spResult.getP());
+                                log.info("[" + tick + "] SIMONA calculated the power of " + PV_2 + " with p = " + spResult.getP());
                             } else {
                                 log.error("Received a result from SIMONA for uuid {}, but I don't expect this entity!", id);
                             }
                         } else if (result instanceof EmResult emResult){
                             if (EM_3.equals(id)) {
                                 log.debug("Tick " + tick + ": SIMONA calculated the power of em3 (" + EM_3 + ") with " + emResult);
-                                log.info("SIMONA calculated the power of em3 (" + EM_3 + ") with p = " + emResult.getP());
+                                log.info("[" + tick + "] SIMONA calculated the power of " + EM_3 + " with p = " + emResult.getP());
                             } else if (EM_4.equals(id)) {
                                 log.debug("Tick " + tick + ": SIMONA calculated the power of em4 (" + EM_4 + ") with " + emResult);
-                                log.info("SIMONA calculated the power of em4 (" + EM_4 + ") with p = " + emResult.getP());
+                                log.info("[" + tick + "] SIMONA calculated the power of " + EM_4 + " with p = " + emResult.getP());
                             } else {
                                 log.error("Received a result from SIMONA for uuid {}, but I don't expect this entity!", id);
                             }
