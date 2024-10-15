@@ -37,10 +37,11 @@ public class SimosaikUtils {
 
     /** Converts input data from MOSAIK to a data format that can be read by SIMONA API */
     public static ExtInputDataPackage createSimosaikPrimaryDataWrapper(
+            long currentTick,
             Map<String, Object> mosaikInput,
             long nextTick
     ) {
-        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(nextTick);
+        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(currentTick, nextTick);
         mosaikInput.forEach(
                 (assetId, inputValue) -> {
                     extInputDataPackage.addValue(

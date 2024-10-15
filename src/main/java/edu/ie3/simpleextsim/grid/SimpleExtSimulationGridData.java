@@ -20,6 +20,9 @@ public class SimpleExtSimulationGridData {
     public final static String LOAD_1 = "LOAD_NS_Node_1";
     public final static String LOAD_2 = "LOAD_NS_Node_2";
 
+    public final static String NODE_1 = "Node_1";
+    public final static String NODE_2 = "Node_2";
+
     public final static UUID EM_3_UUID = UUID.fromString("fd1a8de9-722a-4304-8799-e1e976d9979c");
     public final static UUID EM_4_UUID = UUID.fromString("ff0b995a-86ff-4f4d-987e-e475a64f2180");
 
@@ -28,6 +31,9 @@ public class SimpleExtSimulationGridData {
 
     public final static UUID PV_1_UUID = UUID.fromString("a1eb7fc1-3bee-4b65-a387-ef3046644bf0");
     public final static UUID PV_2_UUID = UUID.fromString("9d7cd8e2-d859-4f4f-9c01-abba06ef2e2c");
+
+    public final static UUID NODE_1_UUID = UUID.fromString("00d03670-7833-47ee-ad52-04d18d1c64fd");
+    public final static UUID NODE_2_UUID = UUID.fromString("dfae9806-9b44-4995-ba27-d66d8e4a43e0");
 
     private SimpleExtSimulationGridData() {}
 

@@ -121,6 +121,7 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
         try {
             logger.info("Got inputs from MOSAIK for tick = " + time);
             ExtInputDataPackage primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
+                    time,
                     inputs,
                     nextTick
             );
