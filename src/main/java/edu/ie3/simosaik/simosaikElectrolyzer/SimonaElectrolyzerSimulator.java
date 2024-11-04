@@ -151,7 +151,7 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
 
     public void setMapping(ExtEntityMapping mapping) {
         this.mapping = mapping;
-        this.simonaPrimaryEntities = this.mapping.getExtIdUuidMapping(EXT_INPUT).keySet().toArray(new String[0]);
-        this.simonaResultEntities = this.mapping.getExtIdUuidMapping(EXT_RESULT_GRID).keySet().toArray(new String[0]);
+        this.simonaPrimaryEntities = this.mapping.getExtId2UuidMapping(EXT_INPUT).keySet().toArray(new String[0]);
+        this.simonaResultEntities = this.mapping.getExtId2UuidMapping(EXT_RESULT_GRID).keySet().toArray(new String[0]);
     }
 }

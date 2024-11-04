@@ -7,14 +7,9 @@ import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.simona.api.data.ExtData;
 import edu.ie3.simona.api.data.ExtInputDataPackage;
 import edu.ie3.simona.api.data.ExtInputDataValue;
-import edu.ie3.simona.api.data.em.ExtEmData;
-import edu.ie3.simona.api.data.em.ExtEmDataSimulation;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataSimulation;
 import edu.ie3.simona.api.data.results.ExtResultData;
-import edu.ie3.simona.api.data.results.ExtResultDataSimulation;
 import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simpleextsim.data.SimpleEmDataFactory;
 import edu.ie3.simpleextsim.data.SimpleExtSimValue;
 import edu.ie3.simpleextsim.data.SimplePrimaryDataFactory;
 import org.slf4j.LoggerFactory;
@@ -26,7 +21,7 @@ import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
 /**
  * Simple example for an external simulation, that calculates set points for two em agents, and gets power for two pv plants from SIMONA.
  */
-public class SimpleExtSimulationWithPrimaryData extends ExtSimulation implements ExtPrimaryDataSimulation, ExtResultDataSimulation {
+public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
 
     private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulationWithPrimaryData");
 
