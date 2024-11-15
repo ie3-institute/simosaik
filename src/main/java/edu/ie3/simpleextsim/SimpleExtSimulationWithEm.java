@@ -1,15 +1,17 @@
 package edu.ie3.simpleextsim;
 
-import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
-import edu.ie3.simona.api.data.*;
-import edu.ie3.simona.api.data.em.ExtEmData;
-import edu.ie3.simona.api.data.results.ExtResultData;
+import edu.ie3.simona.api.data.ExtDataConnection;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.ExtInputDataValue;
+import edu.ie3.simona.api.data.em.ExtEmDataConnection;
+import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simpleextsim.data.SimpleEmDataFactory;
 import edu.ie3.simpleextsim.data.SimpleExtSimValue;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
@@ -21,22 +23,22 @@ import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
  */
 public class SimpleExtSimulationWithEm extends ExtSimulation {
 
-    private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulationWithEm");
+    private final Logger log = LoggerFactory.getLogger(SimpleExtSimulationWithEm.class);
 
-    private final ExtEmData extEmData;
-    private final ExtResultData extResultData;
+    private final ExtEmDataConnection extEmData;
+    private final ExtResultDataConnection extResultData;
 
     private final long deltaT = 900L;
 
     public SimpleExtSimulationWithEm() {
-        this.extEmData = new ExtEmData(
+        this.extEmData = new ExtEmDataConnection(
                 new SimpleEmDataFactory(),
                 Map.of(
                         EM_3, EM_3_UUID,
                         EM_4, EM_4_UUID
                 )
         );
-        this.extResultData = new ExtResultData(
+        this.extResultData = new ExtResultDataConnection(
                 Map.of(
                         PV_1_UUID, PV_1,
                         PV_2_UUID, PV_2
@@ -46,7 +48,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
     }
 
     @Override
-    public List<ExtData> getDataConnections() {
+    public List<ExtDataConnection> getDataConnections() {
         return List.of(extEmData, extResultData);
     }
 

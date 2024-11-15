@@ -1,16 +1,17 @@
 package edu.ie3.simpleextsim;
 
-import ch.qos.logback.classic.Logger;
+import edu.ie3.datamodel.models.input.EmInput;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.NodeResult;
-import edu.ie3.simona.api.data.ExtData;
+import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.ExtInputDataValue;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
-import edu.ie3.simona.api.data.results.ExtResultData;
+import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
+import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simpleextsim.data.SimpleExtSimValue;
 import edu.ie3.simpleextsim.data.SimplePrimaryDataFactory;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
@@ -22,22 +23,23 @@ import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
  */
 public class SimpleExtSimulationWithPowerFlow extends ExtSimulation {
 
-    private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulationWithPowerFlow");
+    private final Logger log = LoggerFactory.getLogger("SimpleExtSimulationWithPowerFlow");
 
-    private final ExtPrimaryData extPrimaryData;
-    private final ExtResultData extResultData;
+    private final ExtPrimaryDataConnection extPrimaryData;
+    private final ExtResultDataConnection extResultData;
 
     private final long deltaT = 900L;
 
     public SimpleExtSimulationWithPowerFlow() {
-        this.extPrimaryData = new ExtPrimaryData(
+        this.extPrimaryData = new ExtPrimaryDataConnection(
                 new SimplePrimaryDataFactory(),
                 Map.of(
                         LOAD_1, LOAD_1_UUID,
                         LOAD_2, LOAD_2_UUID
-                )
+                ),
+                List.of(EmInput.class)
         );
-        this.extResultData = new ExtResultData(
+        this.extResultData = new ExtResultDataConnection(
                 Collections.emptyMap(),
                 Map.of(
                         NODE_1_UUID, NODE_1,
@@ -47,7 +49,7 @@ public class SimpleExtSimulationWithPowerFlow extends ExtSimulation {
     }
 
     @Override
-    public List<ExtData> getDataConnections() {
+    public List<ExtDataConnection> getDataConnections() {
         return List.of(extPrimaryData, extResultData);
     }
 

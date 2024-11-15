@@ -1,18 +1,19 @@
 package edu.ie3.simosaik.simosaikElectrolyzer;
 
-import ch.qos.logback.classic.Logger;
+import edu.ie3.datamodel.models.input.system.LoadInput;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
-import edu.ie3.simona.api.data.ExtData;
+import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
-import edu.ie3.simona.api.data.results.ExtResultData;
+import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
+import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingCsvSource;
 import edu.ie3.simosaik.SimosaikUtils;
 import edu.ie3.simosaik.data.MosaikPrimaryDataFactory;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
@@ -22,9 +23,9 @@ import java.util.Optional;
 
 public class MosaikElectrolyzerSimulation extends ExtSimulation {
 
-    private final ch.qos.logback.classic.Logger log = (Logger) LoggerFactory.getLogger("MosaikSimulation");
-    private final ExtPrimaryData extPrimaryData;
-    private final ExtResultData extResultData;
+    private final Logger log = LoggerFactory.getLogger("MosaikSimulation");
+    private final ExtPrimaryDataConnection extPrimaryData;
+    private final ExtResultDataConnection extResultData;
     private final long deltaT = 900L;
     private final String mosaikIP;
 
@@ -39,11 +40,12 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation {
             Path mappingPath
     ) {
         this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(mappingPath);
-        this.extPrimaryData = new ExtPrimaryData(
+        this.extPrimaryData = new ExtPrimaryDataConnection(
                 new MosaikPrimaryDataFactory(),
-                mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_INPUT)
+                mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_INPUT),
+                List.of(LoadInput.class)
         );
-        this.extResultData = new ExtResultData(
+        this.extResultData = new ExtResultDataConnection(
                 mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
                 mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_GRID)
         );
@@ -51,7 +53,7 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation {
     }
 
     @Override
-    public List<ExtData> getDataConnections() {
+    public List<ExtDataConnection> getDataConnections() {
         return List.of(extPrimaryData, extResultData);
     }
 
