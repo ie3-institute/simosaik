@@ -4,7 +4,7 @@ import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.NodeResult;
 import edu.ie3.simona.api.data.ExtData;
-import edu.ie3.simona.api.data.ExtInputDataPackage;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
 import edu.ie3.simona.api.data.results.ExtResultData;
@@ -77,7 +77,7 @@ public class SimpleExtSimulationWithPowerFlow extends ExtSimulation {
                 new SimpleExtSimValue(LOAD_MODEL_2.getPower(phase))
         );
 
-        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(
+        ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(
                 tick,
                 extSimData,
                 Optional.of(nextTick)

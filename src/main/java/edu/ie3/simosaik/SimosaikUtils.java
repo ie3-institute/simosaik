@@ -1,9 +1,8 @@
 package edu.ie3.simosaik;
 
-import edu.ie3.simona.api.data.ExtInputDataPackage;
-import edu.ie3.simona.api.data.results.ExtResultPackage;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simosaik.data.SimosaikValue;
-import edu.ie3.simosaik.simosaikElectrolyzer.SimonaElectrolyzerSimulator;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,12 +35,12 @@ public class SimosaikUtils {
     }
 
     /** Converts input data from MOSAIK to a data format that can be read by SIMONA API */
-    public static ExtInputDataPackage createSimosaikPrimaryDataWrapper(
+    public static ExtInputDataContainer createSimosaikPrimaryDataWrapper(
             long currentTick,
             Map<String, Object> mosaikInput,
             long nextTick
     ) {
-        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(currentTick, nextTick);
+        ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(currentTick, nextTick);
         mosaikInput.forEach(
                 (assetId, inputValue) -> {
                     extInputDataPackage.addValue(
@@ -78,7 +77,7 @@ public class SimosaikUtils {
      */
     public static Map<String, Object> createSimosaikOutputMap(
             Map<String, List<String>> mosaikRequestedAttributes,
-            ExtResultPackage simonaResults
+            ExtResultContainer simonaResults
     ) {
         Map<String, Object> outputMap = new HashMap<>();
         mosaikRequestedAttributes.forEach(
@@ -98,7 +97,7 @@ public class SimosaikUtils {
         return outputMap;
     }
 
-    private static void addResult(ExtResultPackage results, String id, String attr, Map<String, Object> outputMap) {
+    private static void addResult(ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
         if (attr.equals(MOSAIK_VOLTAGE_DEVIATION)) {
             if (results.getTick() == 0L) {
                 outputMap.put(attr, 0d);

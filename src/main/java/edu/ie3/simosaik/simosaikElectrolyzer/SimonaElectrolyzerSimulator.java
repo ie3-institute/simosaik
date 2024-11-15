@@ -2,8 +2,8 @@ package edu.ie3.simosaik.simosaikElectrolyzer;
 
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
-import edu.ie3.simona.api.data.ExtInputDataPackage;
-import edu.ie3.simona.api.data.results.ExtResultPackage;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.SimonaSimulator;
 import edu.ie3.simosaik.SimosaikUtils;
@@ -45,8 +45,8 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
             + "    }"
             + "}").replace("'", "\""));
 
-    public final DataQueueExtSimulationExtSimulator<ExtInputDataPackage> dataQueueMosaikToSimona;
-    public final DataQueueExtSimulationExtSimulator<ExtResultPackage> dataQueueSimonaToMosaik;
+    public final DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
+    public final DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
 
     private String[] simonaPrimaryEntities;
     private String[] simonaResultEntities;
@@ -120,7 +120,7 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
         long nextTick = time + this.stepSize;
         try {
             logger.info("Got inputs from MOSAIK for tick = " + time);
-            ExtInputDataPackage primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
+            ExtInputDataContainer primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
                     time,
                     inputs,
                     nextTick
@@ -139,7 +139,7 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
             Map<String, List<String>> map
     ) throws Exception {
         logger.info("Got a request from MOSAIK to provide data!");
-        ExtResultPackage results = dataQueueSimonaToMosaik.takeData();
+        ExtResultContainer results = dataQueueSimonaToMosaik.takeData();
         logger.info("Got results from SIMONA for MOSAIK!");
         Map<String, Object> data = SimosaikUtils.createSimosaikOutputMap(
                 map,

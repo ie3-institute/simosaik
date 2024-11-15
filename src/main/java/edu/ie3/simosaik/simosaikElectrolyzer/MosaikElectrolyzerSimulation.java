@@ -3,10 +3,10 @@ package edu.ie3.simosaik.simosaikElectrolyzer;
 import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.simona.api.data.ExtData;
-import edu.ie3.simona.api.data.ExtInputDataPackage;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
 import edu.ie3.simona.api.data.results.ExtResultData;
-import edu.ie3.simona.api.data.results.ExtResultPackage;
+import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.ExtSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
@@ -77,7 +77,7 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation {
             throw new RuntimeException(e);
         }
         try {
-            ExtInputDataPackage rawPrimaryData = simonaElectrolyzerSimulator.dataQueueMosaikToSimona.takeData();
+            ExtInputDataContainer rawPrimaryData = simonaElectrolyzerSimulator.dataQueueMosaikToSimona.takeData();
             log.debug("Received Primary Data from Mosaik = " + rawPrimaryData);
 
             extPrimaryData.providePrimaryData(
@@ -97,7 +97,7 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation {
             Map<String, ModelResultEntity> resultsToBeSend = extResultData.requestResults(tick);
             log.info("Received results from SIMONA! Now convert them and send them to Mosaik!");
 
-            simonaElectrolyzerSimulator.dataQueueSimonaToMosaik.queueData(new ExtResultPackage(tick, resultsToBeSend));
+            simonaElectrolyzerSimulator.dataQueueSimonaToMosaik.queueData(new ExtResultContainer(tick, resultsToBeSend));
             log.info("***** External simulation for tick " + tick + " completed. Next simulation tick = " + nextTick + " *****");
         } catch (InterruptedException e) {
             throw new RuntimeException(e);

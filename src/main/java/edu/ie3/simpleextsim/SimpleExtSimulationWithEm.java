@@ -76,7 +76,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
                 new SimpleExtSimValue(EM_CONTROLLER_4.getSetPoint(phase))
         );
 
-        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(
+        ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(
                 tick,
                 extSimData,
                 Optional.of(nextTick)
