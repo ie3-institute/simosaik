@@ -4,14 +4,12 @@ import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtData;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
 import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simpleextsim.data.SimpleExtSimValue;
-import edu.ie3.simpleextsim.data.SimplePrimaryDataFactory;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
@@ -23,7 +21,7 @@ import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
  */
 public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
 
-    private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulationWithPrimaryData");
+    private final Logger log = (Logger) LoggerFactory.getLogger(simulationName);
 
     private final ExtPrimaryData extPrimaryData;
     private final ExtResultData extResultData;
@@ -31,8 +29,8 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
     private final long deltaT = 900L;
 
     public SimpleExtSimulationWithPrimaryData() {
+        super("SimpleExtSimulationWithPrimaryData");
         this.extPrimaryData = new ExtPrimaryData(
-                new SimplePrimaryDataFactory(),
                 Map.of(
                         LOAD_1, LOAD_1_UUID,
                         LOAD_2, LOAD_2_UUID
@@ -62,7 +60,7 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
     protected Optional<Long> doActivity(long tick) {
         log.info("+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
 
-        Map<String, ExtInputDataValue> extSimData = new HashMap<>();
+        Map<String, Value> extSimData = new HashMap<>();
 
         long phase = (tick / 2000) % 4;
 
@@ -70,26 +68,26 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
 
         extSimData.put(
                 LOAD_MODEL_1.getId(),
-                new SimpleExtSimValue(LOAD_MODEL_1.getPower(phase))
+                LOAD_MODEL_1.getPower(phase)
         );
 
         extSimData.put(
                 LOAD_MODEL_2.getId(),
-                new SimpleExtSimValue(LOAD_MODEL_2.getPower(phase))
+                LOAD_MODEL_2.getPower(phase)
         );
 
-        ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(
+        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(
                 tick,
                 extSimData,
-                Optional.of(nextTick)
+                nextTick
         );
 
 
         // send primary data for load1 and load2 to SIMONA
         extPrimaryData.providePrimaryData(
                 tick,
-                extPrimaryData.createExtPrimaryDataMap(extInputDataPackage),
-                extInputDataPackage.getMaybeNextTick()
+                extPrimaryData.convertExternalInputToPrimaryData(extInputDataContainer),
+                extInputDataContainer.getMaybeNextTick()
         );
         log.info("[" + tick + "] Provide Primary Data to SIMONA for "
                 + LOAD_MODEL_1.getId()

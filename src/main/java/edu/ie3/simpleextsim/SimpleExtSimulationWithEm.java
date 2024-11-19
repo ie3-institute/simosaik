@@ -4,12 +4,12 @@ import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
-import edu.ie3.simona.api.data.*;
+import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.data.ExtData;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.ExtEmData;
 import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simpleextsim.data.SimpleEmDataFactory;
-import edu.ie3.simpleextsim.data.SimpleExtSimValue;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
@@ -21,7 +21,7 @@ import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
  */
 public class SimpleExtSimulationWithEm extends ExtSimulation {
 
-    private final Logger log = (Logger) LoggerFactory.getLogger("SimpleExtSimulationWithEm");
+    private final Logger log = (Logger) LoggerFactory.getLogger(simulationName);
 
     private final ExtEmData extEmData;
     private final ExtResultData extResultData;
@@ -29,8 +29,8 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
     private final long deltaT = 900L;
 
     public SimpleExtSimulationWithEm() {
+        super("SimpleExtSimulationWithEm");
         this.extEmData = new ExtEmData(
-                new SimpleEmDataFactory(),
                 Map.of(
                         EM_3, EM_3_UUID,
                         EM_4, EM_4_UUID
@@ -60,7 +60,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
     protected Optional<Long> doActivity(long tick) {
         log.info("+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
 
-        Map<String, ExtInputDataValue> extSimData = new HashMap<>();
+        Map<String, Value> extSimData = new HashMap<>();
 
         long phase = (tick / 2000) % 4;
 
@@ -68,23 +68,23 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
 
         extSimData.put(
                 EM_CONTROLLER_3.getId(),
-                new SimpleExtSimValue(EM_CONTROLLER_3.getSetPoint(phase))
+                EM_CONTROLLER_3.getSetPoint(phase)
         );
 
         extSimData.put(
                 EM_CONTROLLER_4.getId(),
-                new SimpleExtSimValue(EM_CONTROLLER_4.getSetPoint(phase))
+                EM_CONTROLLER_4.getSetPoint(phase)
         );
 
-        ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(
+        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(
                 tick,
                 extSimData,
-                Optional.of(nextTick)
+                nextTick
         );
 
         extEmData.provideEmData(
                 tick,
-                extEmData.createExtEmDataMap(extInputDataPackage),
+                extEmData.createExtEmDataMap(extInputDataContainer),
                 Optional.of(nextTick));
 
         log.info("[" + tick + "] Provide EmData to SIMONA for "

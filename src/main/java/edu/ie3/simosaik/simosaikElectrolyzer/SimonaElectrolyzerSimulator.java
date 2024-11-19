@@ -45,8 +45,8 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
             + "    }"
             + "}").replace("'", "\""));
 
-    public final DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
-    public final DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
+    public DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
+    public DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
 
     private String[] simonaPrimaryEntities;
     private String[] simonaResultEntities;
@@ -55,8 +55,6 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
 
     public SimonaElectrolyzerSimulator() {
         super("SimonaPowerGrid");
-        this.dataQueueMosaikToSimona = new DataQueueExtSimulationExtSimulator<>();
-        this.dataQueueSimonaToMosaik = new DataQueueExtSimulationExtSimulator<>();
     }
 
     @Override
@@ -120,7 +118,7 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
         long nextTick = time + this.stepSize;
         try {
             logger.info("Got inputs from MOSAIK for tick = " + time);
-            ExtInputDataContainer primaryDataForSimona = SimosaikUtils.createSimosaikPrimaryDataWrapper(
+            ExtInputDataContainer primaryDataForSimona = SimosaikUtils.createExtInputDataContainer(
                     time,
                     inputs,
                     nextTick
@@ -149,9 +147,15 @@ public class SimonaElectrolyzerSimulator extends SimonaSimulator {
         return data;
     }
 
-    public void setMapping(ExtEntityMapping mapping) {
+    public void setConnectionToSimonaApi(
+            ExtEntityMapping mapping,
+            DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+            DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator
+    ) {
         this.mapping = mapping;
         this.simonaPrimaryEntities = this.mapping.getExtId2UuidMapping(EXT_INPUT).keySet().toArray(new String[0]);
         this.simonaResultEntities = this.mapping.getExtId2UuidMapping(EXT_RESULT_GRID).keySet().toArray(new String[0]);
+        this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
+        this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
     }
 }
