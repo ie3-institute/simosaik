@@ -40,7 +40,8 @@ public class SimosaikUtils {
       long currentTick, Map<String, Object> mosaikInput, long nextTick) {
     ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(currentTick, nextTick);
     mosaikInput.forEach(
-        (assetId, inputValue) -> extInputDataPackage.addValue(assetId, getSimosaikValue(inputValue)));
+        (assetId, inputValue) ->
+            extInputDataPackage.addValue(assetId, getSimosaikValue(inputValue)));
     return extInputDataPackage;
   }
 
@@ -50,9 +51,9 @@ public class SimosaikUtils {
     for (Map.Entry<String, Object> attr : attrs.entrySet()) {
       Object[] values = ((Map<String, Object>) attr.getValue()).values().toArray();
       float value = 0;
-        for (Object o : values) {
-            value += ((Number) o).floatValue();
-        }
+      for (Object o : values) {
+        value += ((Number) o).floatValue();
+      }
       convertedInputValueMap.put(attr.getKey(), value);
     }
     return new SimosaikValue(convertedInputValueMap);

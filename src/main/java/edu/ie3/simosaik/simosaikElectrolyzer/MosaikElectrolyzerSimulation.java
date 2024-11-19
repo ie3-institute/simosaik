@@ -6,6 +6,7 @@
 
 package edu.ie3.simosaik.simosaikElectrolyzer;
 
+import edu.ie3.ArgsParser;
 import edu.ie3.datamodel.models.input.system.LoadInput;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.simona.api.data.ExtDataConnection;
@@ -19,7 +20,6 @@ import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingCsvSource;
 import edu.ie3.simosaik.SimosaikUtils;
 import edu.ie3.simosaik.data.MosaikPrimaryDataFactory;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,8 +40,11 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation {
 
   private final ExtEntityMapping mapping;
 
-  public MosaikElectrolyzerSimulation(String mosaikIP, Path mappingPath) {
-    this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(mappingPath);
+  public MosaikElectrolyzerSimulation(String[] mainArgs) {
+    ArgsParser.Arguments arguments = ArgsParser.parse(mainArgs);
+
+    this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(arguments.mappingPath());
+
     this.extPrimaryData =
         new ExtPrimaryDataConnection(
             new MosaikPrimaryDataFactory(),
@@ -51,7 +54,8 @@ public class MosaikElectrolyzerSimulation extends ExtSimulation {
         new ExtResultDataConnection(
             mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
             mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_GRID));
-    this.mosaikIP = mosaikIP;
+
+    this.mosaikIP = arguments.mosaikIP();
   }
 
   @Override
