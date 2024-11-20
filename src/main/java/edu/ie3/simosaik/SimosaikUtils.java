@@ -45,11 +45,11 @@ public class SimosaikUtils {
             Map<String, Object> mosaikInput,
             long nextTick
     ) {
-        ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(currentTick, nextTick);
+        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(currentTick, nextTick);
         mosaikInput.forEach(
                 (assetId, inputValue) -> {
                     try {
-                        extInputDataPackage.addValue(
+                        extInputDataContainer.addValue(
                                 assetId,
                                 convertMosaikDataToValue(inputValue)
                         );
@@ -58,7 +58,7 @@ public class SimosaikUtils {
                     }
                 }
         );
-        return extInputDataPackage;
+        return extInputDataContainer;
     }
 
     private static Value convertMosaikDataToValue(
