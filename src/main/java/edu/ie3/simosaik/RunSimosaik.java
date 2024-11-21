@@ -7,17 +7,18 @@
 package edu.ie3.simosaik;
 
 import de.offis.mosaik.api.SimProcess;
+import edu.ie3.simosaik.mosaik.MosaikSimulator;
 
 /** Class to run SIMONA and MOSAIK in different threads */
 public class RunSimosaik implements Runnable {
 
   /** Simulator that extends the MOSAIK API */
-  private final SimonaSimulator simonaSimulator;
+  private final MosaikSimulator simonaSimulator;
 
   /** IP address for the connection to MOSAIK */
   private final String mosaikIP;
 
-  public RunSimosaik(String mosaikIP, SimonaSimulator simonaSimulator) {
+  public RunSimosaik(String mosaikIP, MosaikSimulator simonaSimulator) {
     this.simonaSimulator = simonaSimulator;
     this.mosaikIP = mosaikIP;
   }

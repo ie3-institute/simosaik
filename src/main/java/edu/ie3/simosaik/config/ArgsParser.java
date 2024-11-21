@@ -4,8 +4,10 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3;
+package edu.ie3.simosaik.config;
 
+import com.typesafe.config.ConfigFactory;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +22,8 @@ public class ArgsParser {
    * @param mosaikIP the IP of the socket
    * @param mappingPath of the ext mapping source
    */
-  public record Arguments(String[] mainArgs, String mosaikIP, Path mappingPath) {}
+  public record Arguments(
+      String[] mainArgs, String mosaikIP, Path mappingPath, SimosaikConfig simosaikConfig) {}
 
   /**
    * Method for parsing the provided arguments.
@@ -37,9 +40,13 @@ public class ArgsParser {
     }
 
     String mosaikIP = extract(parsedArgs, "--ext-address");
-    Path mappingPath = Path.of(extract(parsedArgs, "--mapping-path"));
 
-    return new Arguments(args, mosaikIP, mappingPath);
+    SimosaikConfig config =
+        new SimosaikConfig(ConfigFactory.parseFile(new File(extract(parsedArgs, "--config"))));
+
+    Path mappingPath = Path.of(config.simosaik.mappingPath);
+
+    return new Arguments(args, mosaikIP, mappingPath, config);
   }
 
   /**

@@ -8,42 +8,31 @@ package edu.ie3.simpleextsim;
 
 import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
 
-import edu.ie3.datamodel.models.input.EmInput;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.NodeResult;
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
-import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simpleextsim.data.SimpleExtSimValue;
-import edu.ie3.simpleextsim.data.SimplePrimaryDataFactory;
+import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import java.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Simple example for an external simulation, that calculates set points for two em agents, and gets
  * power for two pv plants from SIMONA.
  */
-public class SimpleExtSimulationWithPowerFlow extends ExtSimulation {
-
-  private final Logger log = LoggerFactory.getLogger("SimpleExtSimulationWithPowerFlow");
+public class SimpleExtSimulationWithPowerFlow extends ExtCoSimulation {
 
   private final ExtPrimaryDataConnection extPrimaryData;
   private final ExtResultDataConnection extResultData;
 
-  private final long deltaT = 900L;
-
   public SimpleExtSimulationWithPowerFlow() {
+    super(SimpleExtSimulationWithPowerFlow.class.getName());
     this.extPrimaryData =
         new ExtPrimaryDataConnection(
-            new SimplePrimaryDataFactory(),
             Map.of(
                 LOAD_1, LOAD_1_UUID,
-                LOAD_2, LOAD_2_UUID),
-            List.of(EmInput.class));
+                LOAD_2, LOAD_2_UUID));
     this.extResultData =
         new ExtResultDataConnection(
             Collections.emptyMap(),
@@ -70,44 +59,30 @@ public class SimpleExtSimulationWithPowerFlow extends ExtSimulation {
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
 
-    Map<String, ExtInputDataValue> extSimData = new HashMap<>();
+    Map<UUID, Value> extSimData = new HashMap<>();
 
     long phase = (tick / 2000) % 4;
 
     long nextTick = tick + deltaT;
 
-    extSimData.put(LOAD_MODEL_1.getId(), new SimpleExtSimValue(LOAD_MODEL_1.getPower(phase)));
+    extSimData.put(LOAD_MODEL_1.getUuid(), LOAD_MODEL_1.getPower(phase));
 
-    extSimData.put(LOAD_MODEL_2.getId(), new SimpleExtSimValue(LOAD_MODEL_2.getPower(phase)));
-
-    ExtInputDataContainer extInputDataPackage =
-        new ExtInputDataContainer(tick, extSimData, Optional.of(nextTick));
+    extSimData.put(LOAD_MODEL_2.getUuid(), LOAD_MODEL_2.getPower(phase));
 
     // send primary data for load1 and load2 to SIMONA
-
-    extPrimaryData.providePrimaryData(
-        tick,
-        extPrimaryData.createExtPrimaryDataMap(extInputDataPackage),
-        extInputDataPackage.getMaybeNextTick());
+    extPrimaryData.providePrimaryData(tick, extSimData, Optional.of(nextTick));
 
     log.info(
-        "["
-            + tick
-            + "] Provide Primary Data to SIMONA for "
-            + LOAD_MODEL_1.getId()
-            + " ("
-            + LOAD_MODEL_1.getUuid()
-            + ") with "
-            + LOAD_MODEL_1.getPower(phase)
-            + " and "
-            + LOAD_MODEL_2.getId()
-            + " ("
-            + LOAD_MODEL_2.getUuid()
-            + ") with "
-            + LOAD_MODEL_2.getPower(phase)
-            + ".");
+        "[{}] Provide Primary Data to SIMONA for {} ({}) with {} and {} ({}) with {}.",
+        tick,
+        LOAD_MODEL_1.getId(),
+        LOAD_MODEL_1.getUuid(),
+        LOAD_MODEL_1.getPower(phase),
+        LOAD_MODEL_2.getId(),
+        LOAD_MODEL_2.getUuid(),
+        LOAD_MODEL_2.getPower(phase));
 
-    log.debug("[" + tick + "] Request Results from SIMONA!");
+    log.debug("[{}] Request Results from SIMONA!", tick);
 
     try {
       Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);

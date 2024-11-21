@@ -11,39 +11,29 @@ import static edu.ie3.simpleextsim.grid.SimpleExtSimulationGridData.*;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.ExtInputDataValue;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
-import edu.ie3.simona.api.simulation.ExtSimulation;
-import edu.ie3.simpleextsim.data.SimpleExtSimValue;
-import edu.ie3.simpleextsim.data.SimplePrimaryDataFactory;
+import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import java.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Simple example for an external simulation, that calculates set points for two em agents, and gets
  * power for two pv plants from SIMONA.
  */
-public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
-
-  private final Logger log = LoggerFactory.getLogger("SimpleExtSimulationWithPrimaryData");
+public class SimpleExtSimulationWithPrimaryData extends ExtCoSimulation {
 
   private final ExtPrimaryDataConnection extPrimaryData;
   private final ExtResultDataConnection extResultData;
 
-  private final long deltaT = 900L;
-
   public SimpleExtSimulationWithPrimaryData() {
+    super(SimpleExtSimulationWithPrimaryData.class.getName());
     this.extPrimaryData =
         new ExtPrimaryDataConnection(
-            new SimplePrimaryDataFactory(),
             Map.of(
                 LOAD_1, LOAD_1_UUID,
-                LOAD_2, LOAD_2_UUID),
-            List.of());
+                LOAD_2, LOAD_2_UUID));
     this.extResultData =
         new ExtResultDataConnection(
             Map.of(
@@ -70,47 +60,35 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
 
-    Map<String, ExtInputDataValue> extSimData = new HashMap<>();
+    Map<UUID, Value> extSimData = new HashMap<>();
 
     long phase = (tick / 2000) % 4;
 
     long nextTick = tick + deltaT;
 
-    extSimData.put(LOAD_MODEL_1.getId(), new SimpleExtSimValue(LOAD_MODEL_1.getPower(phase)));
+    extSimData.put(LOAD_MODEL_1.getUuid(), LOAD_MODEL_1.getPower(phase));
 
-    extSimData.put(LOAD_MODEL_2.getId(), new SimpleExtSimValue(LOAD_MODEL_2.getPower(phase)));
-
-    ExtInputDataContainer extInputDataPackage =
-        new ExtInputDataContainer(tick, extSimData, Optional.of(nextTick));
+    extSimData.put(LOAD_MODEL_2.getUuid(), LOAD_MODEL_2.getPower(phase));
 
     // send primary data for load1 and load2 to SIMONA
-    extPrimaryData.providePrimaryData(
-        tick,
-        extPrimaryData.createExtPrimaryDataMap(extInputDataPackage),
-        extInputDataPackage.getMaybeNextTick());
-    log.info(
-        "["
-            + tick
-            + "] Provide Primary Data to SIMONA for "
-            + LOAD_MODEL_1.getId()
-            + " ("
-            + LOAD_MODEL_1.getUuid()
-            + ") with "
-            + LOAD_MODEL_1.getPower(phase)
-            + " and "
-            + LOAD_MODEL_2.getId()
-            + " ("
-            + LOAD_MODEL_2.getUuid()
-            + ") with "
-            + LOAD_MODEL_2.getPower(phase)
-            + ".");
+    extPrimaryData.providePrimaryData(tick, extSimData, Optional.of(nextTick));
 
-    log.info("[" + tick + "] Request Results from SIMONA!");
+    log.info(
+        "[{}] Provide Primary Data to SIMONA for {} ({}) with {} and {} ({}) with {}.",
+        tick,
+        LOAD_MODEL_1.getId(),
+        LOAD_MODEL_1.getUuid(),
+        LOAD_MODEL_1.getPower(phase),
+        LOAD_MODEL_2.getId(),
+        LOAD_MODEL_2.getUuid(),
+        LOAD_MODEL_2.getPower(phase));
+
+    log.info("[{}] Request Results from SIMONA!", tick);
 
     try {
       Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
 
-      log.info("[" + tick + "] Received results from SIMONA for " + resultsFromSimona.keySet());
+      log.info("[{}] Received results from SIMONA for {}", tick, resultsFromSimona.keySet());
 
       resultsFromSimona.forEach(
           (id, result) -> {
@@ -118,30 +96,20 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
             if (result instanceof PvResult spResult) {
               if (PV_1.equals(id)) {
                 log.debug(
-                    "Tick "
-                        + tick
-                        + ": SIMONA calculated the power of pv1 ("
-                        + PV_1
-                        + ") with "
-                        + spResult);
+                    "Tick {}: SIMONA calculated the power of pv1 (" + PV_1 + ") with {}",
+                    tick,
+                    spResult);
                 log.info(
-                    "SIMONA calculated the power of pv1 ("
-                        + PV_1
-                        + ") with p = "
-                        + spResult.getP());
+                    "SIMONA calculated the power of pv1 (" + PV_1 + ") with p = {}",
+                    spResult.getP());
               } else if (PV_2.equals(id)) {
                 log.debug(
-                    "Tick "
-                        + tick
-                        + ": SIMONA calculated the power of pv2 ("
-                        + PV_2
-                        + ") with "
-                        + spResult);
+                    "Tick {}: SIMONA calculated the power of pv2 (" + PV_2 + ") with {}",
+                    tick,
+                    spResult);
                 log.info(
-                    "SIMONA calculated the power of pv2 ("
-                        + PV_2
-                        + ") with p = "
-                        + spResult.getP());
+                    "SIMONA calculated the power of pv2 (" + PV_2 + ") with p = {}",
+                    spResult.getP());
               } else {
                 log.error(
                     "Received a result from SIMONA for uuid {}, but I don't expect this entity!",
@@ -150,30 +118,20 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
             } else if (result instanceof EmResult emResult) {
               if (EM_3.equals(id)) {
                 log.debug(
-                    "Tick "
-                        + tick
-                        + ": SIMONA calculated the power of em3 ("
-                        + EM_3
-                        + ") with "
-                        + emResult);
+                    "Tick {}: SIMONA calculated the power of em3 (" + EM_3 + ") with {}",
+                    tick,
+                    emResult);
                 log.info(
-                    "SIMONA calculated the power of em3 ("
-                        + EM_3
-                        + ") with p = "
-                        + emResult.getP());
+                    "SIMONA calculated the power of em3 (" + EM_3 + ") with p = {}",
+                    emResult.getP());
               } else if (EM_4.equals(id)) {
                 log.debug(
-                    "Tick "
-                        + tick
-                        + ": SIMONA calculated the power of em4 ("
-                        + EM_4
-                        + ") with "
-                        + emResult);
+                    "Tick {}: SIMONA calculated the power of em4 (" + EM_4 + ") with {}",
+                    tick,
+                    emResult);
                 log.info(
-                    "SIMONA calculated the power of em4 ("
-                        + EM_4
-                        + ") with p = "
-                        + emResult.getP());
+                    "SIMONA calculated the power of em4 (" + EM_4 + ") with p = {}",
+                    emResult.getP());
               } else {
                 log.error(
                     "Received a result from SIMONA for uuid {}, but I don't expect this entity!",
@@ -187,11 +145,9 @@ public class SimpleExtSimulationWithPrimaryData extends ExtSimulation {
       throw new RuntimeException(e);
     }
     log.info(
-        "***** External simulation for tick "
-            + tick
-            + " completed. Next simulation tick = "
-            + nextTick
-            + " *****");
+        "***** External simulation for tick {} completed. Next simulation tick = {} *****",
+        tick,
+        nextTick);
     return Optional.of(nextTick);
   }
 }

@@ -10,7 +10,7 @@ import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
-import edu.ie3.simosaik.data.SimosaikValue;
+import edu.ie3.simosaik.mosaik.MosaikSimulator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +26,7 @@ public class SimosaikUtils {
    * @param simonaSimulator Simulator that extends the MOSAIK API
    * @param mosaikIP IP address for the connection with MOSAIK
    */
-  public static void startMosaikSimulation(SimonaSimulator simonaSimulator, String mosaikIP) {
+  public static void startMosaikSimulation(MosaikSimulator simonaSimulator, String mosaikIP) {
     try {
       RunSimosaik simosaikRunner = new RunSimosaik(mosaikIP, simonaSimulator);
       new Thread(simosaikRunner, "Simosaik").start();
@@ -36,27 +36,15 @@ public class SimosaikUtils {
   }
 
   /** Converts input data from MOSAIK to a data format that can be read by SIMONA API */
+  @SuppressWarnings("unchecked")
   public static ExtInputDataContainer createSimosaikPrimaryDataWrapper(
       long currentTick, Map<String, Object> mosaikInput, long nextTick) {
     ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(currentTick, nextTick);
     mosaikInput.forEach(
         (assetId, inputValue) ->
-            extInputDataPackage.addValue(assetId, getSimosaikValue(inputValue)));
+            extInputDataPackage.addValue(
+                assetId, convert((Map<String, Map<String, Number>>) inputValue)));
     return extInputDataPackage;
-  }
-
-  private static SimosaikValue getSimosaikValue(Object inputValue) {
-    Map<String, Float> convertedInputValueMap = new HashMap<>();
-    Map<String, Object> attrs = (Map<String, Object>) inputValue;
-    for (Map.Entry<String, Object> attr : attrs.entrySet()) {
-      Object[] values = ((Map<String, Object>) attr.getValue()).values().toArray();
-      float value = 0;
-      for (Object o : values) {
-        value += ((Number) o).floatValue();
-      }
-      convertedInputValueMap.put(attr.getKey(), value);
-    }
-    return new SimosaikValue(convertedInputValueMap);
   }
 
   /**
