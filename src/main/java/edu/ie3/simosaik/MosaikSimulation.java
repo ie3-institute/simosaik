@@ -18,17 +18,19 @@ import edu.ie3.simosaik.config.ArgsParser;
 import edu.ie3.simosaik.config.SimosaikConfig;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class MosaikSimulation extends ExtCoSimulation {
 
-  private final Optional<ExtPrimaryDataConnection> extPrimaryDataConnection;
-  private final Optional<ExtEmDataConnection> extEmDataConnection;
-  private final Optional<ExtResultDataConnection> extResultDataConnection;
+  private final ExtPrimaryDataConnection extPrimaryDataConnection;
+  private final ExtEmDataConnection extEmDataConnection;
+  private final ExtResultDataConnection extResultDataConnection;
 
   private final String mosaikIP;
-  private final SimosaikConfig config;
+  private final SimosaikConfig.Simosaik.Receive receive;
+  private final boolean sendResults;
 
   private MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
 
@@ -41,7 +43,10 @@ public final class MosaikSimulation extends ExtCoSimulation {
     ArgsParser.Arguments arguments = ArgsParser.parse(mainArgs);
 
     this.mosaikIP = arguments.mosaikIP();
-    this.config = arguments.simosaikConfig();
+    SimosaikConfig config = arguments.simosaikConfig();
+
+    this.receive = config.simosaik.receive;
+    this.sendResults = config.simosaik.sendResults;
 
     this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(arguments.mappingPath());
 
@@ -51,12 +56,10 @@ public final class MosaikSimulation extends ExtCoSimulation {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public List<ExtDataConnection> getDataConnections() {
-    return (List<ExtDataConnection>)
-        Stream.of(extPrimaryDataConnection, extEmDataConnection, extResultDataConnection)
-            .flatMap(Optional::stream)
-            .toList();
+    return Stream.of(extPrimaryDataConnection, extEmDataConnection, extResultDataConnection)
+        .filter(Objects::nonNull)
+        .toList();
   }
 
   @Override
@@ -70,6 +73,20 @@ public final class MosaikSimulation extends ExtCoSimulation {
       mosaikSimulator.setQueues(
           dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
       SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
+
+      if (!receive.primary) {
+        log.warn(
+            "No external primary data connection present! Therefore no primary data is send to SIMONA!");
+      }
+
+      if (receive.em) {
+        log.warn("An external em data connection is present! This is not supported currently!");
+      }
+
+      if (!sendResults) {
+        log.warn(
+            "No external result data connection present! Therefore no result data is send to MOSAIK!");
+      }
     }
     log.info(
         "+++++++++++++++++++++++++++ initialization of the external simulation completed +++++++++++++++++++++++++++");
@@ -89,40 +106,39 @@ public final class MosaikSimulation extends ExtCoSimulation {
 
     long nextTick = tick + deltaT;
 
-    extPrimaryDataConnection.ifPresentOrElse(
-        connection -> sendPrimaryDataToSimona(connection, tick),
-        () -> log.info("No external primary data connection present!"));
+    if (extPrimaryDataConnection != null) {
+      sendPrimaryDataToSimona(extPrimaryDataConnection, tick);
+    }
 
-    extEmDataConnection.ifPresent(connection -> sendEmDataToSimona(connection, tick, nextTick));
+    if (extEmDataConnection != null) {
+      sendEmDataToSimona(extEmDataConnection, tick, nextTick);
+    }
 
-    extResultDataConnection.ifPresentOrElse(
-        connection -> sendResultsToExtCoSimulator(connection, tick, nextTick),
-        () -> log.info("No external result data connection present!"));
+    if (extResultDataConnection != null) {
+      sendResultsToExtCoSimulator(extResultDataConnection, tick, nextTick);
+    }
 
     return Optional.of(nextTick);
   }
 
-  private Optional<ExtPrimaryDataConnection> primaryDataConnection(SimosaikConfig config) {
+  private ExtPrimaryDataConnection primaryDataConnection(SimosaikConfig config) {
     return config.simosaik.receive.primary
-        ? Optional.of(
-            new ExtPrimaryDataConnection(
-                mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_PRIMARY_INPUT)))
-        : Optional.empty();
+        ? new ExtPrimaryDataConnection(
+            mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_PRIMARY_INPUT))
+        : null;
   }
 
-  private Optional<ExtEmDataConnection> emDataConnection(SimosaikConfig config) {
+  private ExtEmDataConnection emDataConnection(SimosaikConfig config) {
     return config.simosaik.receive.em
-        ? Optional.of(
-            new ExtEmDataConnection(mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_EM_INPUT)))
-        : Optional.empty();
+        ? new ExtEmDataConnection(mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_EM_INPUT))
+        : null;
   }
 
-  private Optional<ExtResultDataConnection> resultDataConnection(SimosaikConfig config) {
+  private ExtResultDataConnection resultDataConnection(SimosaikConfig config) {
     return config.simosaik.sendResults
-        ? Optional.of(
-            new ExtResultDataConnection(
-                mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
-                mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_GRID)))
-        : Optional.empty();
+        ? new ExtResultDataConnection(
+            mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
+            mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_GRID))
+        : null;
   }
 }
