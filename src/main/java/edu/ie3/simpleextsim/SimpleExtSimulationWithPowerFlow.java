@@ -15,6 +15,14 @@ import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
+import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.data.ExtData;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
+import edu.ie3.simona.api.data.results.ExtResultData;
+import edu.ie3.simona.api.simulation.ExtSimulation;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 
 /**
@@ -23,6 +31,12 @@ import java.util.*;
  */
 public class SimpleExtSimulationWithPowerFlow extends ExtCoSimulation {
 
+    private final Logger log = (Logger) LoggerFactory.getLogger(simulationName);
+
+    private final ExtPrimaryData extPrimaryData;
+    private final ExtResultData extResultData;
+
+    private final long deltaT = 900L;
   private final ExtPrimaryDataConnection extPrimaryData;
   private final ExtResultDataConnection extResultData;
 
@@ -59,30 +73,52 @@ public class SimpleExtSimulationWithPowerFlow extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
 
-    Map<UUID, Value> extSimData = new HashMap<>();
+        Map<String, Value> extSimData = new HashMap<>();
 
     long phase = (tick / 2000) % 4;
 
     long nextTick = tick + deltaT;
 
-    extSimData.put(LOAD_MODEL_1.getUuid(), LOAD_MODEL_1.getPower(phase));
+        extSimData.put(
+                LOAD_MODEL_1.getId(),
+                LOAD_MODEL_1.getPower(phase)
+        );
 
-    extSimData.put(LOAD_MODEL_2.getUuid(), LOAD_MODEL_2.getPower(phase));
+        extSimData.put(
+                LOAD_MODEL_2.getId(),
+                LOAD_MODEL_2.getPower(phase)
+        );
 
-    // send primary data for load1 and load2 to SIMONA
-    extPrimaryData.providePrimaryData(tick, extSimData, Optional.of(nextTick));
+        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(
+                tick,
+                extSimData,
+                nextTick
+        );
 
-    log.info(
-        "[{}] Provide Primary Data to SIMONA for {} ({}) with {} and {} ({}) with {}.",
-        tick,
-        LOAD_MODEL_1.getId(),
-        LOAD_MODEL_1.getUuid(),
-        LOAD_MODEL_1.getPower(phase),
-        LOAD_MODEL_2.getId(),
-        LOAD_MODEL_2.getUuid(),
-        LOAD_MODEL_2.getPower(phase));
 
-    log.debug("[{}] Request Results from SIMONA!", tick);
+        // send primary data for load1 and load2 to SIMONA
+
+        extPrimaryData.providePrimaryData(
+                tick,
+                extPrimaryData.convertExternalInputToPrimaryData(extInputDataContainer),
+                extInputDataContainer.getMaybeNextTick()
+        );
+
+        log.info("[" + tick + "] Provide Primary Data to SIMONA for "
+                + LOAD_MODEL_1.getId()
+                + " ("
+                + LOAD_MODEL_1.getUuid()
+                + ") with "
+                + LOAD_MODEL_1.getPower(phase)
+                + " and "
+                + LOAD_MODEL_2.getId()
+                + " ("
+                + LOAD_MODEL_2.getUuid()
+                + ") with "
+                + LOAD_MODEL_2.getPower(phase)
+                + ".");
+
+        log.debug("[" + tick + "] Request Results from SIMONA!");
 
     try {
       Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
