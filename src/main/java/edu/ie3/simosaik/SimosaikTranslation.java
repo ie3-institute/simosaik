@@ -10,6 +10,7 @@ import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.exceptions.ConversionException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -30,7 +31,8 @@ public class SimosaikTranslation {
    * @param inputValue map: mosaik field name to value map
    * @return a new value
    */
-  public static Value convert(Map<String, Map<String, Number>> inputValue) {
+  public static Value convertMosaikDataToValue(Map<String, Map<String, Number>> inputValue)
+      throws ConversionException {
     Map<String, Double> valueMap = new HashMap<>();
 
     for (Map.Entry<String, Map<String, Number>> attr : inputValue.entrySet()) {
@@ -48,7 +50,7 @@ public class SimosaikTranslation {
     } else if (isPValue(keySet)) {
       return new PValue(extract(valueMap, MOSAIK_ACTIVE_POWER, StandardUnits.ACTIVE_POWER_IN));
     } else {
-      throw new RuntimeException("This method can only convert PValue or SValue.");
+      throw new ConversionException("This method can only convert PValue or SValue.");
     }
   }
 

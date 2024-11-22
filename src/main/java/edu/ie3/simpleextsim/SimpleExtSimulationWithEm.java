@@ -13,18 +13,11 @@ import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
+import edu.ie3.simona.api.data.ExtInputDataConnection;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
-import edu.ie3.datamodel.models.value.Value;
-import edu.ie3.simona.api.data.ExtData;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.em.ExtEmData;
-import edu.ie3.simona.api.data.results.ExtResultData;
-import edu.ie3.simona.api.simulation.ExtSimulation;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 
 /**
@@ -36,24 +29,8 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
   private final ExtEmDataConnection extEmData;
   private final ExtResultDataConnection extResultData;
 
-    public SimpleExtSimulationWithEm() {
-        super("SimpleExtSimulationWithEm");
-        this.extEmData = new ExtEmDataConnection(
-                Map.of(
-                        EM_3, EM_3_UUID,
-                        EM_4, EM_4_UUID
-                )
-        );
-        this.extResultData = new ExtResultDataConnection(
-                Map.of(
-                        PV_1_UUID, PV_1,
-                        PV_2_UUID, PV_2
-                ),
-                Collections.emptyMap()
-        );
-    }
   public SimpleExtSimulationWithEm() {
-    super(SimpleExtSimulationWithEm.class.getName());
+    super("SimpleExtSimulationWithEm", "SimpleExtSimulator");
     this.extEmData =
         new ExtEmDataConnection(
             Map.of(
@@ -68,8 +45,8 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
   }
 
   @Override
-  public List<ExtDataConnection> getDataConnections() {
-    return List.of(extEmData, extResultData);
+  public Set<ExtDataConnection> getDataConnections() {
+    return Set.of(extEmData, extResultData);
   }
 
   @Override
@@ -85,7 +62,7 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
 
-        Map<String, Value> extSimData = new HashMap<>();
+    Map<String, Value> extSimData = new HashMap<>();
 
     long phase = (tick / 2000) % 4;
 
@@ -98,24 +75,27 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
     ExtInputDataContainer extInputDataContainer =
         new ExtInputDataContainer(tick, extSimData, nextTick);
 
-        extEmData.provideEmData(
-                tick,
-                extEmData.createExtEmDataMap(extInputDataContainer),
-                Optional.of(nextTick));
+    extEmData.provideEmData(
+        tick,
+        extEmData.convertExternalInputToEmSetPoints(extInputDataContainer),
+        Optional.of(nextTick));
 
-        log.info("[" + tick + "] Provide EmData to SIMONA for "
-                + EM_CONTROLLER_3.getId()
-                + " ("
-                + EM_CONTROLLER_3.getUuid()
-                + ") with "
-                + EM_CONTROLLER_3.getSetPoint(phase)
-                + " and "
-                + EM_CONTROLLER_4.getId()
-                + " ("
-                + EM_CONTROLLER_4.getUuid()
-                + ") with "
-                + EM_CONTROLLER_4.getSetPoint(phase)
-                + ".");
+    log.info(
+        "["
+            + tick
+            + "] Provide EmData to SIMONA for "
+            + EM_CONTROLLER_3.getId()
+            + " ("
+            + EM_CONTROLLER_3.getUuid()
+            + ") with "
+            + EM_CONTROLLER_3.getSetPoint(phase)
+            + " and "
+            + EM_CONTROLLER_4.getId()
+            + " ("
+            + EM_CONTROLLER_4.getUuid()
+            + ") with "
+            + EM_CONTROLLER_4.getSetPoint(phase)
+            + ".");
 
     log.debug("[" + tick + "] Request Results from SIMONA!");
 
@@ -186,5 +166,15 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
         tick,
         nextTick);
     return Optional.of(nextTick);
+  }
+
+  @Override
+  protected Set<ExtInputDataConnection> getInputDataConnections() {
+    return Set.of(extEmData);
+  }
+
+  @Override
+  protected Optional<ExtResultDataConnection> getResultDataConnection() {
+    return Optional.of(extResultData);
   }
 }

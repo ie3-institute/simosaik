@@ -6,17 +6,11 @@
 
 package edu.ie3.simosaik;
 
-import edu.ie3.datamodel.models.StandardUnits;
-import edu.ie3.datamodel.models.value.PValue;
-import edu.ie3.datamodel.models.value.SValue;
-import edu.ie3.datamodel.models.value.Value;
 import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.exceptions.ConversionException;
-import tech.units.indriya.quantity.Quantities;
-
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
 import java.util.HashMap;
 import java.util.List;
@@ -42,101 +36,23 @@ public class SimosaikUtils {
     }
   }
 
-    /** Converts input data from MOSAIK to a data format that can be read by SIMONA API */
-    public static ExtInputDataContainer createExtInputDataContainer(
-            long currentTick,
-            Map<String, Object> mosaikInput,
-            long nextTick
-    ) {
-        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(currentTick, nextTick);
-        mosaikInput.forEach(
-                (assetId, inputValue) -> {
-                    try {
-                        extInputDataContainer.addValue(
-                                assetId,
-                                convertMosaikDataToValue(inputValue)
-                        );
-                    } catch (ConversionException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-        );
-        return extInputDataContainer;
-    }
   /** Converts input data from MOSAIK to a data format that can be read by SIMONA API */
   @SuppressWarnings("unchecked")
-  public static ExtInputDataContainer createSimosaikPrimaryDataWrapper(
+  public static ExtInputDataContainer createExtInputDataContainer(
       long currentTick, Map<String, Object> mosaikInput, long nextTick) {
-    ExtInputDataContainer extInputDataPackage = new ExtInputDataContainer(currentTick, nextTick);
+    ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(currentTick, nextTick);
     mosaikInput.forEach(
-        (assetId, inputValue) ->
-            extInputDataPackage.addValue(
-                assetId, convert((Map<String, Map<String, Number>>) inputValue)));
-    return extInputDataPackage;
+        (assetId, inputValue) -> {
+          try {
+            extInputDataContainer.addValue(
+                assetId, convertMosaikDataToValue((Map<String, Map<String, Number>>) inputValue));
+          } catch (ConversionException e) {
+            throw new RuntimeException(e);
+          }
+        });
+    return extInputDataContainer;
   }
 
-    private static Value convertMosaikDataToValue(
-            Object inputValue
-    ) throws ConversionException {
-        Map<String, Float> convertedInputValueMap = new HashMap<>();
-        Map<String, Object> attrs = (Map<String, Object>) inputValue;
-        for (Map.Entry<String, Object> attr : attrs.entrySet()) {
-            Object[] values = ((Map<String, Object>) attr.getValue()).values().toArray();
-            float value = 0;
-            for (int i = 0; i < values.length; i++) {
-                value += ((Number) values[i]).floatValue();
-            }
-            convertedInputValueMap.put(
-                    attr.getKey(),
-                    value
-            );
-        }
-        return convertAttributeMapToValue(convertedInputValueMap);
-    }
-
-    private static Value convertAttributeMapToValue(
-            Map<String, Float> inputMap
-    ) throws ConversionException {
-        if (inputMap.containsKey(MOSAIK_ACTIVE_POWER) && inputMap.containsKey(MOSAIK_REACTIVE_POWER)) {
-            return new SValue(
-                    Quantities.getQuantity(inputMap.get(MOSAIK_ACTIVE_POWER) * 1000, StandardUnits.ACTIVE_POWER_IN),
-                    Quantities.getQuantity(inputMap.get(MOSAIK_REACTIVE_POWER) * 1000, StandardUnits.ACTIVE_POWER_IN)
-            );
-        } else if (inputMap.containsKey(MOSAIK_ACTIVE_POWER) && !inputMap.containsKey(MOSAIK_REACTIVE_POWER)) {
-            return new PValue(
-                    Quantities.getQuantity(inputMap.get(MOSAIK_ACTIVE_POWER) * 1000, StandardUnits.ACTIVE_POWER_IN)
-            );
-        } else {
-            throw new ConversionException("This factory can only convert PValue or SValue.");
-        }
-    }
-
-
-    /**
-     * Converts the results sent by SIMONA for the requested entities and attributes in a
-     * format that can be read by MOSAIK
-     */
-    public static Map<String, Object> createSimosaikOutputMap(
-            Map<String, List<String>> mosaikRequestedAttributes,
-            ExtResultContainer simonaResults
-    ) {
-        Map<String, Object> outputMap = new HashMap<>();
-        mosaikRequestedAttributes.forEach(
-                (id, attrs) -> {
-                    HashMap<String, Object> values = new HashMap<>();
-                    for (String attr : attrs) {
-                        addResult(
-                                simonaResults,
-                                id,
-                                attr,
-                                values
-                        );
-                    }
-                    outputMap.put(id, values);
-                }
-        );
-        return outputMap;
-    }
   /**
    * Converts the results sent by SIMONA for the requested entities and attributes in a format that
    * can be read by MOSAIK

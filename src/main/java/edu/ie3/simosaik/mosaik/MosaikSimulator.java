@@ -16,7 +16,10 @@ import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.SimosaikUtils;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class MosaikSimulator extends Simulator implements Meta {
@@ -33,10 +36,7 @@ public class MosaikSimulator extends Simulator implements Meta {
   protected String[] simonaResultEntities;
 
   public MosaikSimulator() {
-    this(
-        900,
-        SimosaikUtils::createSimosaikPrimaryDataWrapper,
-        SimosaikUtils::createSimosaikOutputMap);
+    this(900, SimosaikUtils::createExtInputDataContainer, SimosaikUtils::createSimosaikOutputMap);
   }
 
   public MosaikSimulator(
@@ -111,18 +111,16 @@ public class MosaikSimulator extends Simulator implements Meta {
     return data;
   }
 
-  public void setMapping(ExtEntityMapping mapping) {
+  public void setConnectionToSimonaApi(
+      ExtEntityMapping mapping,
+      DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     this.simonaPrimaryEntities =
         mapping.getExtId2UuidMapping(EXT_PRIMARY_INPUT).keySet().toArray(new String[0]);
     this.simonaResultEntities =
         mapping.getExtId2UuidMapping(EXT_RESULT_GRID).keySet().toArray(new String[0]);
-  }
-
-  public void setQueues(
-      DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona,
-      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik) {
-    this.dataQueueMosaikToSimona = dataQueueMosaikToSimona;
-    this.dataQueueSimonaToMosaik = dataQueueSimonaToMosaik;
+    this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
+    this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
   }
 
   protected List<Map<String, Object>> buildMap(String[] simonaEntities, String model) {

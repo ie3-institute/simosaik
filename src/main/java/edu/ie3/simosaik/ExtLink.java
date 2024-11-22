@@ -8,6 +8,7 @@ package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
+import edu.ie3.simosaik.config.ArgsParser;
 
 public class ExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
@@ -19,7 +20,9 @@ public class ExtLink implements ExtLinkInterface {
 
   @Override
   public void setup(ExtSimAdapterData data) {
-    extSim = new MosaikSimulation(data.getMainArgs());
+    ArgsParser.Arguments arguments = ArgsParser.parse(data.getMainArgs());
+
+    extSim = new MosaikSimulation(arguments);
     extSim.setAdapterData(data);
   }
 }
