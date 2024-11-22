@@ -23,6 +23,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with primary and em data.
+ * Also, this simulation can send result data back to mosaik.
+ */
 public final class MosaikSimulation extends ExtCoSimulation {
 
   private final Optional<ExtPrimaryDataConnection> extPrimaryDataConnection;

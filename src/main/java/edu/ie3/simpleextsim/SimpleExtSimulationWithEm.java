@@ -80,24 +80,9 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
         extEmData.convertExternalInputToEmSetPoints(extInputDataContainer),
         Optional.of(nextTick));
 
-    log.info(
-        "["
-            + tick
-            + "] Provide EmData to SIMONA for "
-            + EM_CONTROLLER_3.getId()
-            + " ("
-            + EM_CONTROLLER_3.getUuid()
-            + ") with "
-            + EM_CONTROLLER_3.getSetPoint(phase)
-            + " and "
-            + EM_CONTROLLER_4.getId()
-            + " ("
-            + EM_CONTROLLER_4.getUuid()
-            + ") with "
-            + EM_CONTROLLER_4.getSetPoint(phase)
-            + ".");
+      log.info("[{}] Provide EmData to SIMONA for {} ({}) with {} and {} ({}) with {}.", tick, EM_CONTROLLER_3.getId(), EM_CONTROLLER_3.getUuid(), EM_CONTROLLER_3.getSetPoint(phase), EM_CONTROLLER_4.getId(), EM_CONTROLLER_4.getUuid(), EM_CONTROLLER_4.getSetPoint(phase));
 
-    log.debug("[" + tick + "] Request Results from SIMONA!");
+      log.debug("[{}] Request Results from SIMONA!", tick);
 
     try {
       Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
