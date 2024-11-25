@@ -13,7 +13,6 @@ import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataConnection;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
@@ -80,9 +79,17 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
         extEmData.convertExternalInputToEmSetPoints(extInputDataContainer),
         Optional.of(nextTick));
 
-      log.info("[{}] Provide EmData to SIMONA for {} ({}) with {} and {} ({}) with {}.", tick, EM_CONTROLLER_3.getId(), EM_CONTROLLER_3.getUuid(), EM_CONTROLLER_3.getSetPoint(phase), EM_CONTROLLER_4.getId(), EM_CONTROLLER_4.getUuid(), EM_CONTROLLER_4.getSetPoint(phase));
+    log.info(
+        "[{}] Provide EmData to SIMONA for {} ({}) with {} and {} ({}) with {}.",
+        tick,
+        EM_CONTROLLER_3.getId(),
+        EM_CONTROLLER_3.getUuid(),
+        EM_CONTROLLER_3.getSetPoint(phase),
+        EM_CONTROLLER_4.getId(),
+        EM_CONTROLLER_4.getUuid(),
+        EM_CONTROLLER_4.getSetPoint(phase));
 
-      log.debug("[{}] Request Results from SIMONA!", tick);
+    log.debug("[{}] Request Results from SIMONA!", tick);
 
     try {
       Map<String, ModelResultEntity> resultsFromSimona = extResultData.requestResults(tick);
@@ -151,15 +158,5 @@ public class SimpleExtSimulationWithEm extends ExtCoSimulation {
         tick,
         nextTick);
     return Optional.of(nextTick);
-  }
-
-  @Override
-  protected Set<ExtInputDataConnection> getInputDataConnections() {
-    return Set.of(extEmData);
-  }
-
-  @Override
-  protected Optional<ExtResultDataConnection> getResultDataConnection() {
-    return Optional.of(extResultData);
   }
 }

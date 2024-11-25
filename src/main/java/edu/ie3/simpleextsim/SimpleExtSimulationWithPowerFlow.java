@@ -12,7 +12,6 @@ import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.NodeResult;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataConnection;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
@@ -137,15 +136,5 @@ public class SimpleExtSimulationWithPowerFlow extends ExtCoSimulation {
         tick,
         nextTick);
     return Optional.of(nextTick);
-  }
-
-  @Override
-  protected Set<ExtInputDataConnection> getInputDataConnections() {
-    return Set.of(extPrimaryData);
-  }
-
-  @Override
-  protected Optional<ExtResultDataConnection> getResultDataConnection() {
-    return Optional.of(extResultData);
   }
 }

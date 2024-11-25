@@ -6,8 +6,8 @@
 
 package edu.ie3.simosaik.mosaik;
 
-import static edu.ie3.simona.api.simulation.mapping.ExtEntityEntry.EXT_PRIMARY_INPUT;
-import static edu.ie3.simona.api.simulation.mapping.ExtEntityEntry.EXT_RESULT_GRID;
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_PRIMARY_INPUT;
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_RESULT_GRID;
 
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+/** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator implements Meta {
   protected final Logger logger = SimProcess.logger;
 
@@ -35,8 +36,11 @@ public class MosaikSimulator extends Simulator implements Meta {
   protected String[] simonaPrimaryEntities;
   protected String[] simonaResultEntities;
 
-  public MosaikSimulator() {
-    this(900, SimosaikUtils::createExtInputDataContainer, SimosaikUtils::createSimosaikOutputMap);
+  public MosaikSimulator(int stepSize) {
+    this(
+        stepSize,
+        SimosaikUtils::createExtInputDataContainer,
+        SimosaikUtils::createSimosaikOutputMap);
   }
 
   public MosaikSimulator(
@@ -60,7 +64,7 @@ public class MosaikSimulator extends Simulator implements Meta {
     return switch (model) {
       case SIMONA_POWER_GRID_ENVIRONMENT -> {
         if (num != 1) {
-          throwException(num, 1, SIMONA_POWER_GRID_ENVIRONMENT);
+          throwException(num, 1, model);
         }
         yield buildMap(new String[] {model}, model);
       }

@@ -13,7 +13,6 @@ import edu.ie3.datamodel.models.result.system.EmResult;
 import edu.ie3.datamodel.models.result.system.PvResult;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataConnection;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
@@ -158,15 +157,5 @@ public class SimpleExtSimulationWithPrimaryData extends ExtCoSimulation {
         tick,
         nextTick);
     return Optional.of(nextTick);
-  }
-
-  @Override
-  protected Set<ExtInputDataConnection> getInputDataConnections() {
-    return Set.of(extPrimaryData);
-  }
-
-  @Override
-  protected Optional<ExtResultDataConnection> getResultDataConnection() {
-    return Optional.of(extResultData);
   }
 }

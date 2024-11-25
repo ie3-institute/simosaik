@@ -10,7 +10,6 @@ import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
-import edu.ie3.simona.api.exceptions.ConversionException;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
 import java.util.HashMap;
 import java.util.List;
@@ -42,14 +41,9 @@ public class SimosaikUtils {
       long currentTick, Map<String, Object> mosaikInput, long nextTick) {
     ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(currentTick, nextTick);
     mosaikInput.forEach(
-        (assetId, inputValue) -> {
-          try {
+        (assetId, inputValue) ->
             extInputDataContainer.addValue(
-                assetId, convertMosaikDataToValue((Map<String, Map<String, Number>>) inputValue));
-          } catch (ConversionException e) {
-            throw new RuntimeException(e);
-          }
-        });
+                assetId, convertMosaikDataToValue((Map<String, Map<String, Number>>) inputValue)));
     return extInputDataContainer;
   }
 
