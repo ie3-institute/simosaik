@@ -47,6 +47,7 @@ dependencies {
   /* Mosaik dependencies */
   implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.9.3'
   implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+  implementation files('libs/mosaik-api-java-3.0.jar')
 
   // ie³ internal repository
   implementation('com.github.ie3-institute:PowerSystemUtils:2.2.1') {
@@ -68,19 +69,15 @@ dependencies {
     exclude group: 'edu.ie3'
   }
 
-  implementation files('libs/mosaik-api-java-3.0.jar')
-
   /* logging */
-  implementation "com.typesafe.scala-logging:scala-logging_${scalaVersion}:3.9.5" // pekko scala logging
-  implementation "ch.qos.logback:logback-classic:1.4.14"
+  implementation platform('org.apache.logging.log4j:log4j-bom:2.24.2')
+  implementation 'org.apache.logging.log4j:log4j-api' // log4j
+  implementation 'org.apache.logging.log4j:log4j-core' // log4j
+  implementation 'org.apache.logging.log4j:log4j-slf4j-impl' // log4j -> slf4j
 
   /* config */
   implementation 'com.typesafe:config:1.4.3'
   implementation "com.github.carueda:tscfg_2.13:$tscfgVersion"
-
-  /* --- Scala libs --- */
-  /* CORE Scala */
-  implementation "org.scala-lang:scala-library:${scalaBinaryVersion}"
 
   /* CORE Pekko */
   implementation "org.apache.pekko:pekko-actor_${scalaVersion}:${pekkoVersion}"

@@ -7,7 +7,7 @@
 package edu.ie3.simosaik.mosaik;
 
 import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_PRIMARY_INPUT;
-import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_RESULT_GRID;
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_GRID_RESULT;
 
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
@@ -53,14 +53,12 @@ public class MosaikSimulator extends Simulator implements Meta {
   }
 
   @Override
-  public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams)
-      throws Exception {
+  public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
     return getMeta();
   }
 
   @Override
-  public List<Map<String, Object>> create(int num, String model, Map<String, Object> modelParams)
-      throws Exception {
+  public List<Map<String, Object>> create(int num, String model, Map<String, Object> modelParams) {
     return switch (model) {
       case SIMONA_POWER_GRID_ENVIRONMENT -> {
         if (num != 1) {
@@ -91,7 +89,7 @@ public class MosaikSimulator extends Simulator implements Meta {
   }
 
   @Override
-  public final long step(long time, Map<String, Object> inputs, long maxAdvance) throws Exception {
+  public final long step(long time, Map<String, Object> inputs, long maxAdvance) {
     long nextTick = time + this.stepSize;
     try {
       logger.info("Got inputs from MOSAIK for tick = " + time);
@@ -122,7 +120,7 @@ public class MosaikSimulator extends Simulator implements Meta {
     this.simonaPrimaryEntities =
         mapping.getExtId2UuidMapping(EXT_PRIMARY_INPUT).keySet().toArray(new String[0]);
     this.simonaResultEntities =
-        mapping.getExtId2UuidMapping(EXT_RESULT_GRID).keySet().toArray(new String[0]);
+        mapping.getExtId2UuidMapping(EXT_GRID_RESULT).keySet().toArray(new String[0]);
     this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
     this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
   }
