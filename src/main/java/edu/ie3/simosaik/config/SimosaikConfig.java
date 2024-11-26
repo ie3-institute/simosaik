@@ -11,36 +11,12 @@ public class SimosaikConfig {
 
   public static class Simosaik {
     public final java.lang.String mappingPath;
-    public final Simosaik.Receive receive;
-    public final boolean sendResults;
-
-    public static class Receive {
-      public final boolean em;
-      public final boolean primary;
-
-      public Receive(
-          com.typesafe.config.Config c,
-          java.lang.String parentPath,
-          $TsCfgValidator $tsCfgValidator) {
-        this.em = c.hasPathOrNull("em") && c.getBoolean("em");
-        this.primary = !c.hasPathOrNull("primary") || c.getBoolean("primary");
-      }
-    }
 
     public Simosaik(
         com.typesafe.config.Config c,
         java.lang.String parentPath,
         $TsCfgValidator $tsCfgValidator) {
       this.mappingPath = $_reqStr(parentPath, c, "mappingPath", $tsCfgValidator);
-      this.receive =
-          c.hasPathOrNull("receive")
-              ? new Simosaik.Receive(
-                  c.getConfig("receive"), parentPath + "receive.", $tsCfgValidator)
-              : new Simosaik.Receive(
-                  com.typesafe.config.ConfigFactory.parseString("receive{}"),
-                  parentPath + "receive.",
-                  $tsCfgValidator);
-      this.sendResults = !c.hasPathOrNull("sendResults") || c.getBoolean("sendResults");
     }
 
     private static java.lang.String $_reqStr(

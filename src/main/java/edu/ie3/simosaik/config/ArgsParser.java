@@ -22,8 +22,7 @@ public class ArgsParser {
    * @param mosaikIP the IP of the socket
    * @param mappingPath of the ext mapping source
    */
-  public record Arguments(
-      String[] mainArgs, String mosaikIP, Path mappingPath, SimosaikConfig simosaikConfig) {}
+  public record Arguments(String[] mainArgs, String mosaikIP, Path mappingPath) {}
 
   /**
    * Method for parsing the provided arguments.
@@ -46,7 +45,7 @@ public class ArgsParser {
 
     Path mappingPath = Path.of(config.simosaik.mappingPath);
 
-    return new Arguments(args, mosaikIP, mappingPath, config);
+    return new Arguments(args, mosaikIP, mappingPath);
   }
 
   /**

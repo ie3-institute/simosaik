@@ -14,11 +14,9 @@ import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
-import edu.ie3.simona.api.simulation.mapping.DataType;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingCsvSource;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
 import edu.ie3.simosaik.config.ArgsParser;
-import edu.ie3.simosaik.config.SimosaikConfig;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
 import java.util.Map;
 import java.util.Optional;
@@ -32,9 +30,9 @@ import java.util.stream.Stream;
  */
 public final class MosaikSimulation extends ExtCoSimulation {
 
-  private final Optional<ExtPrimaryDataConnection> extPrimaryDataConnection;
-  private final Optional<ExtEmDataConnection> extEmDataConnection;
-  private final Optional<ExtResultDataConnection> extResultDataConnection;
+  private final ExtPrimaryDataConnection extPrimaryDataConnection;
+  private final ExtEmDataConnection extEmDataConnection;
+  private final ExtResultDataConnection extResultDataConnection;
 
   private final String mosaikIP;
 
@@ -48,40 +46,21 @@ public final class MosaikSimulation extends ExtCoSimulation {
     super("MosaikSimulation", "MosaikSimulator");
 
     this.mosaikIP = arguments.mosaikIP();
-    SimosaikConfig config = arguments.simosaikConfig();
 
     try {
-      this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(arguments.mappingPath());
+      this.mapping = ExtEntityMappingSource.fromFile(arguments.mappingPath());
     } catch (SourceException e) {
       throw new RuntimeException(e);
     }
 
-    this.extPrimaryDataConnection =
-        Optional.ofNullable(
-            config.simosaik.receive.primary
-                ? new ExtPrimaryDataConnection(
-                    mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT))
-                : null);
-
-    this.extEmDataConnection =
-        Optional.ofNullable(
-            config.simosaik.receive.em
-                ? new ExtEmDataConnection(mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT))
-                : null);
-
-    this.extResultDataConnection =
-        Optional.ofNullable(
-            config.simosaik.sendResults
-                ? new ExtResultDataConnection(
-                    mapping.getExtUuid2IdMapping(DataType.EXT_RESULT_PARTICIPANT),
-                    mapping.getExtUuid2IdMapping(DataType.EXT_RESULT_GRID))
-                : null);
+    this.extPrimaryDataConnection = buildPrimaryConnection(mapping);
+    this.extEmDataConnection = buildEmConnection(mapping);
+    this.extResultDataConnection = buildResultConnection(mapping);
   }
 
   @Override
   public Set<ExtDataConnection> getDataConnections() {
     return Stream.of(extPrimaryDataConnection, extEmDataConnection, extResultDataConnection)
-        .flatMap(Optional::stream)
         .collect(Collectors.toSet());
   }
 
@@ -114,12 +93,9 @@ public final class MosaikSimulation extends ExtCoSimulation {
       ExtInputDataContainer inputData = dataQueueExtCoSimulatorToSimonaApi.takeData();
       Map<String, Value> data = inputData.getSimonaInputMap();
 
-      extPrimaryDataConnection.ifPresent(con -> sendPrimaryDataToSimona(con, tick, data, nextTick));
-      extEmDataConnection.ifPresent(con -> sendEmDataToSimona(con, tick, data, nextTick));
-
-      if (extResultDataConnection.isPresent()) {
-        sendDataToExt(extResultDataConnection.get(), tick, nextTick);
-      }
+      sendPrimaryDataToSimona(extPrimaryDataConnection, tick, data, nextTick);
+      sendEmDataToSimona(extEmDataConnection, tick, data, nextTick);
+      sendDataToExt(extResultDataConnection, tick, nextTick);
 
       return nextTick;
     } catch (InterruptedException e) {
