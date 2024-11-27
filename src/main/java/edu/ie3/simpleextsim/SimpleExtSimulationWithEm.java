@@ -84,7 +84,7 @@ public class SimpleExtSimulationWithEm extends ExtSimulation {
 
         extEmData.provideEmData(
                 tick,
-                extEmData.createExtEmDataMap(extInputDataContainer),
+                extEmData.convertExternalInputToEmSetPoints(extInputDataContainer),
                 Optional.of(nextTick));
 
         log.info("[" + tick + "] Provide EmData to SIMONA for "
