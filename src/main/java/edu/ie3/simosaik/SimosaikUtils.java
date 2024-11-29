@@ -1,9 +1,13 @@
 package edu.ie3.simosaik;
 
-import edu.ie3.simona.api.data.ExtInputDataPackage;
-import edu.ie3.simona.api.data.results.ExtResultPackage;
-import edu.ie3.simosaik.data.SimosaikValue;
-import edu.ie3.simosaik.simosaikElectrolyzer.SimonaElectrolyzerSimulator;
+import edu.ie3.datamodel.models.StandardUnits;
+import edu.ie3.datamodel.models.value.PValue;
+import edu.ie3.datamodel.models.value.SValue;
+import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.results.ExtResultContainer;
+import edu.ie3.simona.api.exceptions.ConversionException;
+import tech.units.indriya.quantity.Quantities;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,25 +40,30 @@ public class SimosaikUtils {
     }
 
     /** Converts input data from MOSAIK to a data format that can be read by SIMONA API */
-    public static ExtInputDataPackage createSimosaikPrimaryDataWrapper(
+    public static ExtInputDataContainer createExtInputDataContainer(
+            long currentTick,
             Map<String, Object> mosaikInput,
             long nextTick
     ) {
-        ExtInputDataPackage extInputDataPackage = new ExtInputDataPackage(nextTick);
+        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(currentTick, nextTick);
         mosaikInput.forEach(
                 (assetId, inputValue) -> {
-                    extInputDataPackage.addValue(
-                            assetId,
-                            getSimosaikValue(inputValue)
-                    );
+                    try {
+                        extInputDataContainer.addValue(
+                                assetId,
+                                convertMosaikDataToValue(inputValue)
+                        );
+                    } catch (ConversionException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
         );
-        return extInputDataPackage;
+        return extInputDataContainer;
     }
 
-    private static SimosaikValue getSimosaikValue(
+    private static Value convertMosaikDataToValue(
             Object inputValue
-    ) {
+    ) throws ConversionException {
         Map<String, Float> convertedInputValueMap = new HashMap<>();
         Map<String, Object> attrs = (Map<String, Object>) inputValue;
         for (Map.Entry<String, Object> attr : attrs.entrySet()) {
@@ -68,8 +77,26 @@ public class SimosaikUtils {
                     value
             );
         }
-        return new SimosaikValue(convertedInputValueMap);
+        return convertAttributeMapToValue(convertedInputValueMap);
     }
+
+    private static Value convertAttributeMapToValue(
+            Map<String, Float> inputMap
+    ) throws ConversionException {
+        if (inputMap.containsKey(MOSAIK_ACTIVE_POWER) && inputMap.containsKey(MOSAIK_REACTIVE_POWER)) {
+            return new SValue(
+                    Quantities.getQuantity(inputMap.get(MOSAIK_ACTIVE_POWER) * 1000, StandardUnits.ACTIVE_POWER_IN),
+                    Quantities.getQuantity(inputMap.get(MOSAIK_REACTIVE_POWER) * 1000, StandardUnits.ACTIVE_POWER_IN)
+            );
+        } else if (inputMap.containsKey(MOSAIK_ACTIVE_POWER) && !inputMap.containsKey(MOSAIK_REACTIVE_POWER)) {
+            return new PValue(
+                    Quantities.getQuantity(inputMap.get(MOSAIK_ACTIVE_POWER) * 1000, StandardUnits.ACTIVE_POWER_IN)
+            );
+        } else {
+            throw new ConversionException("This factory can only convert PValue or SValue.");
+        }
+    }
+
 
     /**
      * Converts the results sent by SIMONA for the requested entities and attributes in a
@@ -77,7 +104,7 @@ public class SimosaikUtils {
      */
     public static Map<String, Object> createSimosaikOutputMap(
             Map<String, List<String>> mosaikRequestedAttributes,
-            ExtResultPackage simonaResults
+            ExtResultContainer simonaResults
     ) {
         Map<String, Object> outputMap = new HashMap<>();
         mosaikRequestedAttributes.forEach(
@@ -97,7 +124,7 @@ public class SimosaikUtils {
         return outputMap;
     }
 
-    private static void addResult(ExtResultPackage results, String id, String attr, Map<String, Object> outputMap) {
+    private static void addResult(ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
         if (attr.equals(MOSAIK_VOLTAGE_DEVIATION)) {
             if (results.getTick() == 0L) {
                 outputMap.put(attr, 0d);

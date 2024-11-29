@@ -62,11 +62,7 @@ dependencies {
         exclude group: 'edu.ie3'
     }
 
-
-    //implementation files('/home/smjobaoo/git/simonaAPI_dev/simosaik/libs/mosaik-api-java-3.0.jar')
-    implementation files('libs/iee-opsim-datamodel-3.3.8.jar')
     implementation files('libs/mosaik-api-java-3.0.jar')
-    implementation files('libs/iee-opsim-client-2.2.23-SNAPSHOT-jar-with-dependencies.jar')
 
     /* logging */
     implementation "com.typesafe.scala-logging:scala-logging_${scalaVersion}:3.9.5" // pekko scala logging
@@ -80,7 +76,4 @@ dependencies {
     implementation "org.apache.pekko:pekko-actor_${scalaVersion}:${pekkoVersion}"
     implementation "org.apache.pekko:pekko-actor-typed_${scalaVersion}:${pekkoVersion}"
     implementation "org.apache.pekko:pekko-slf4j_${scalaVersion}:${pekkoVersion}"
-    //implementation "org.apache.pekko:pekko-connectors-csv_${scalaVersion}:${pekkoVersion}"
-
-
 }
