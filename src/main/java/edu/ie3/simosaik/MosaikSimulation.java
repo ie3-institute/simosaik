@@ -18,6 +18,9 @@ import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
 import edu.ie3.simosaik.config.ArgsParser;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -30,6 +33,8 @@ import java.util.stream.Stream;
  */
 public final class MosaikSimulation extends ExtCoSimulation {
 
+  private static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
+
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
   private final ExtEmDataConnection extEmDataConnection;
   private final ExtResultDataConnection extResultDataConnection;
@@ -38,13 +43,20 @@ public final class MosaikSimulation extends ExtCoSimulation {
 
   private MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
 
+  private final int stepSize;
+
   private boolean startedMosasik = false;
 
   private final ExtEntityMapping mapping;
 
   public MosaikSimulation(ArgsParser.Arguments arguments) {
+    this(900, arguments);
+  }
+
+  public MosaikSimulation(int stepSize, ArgsParser.Arguments arguments) {
     super("MosaikSimulation", "MosaikSimulator");
 
+    this.stepSize = stepSize;
     this.mosaikIP = arguments.mosaikIP();
 
     try {
@@ -53,9 +65,9 @@ public final class MosaikSimulation extends ExtCoSimulation {
       throw new RuntimeException(e);
     }
 
-    this.extPrimaryDataConnection = buildPrimaryConnection(mapping);
-    this.extEmDataConnection = buildEmConnection(mapping);
-    this.extResultDataConnection = buildResultConnection(mapping);
+    this.extPrimaryDataConnection = buildPrimaryConnection(mapping, log);
+    this.extEmDataConnection = buildEmConnection(mapping, log);
+    this.extResultDataConnection = buildResultConnection(mapping, log);
   }
 
   @Override
@@ -70,7 +82,7 @@ public final class MosaikSimulation extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
     if (!startedMosasik) {
       startedMosasik = true;
-      this.mosaikSimulator = new MosaikSimulator((int) deltaT);
+      this.mosaikSimulator = new MosaikSimulator(stepSize);
       mosaikSimulator.setConnectionToSimonaApi(
           mapping, dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
       SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
@@ -88,16 +100,21 @@ public final class MosaikSimulation extends ExtCoSimulation {
     try {
       Thread.sleep(500);
 
-      Optional<Long> nextTick = Optional.of(tick + deltaT);
-
       ExtInputDataContainer inputData = dataQueueExtCoSimulatorToSimonaApi.takeData();
       Map<String, Value> data = inputData.getSimonaInputMap();
 
-      sendPrimaryDataToSimona(extPrimaryDataConnection, tick, data, nextTick);
-      sendEmDataToSimona(extEmDataConnection, tick, data, nextTick);
-      sendDataToExt(extResultDataConnection, tick, nextTick);
+      Optional<Long> maybeNextTickSimona = inputData.getMaybeNextTick();
+      sendPrimaryDataToSimona(extPrimaryDataConnection, tick, data, maybeNextTickSimona, log);
+      sendEmDataToSimona(extEmDataConnection, tick, data, maybeNextTickSimona, log);
 
-      return nextTick;
+      Optional<Long> maybeNextTickExt = Optional.of(tick + stepSize);
+      sendDataToExt(extResultDataConnection, tick, maybeNextTickExt, log);
+
+      if (maybeNextTickSimona.isPresent() && maybeNextTickSimona.get() < maybeNextTickExt.get()) {
+        return maybeNextTickSimona;
+      } else {
+        return maybeNextTickExt;
+      }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

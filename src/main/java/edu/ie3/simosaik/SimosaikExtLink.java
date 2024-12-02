@@ -10,7 +10,7 @@ import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
 
-public class ExtLink implements ExtLinkInterface {
+public class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
 
   @Override

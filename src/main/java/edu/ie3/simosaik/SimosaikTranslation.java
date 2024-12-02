@@ -10,7 +10,7 @@ import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
-import edu.ie3.simona.api.exceptions.ConversionException;
+import edu.ie3.simosaik.exceptions.ConversionException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
