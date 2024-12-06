@@ -1,8 +1,8 @@
-package edu.ie3.simosaik.simosaikElectrolyzer;
+package edu.ie3.simosaik.simosaikOptimizer;
 
 import ch.qos.logback.classic.Logger;
 import edu.ie3.simona.api.data.ExtData;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryData;
+import edu.ie3.simona.api.data.em.ExtEmData;
 import edu.ie3.simona.api.data.results.ExtResultData;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
@@ -15,30 +15,31 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 
-public class MosaikElectrolyzerSimulation extends ExtCoSimulation {
+public class MosaikOptimizerSimulation extends ExtCoSimulation {
 
     private final Logger log = (Logger) LoggerFactory.getLogger("MosaikSimulation");
-    private final ExtPrimaryData extPrimaryData;
+    private final ExtEmData extEmData;
     private final ExtResultData extResultData;
     private final long deltaT = 900L;
     private final String mosaikIP;
 
-    private SimonaElectrolyzerSimulator simonaElectrolyzerSimulator; //extends Simulator in Mosaik
+    private SimonaOptimizerSimulator simonaOptimizerSimulator; //extends Simulator in Mosaik
 
     private final ExtEntityMapping mapping;
 
-    public MosaikElectrolyzerSimulation(
+    public MosaikOptimizerSimulation(
             String mosaikIP,
             Path mappingPath
     ) {
-        super("MosaikElectrolyzerSimulation", "mosaik");
+        super("MosaikOptimizerSimulation", "mosaik");
         this.mapping = ExtEntityMappingCsvSource.createExtEntityMapping(mappingPath);
-        this.extPrimaryData = new ExtPrimaryData(
+        this.extEmData = new ExtEmData(
                 mapping.getExtId2UuidMapping(ExtEntityEntry.EXT_INPUT)
         );
         this.extResultData = new ExtResultData(
                 mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_PARTICIPANT),
-                mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_GRID)
+                mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_GRID),
+                mapping.getExtUuid2IdMapping(ExtEntityEntry.EXT_RESULT_FLEX_OPTIONS)
         );
         this.mosaikIP = mosaikIP;
     }
@@ -46,15 +47,15 @@ public class MosaikElectrolyzerSimulation extends ExtCoSimulation {
 
     @Override
     public List<ExtData> getDataConnections() {
-        return List.of(extPrimaryData, extResultData);
+        return List.of(extEmData, extResultData);
     }
 
     @Override
     protected Long initialize() {
         log.info("+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
-        this.simonaElectrolyzerSimulator = new SimonaElectrolyzerSimulator();
-        simonaElectrolyzerSimulator.setConnectionToSimonaApi(mapping, dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
-        SimosaikUtils.startMosaikSimulation(simonaElectrolyzerSimulator, mosaikIP);
+        this.simonaOptimizerSimulator = new SimonaOptimizerSimulator();
+        simonaOptimizerSimulator.setConnectionToSimonaApi(mapping, dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
+        SimosaikUtils.startMosaikSimulation(simonaOptimizerSimulator, mosaikIP, log);
         log.info("+++++++++++++++++++++++++++ initialization of the external simulation completed +++++++++++++++++++++++++++");
         return 0L;
     }
@@ -64,15 +65,6 @@ public class MosaikElectrolyzerSimulation extends ExtCoSimulation {
         log.info("+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++", tick);
         try {
             Thread.sleep(500);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            sendPrimaryDataToSimona(
-                    extPrimaryData,
-                    tick,
-                    log
-            );
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -87,6 +79,17 @@ public class MosaikElectrolyzerSimulation extends ExtCoSimulation {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        try {
+            sendEmDataToSimona(
+                    extEmData,
+                    tick,
+                    nextTick,
+                    log
+            );
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("+++++++++++++++++++++++++++ Activities in External simulation: Tick {} completed. +++++++++++++++++++++++++++\n", tick);
         return Optional.of(nextTick);
     }
 }

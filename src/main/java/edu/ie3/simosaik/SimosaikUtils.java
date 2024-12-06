@@ -1,5 +1,6 @@
 package edu.ie3.simosaik;
 
+import ch.qos.logback.classic.Logger;
 import edu.ie3.datamodel.models.StandardUnits;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
@@ -27,13 +28,15 @@ public class SimosaikUtils {
      */
     public static void startMosaikSimulation(
             SimonaSimulator simonaSimulator,
-            String mosaikIP
+            String mosaikIP,
+            Logger logger
     ) {
         try {
             RunSimosaik simosaikRunner = new RunSimosaik(
                     mosaikIP, simonaSimulator
             );
             new Thread(simosaikRunner, "Simosaik").start();
+            logger.info("Started Simona in new thread!");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -124,7 +127,7 @@ public class SimosaikUtils {
         return outputMap;
     }
 
-    private static void addResult(ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
+    public static void addResult(ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
         if (attr.equals(MOSAIK_VOLTAGE_DEVIATION)) {
             if (results.getTick() == 0L) {
                 outputMap.put(attr, 0d);
@@ -136,6 +139,12 @@ public class SimosaikUtils {
             outputMap.put(attr, results.getActivePower(id));
         }
         if (attr.equals(MOSAIK_REACTIVE_POWER)) {
+            outputMap.put(attr, results.getReactivePower(id));
+        }
+        if (attr.equals(MOSAIK_ACTIVE_POWER_IN)) {
+            outputMap.put(attr, results.getActivePower(id));
+        }
+        if (attr.equals(MOSAIK_REACTIVE_POWER_IN)) {
             outputMap.put(attr, results.getReactivePower(id));
         }
     }
