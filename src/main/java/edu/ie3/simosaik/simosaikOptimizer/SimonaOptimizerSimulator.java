@@ -15,8 +15,7 @@ import org.json.simple.JSONValue;
 
 import java.util.*;
 
-import static edu.ie3.simona.api.simulation.mapping.ExtEntityEntry.EXT_INPUT;
-import static edu.ie3.simona.api.simulation.mapping.ExtEntityEntry.EXT_RESULT_FLEX_OPTIONS;
+import static edu.ie3.simona.api.simulation.mapping.ExtEntityEntry.*;
 import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 public class SimonaOptimizerSimulator extends SimonaSimulator {
@@ -50,11 +49,11 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
             //+ "            'params': [],"
             //+ "            'attrs': ['" + FLEX_OPTION_P_MIN + "', '" + FLEX_OPTION_P_REF + "', '" + FLEX_OPTION_P_MAX + "']"
             //+ "        }"
-            //+ "        '" + RESULT_OUTPUT_ENTITIES + "': {"
-            //+ "            'public': true,"
-            //+ "            'params': [],"
-            //+ "            'attrs': ['" + MOSAIK_ACTIVE_POWER_IN + "', '" + MOSAIK_REACTIVE_POWER_IN + "']"
-            //+ "        }"
+            + "        '" + RESULT_OUTPUT_ENTITIES + "': {"
+            + "            'public': true,"
+            + "            'params': [],"
+            + "            'attrs': ['" + MOSAIK_VOLTAGE_PU + "']"
+            + "        }"
             + "    }"
             + "}").replace("'", "\""));
 
@@ -180,19 +179,30 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
     public Map<String, Object> getData(
             Map<String, List<String>> map
     ) throws Exception {
+        //logger.info("[" + this.time + "-" + this.counter + "] Got a request from MOSAIK to provide data!");
         //logger.info("[" + this.time + "-" + this.counter + "] Got a request from MOSAIK to provide data! \nOutputs = " + map);
         logger.info("[" + this.time + "] Got a request from MOSAIK to provide data!");
-        if (this.counter == 1) {
+        if (this.counter == 1 || this.counter == 2) {
             ExtResultContainer results = dataQueueSimonaToMosaik.takeData();
-            //logger.info("Got results from SIMONA for MOSAIK!");
-            Map<String, Object> data = createSimosaikOutputMap(
-                    map,
-                    results
-            );
+            //logger.info("[" + this.time + "-" + this.counter + "] Got results from SIMONA for MOSAIK! \n" + results.getResultsAsString());
+            Map<String, Object> data;
+            if (this.counter == 2 && this.time == 0) {
+                logger.info("[" + this.time + "] Got a final request from MOSAIK to provide data for tick 0!");
+                data = createSimosaikOutputMapFromRequestedAttributes(
+                        map,
+                        results
+                );
+            } else {
+                data = createSimosaikOutputMap(
+                        map,
+                        results
+                );
+            }
             data.put("time", this.time);
             this.resultCache = data;
         }
-        logger.info("[" + this.time + "] Converted results for MOSAIK! Now send it to MOSAIK!");
+        //logger.info("[" + this.time + "-" + this.counter + "] Converted results for MOSAIK! Now send it to MOSAIK!\n Results = " + this.resultCache + "\n\n");
+        logger.info("[" + this.time + "] Converted results for MOSAIK! Now send it to MOSAIK!\n");
         return this.resultCache;
     }
 
@@ -205,6 +215,7 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
         this.mapping = mapping;
         this.simonaEmAgents = this.mapping.getExtId2UuidMapping(EXT_INPUT).keySet().toArray(new String[0]);
         this.simonaFlexOptionEntities = this.mapping.getExtId2UuidMapping(EXT_RESULT_FLEX_OPTIONS).keySet().toArray(new String[0]);
+        this.simonaResultOutputEntities = this.mapping.getExtId2UuidMapping(EXT_RESULT_GRID).keySet().toArray(new String[0]);
         this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
         this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
     }
@@ -243,6 +254,54 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
             ExtResultContainer simonaResults
     ) {
         Map<String, Object> outputMap = new HashMap<>();
+        simonaResults.getResults().forEach(
+                (id, result) -> {
+                    List<String> attrs = mosaikRequestedAttributes.get(id);
+                    HashMap<String, Object> values = new HashMap<>();
+                    for (String attr : attrs) {
+                        if (attr.equals(MOSAIK_ACTIVE_POWER_IN) || attr.equals(MOSAIK_REACTIVE_POWER_IN)) {
+                            SimosaikUtils.addResult(
+                                    simonaResults,
+                                    id,
+                                    attr,
+                                    values
+                            );
+                        } else if(
+                                attr.equals(FLEX_OPTION_P_MIN) ||
+                                        attr.equals(FLEX_OPTION_P_REF) ||
+                                        attr.equals(FLEX_OPTION_P_MAX)
+                        ) {
+                            addFlexOptions(
+                                    simonaResults,
+                                    id,
+                                    attr,
+                                    values
+                            );
+                        } else if(
+                                attr.equals(MOSAIK_VOLTAGE_DEVIATION) || attr.equals(MOSAIK_VOLTAGE_PU)  // Grid assets
+                        ) {
+                            SimosaikUtils.addResult(
+                                    simonaResults,
+                                    id,
+                                    attr,
+                                    values
+                            );
+                        } else {
+                            logger.info("id = " + id + " requested attr = " + attr);
+                        }
+                    }
+                    outputMap.put(id, values);
+                }
+        );
+        return outputMap;
+    }
+
+
+    public Map<String, Object> createSimosaikOutputMapFromRequestedAttributes(
+            Map<String, List<String>> mosaikRequestedAttributes,
+            ExtResultContainer simonaResults
+    ) {
+        Map<String, Object> outputMap = new HashMap<>();
         mosaikRequestedAttributes.forEach(
                 (id, attrs) -> {
                     HashMap<String, Object> values = new HashMap<>();
@@ -266,7 +325,7 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
                                     values
                             );
                         } else if(
-                                attr.equals(MOSAIK_VOLTAGE_DEVIATION)   // Grid assets
+                                attr.equals(MOSAIK_VOLTAGE_DEVIATION) || attr.equals(MOSAIK_VOLTAGE_PU)   // Grid assets
                         ) {
                             SimosaikUtils.addResult(
                                     simonaResults,

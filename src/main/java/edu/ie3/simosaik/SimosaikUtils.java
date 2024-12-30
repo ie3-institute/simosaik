@@ -135,6 +135,13 @@ public class SimosaikUtils {
                 outputMap.put(attr, results.getVoltageDeviation(id));
             }
         }
+        if (attr.equals(MOSAIK_VOLTAGE_PU)) {
+            if (results.getTick() == 0L) {
+                outputMap.put(attr, 1d);
+            } else {            // grid related results are not sent in time step zero
+                outputMap.put(attr, results.getVoltage(id));
+            }
+        }
         if (attr.equals(MOSAIK_ACTIVE_POWER)) {
             outputMap.put(attr, results.getActivePower(id));
         }

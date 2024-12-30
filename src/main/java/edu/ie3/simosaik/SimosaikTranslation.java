@@ -5,6 +5,7 @@ public class SimosaikTranslation {
     public static final String MOSAIK_ACTIVE_POWER = "P[MW]";
     public static final String MOSAIK_REACTIVE_POWER = "Q[MVAr]";
     public static final String MOSAIK_VOLTAGE_DEVIATION = "deltaU[kV]";
+    public static final String MOSAIK_VOLTAGE_PU = "u[pu]";
     public static final String MOSAIK_ACTIVE_POWER_IN = "Pin[MW]";
     public static final String MOSAIK_REACTIVE_POWER_IN = "Qin[MVAr]";
     public static final String MOSAIK_SOC = "SOC[percent]";

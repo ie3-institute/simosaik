@@ -70,7 +70,7 @@ public class MosaikOptimizerSimulation extends ExtCoSimulation {
         }
         long nextTick = tick + deltaT;
         try {
-            sendResultsToExtCoSimulator(
+            sendFlexOptionResultsToExtCoSimulator(
                     extResultData,
                     tick,
                     Optional.of(nextTick),
@@ -84,6 +84,16 @@ public class MosaikOptimizerSimulation extends ExtCoSimulation {
                     extEmData,
                     tick,
                     nextTick,
+                    log
+            );
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            sendResultsToExtCoSimulator(
+                    extResultData,
+                    tick,
+                    Optional.of(nextTick),
                     log
             );
         } catch (InterruptedException e) {
