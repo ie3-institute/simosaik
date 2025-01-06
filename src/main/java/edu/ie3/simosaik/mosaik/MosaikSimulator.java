@@ -6,8 +6,8 @@
 
 package edu.ie3.simosaik.mosaik;
 
-import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_PRIMARY_INPUT;
 import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_GRID_RESULT;
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_PRIMARY_INPUT;
 
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
@@ -54,7 +54,7 @@ public class MosaikSimulator extends Simulator implements Meta {
 
   @Override
   public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
-    return getMeta();
+    return Meta.getMeta();
   }
 
   @Override

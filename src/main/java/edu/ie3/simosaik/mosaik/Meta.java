@@ -8,10 +8,12 @@ package edu.ie3.simosaik.mosaik;
 
 import static edu.ie3.simosaik.SimosaikTranslation.*;
 import static edu.ie3.simosaik.SimosaikTranslation.MOSAIK_VOLTAGE_DEVIATION;
+import static java.util.Collections.emptyList;
 
 import de.offis.mosaik.api.Simulator;
-import java.util.Map;
-import org.json.simple.JSONValue;
+import java.util.*;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 public interface Meta {
 
@@ -20,53 +22,48 @@ public interface Meta {
   String RESULT_OUTPUT_ENTITIES = "ResultOutputEntities";
 
   @SuppressWarnings("unchecked")
-  Map<String, Object> meta =
-      (Map<String, Object>)
-          JSONValue.parse(
-              ("{"
-                      + "    'api_version': '"
-                      + Simulator.API_VERSION
-                      + "',"
-                      + "    'type': 'time-based',"
-                      + "    'models': {"
-                      + "        '"
-                      + SIMONA_POWER_GRID_ENVIRONMENT
-                      + "': {"
-                      + "            'public': true,"
-                      + "            'params': ['simona_config'],"
-                      + "            'attrs': []"
-                      + "        },"
-                      + "        '"
-                      + PRIMARY_INPUT_ENTITIES
-                      + "': {"
-                      + "            'public': true,"
-                      + "            'params': [],"
-                      + "            'attrs': ['"
-                      + MOSAIK_ACTIVE_POWER
-                      + "', '"
-                      + MOSAIK_REACTIVE_POWER
-                      + "', '"
-                      + MOSAIK_VOLTAGE_DEVIATION
-                      + "']"
-                      + "        },"
-                      + "        '"
-                      + RESULT_OUTPUT_ENTITIES
-                      + "': {"
-                      + "            'public': true,"
-                      + "            'params': [],"
-                      + "            'attrs': ['"
-                      + MOSAIK_ACTIVE_POWER
-                      + "', '"
-                      + MOSAIK_REACTIVE_POWER
-                      + "', '"
-                      + MOSAIK_VOLTAGE_DEVIATION
-                      + "']"
-                      + "        }"
-                      + "    }"
-                      + "}")
-                  .replace("'", "\""));
+  static Map<String, Object> getMeta() {
+    Map<String, Object> map = new HashMap<>();
+    map.put("api_version", Simulator.API_VERSION);
+    map.put("type", "time-based");
 
-  default Map<String, Object> getMeta() {
-    return meta;
+    JSONObject models = new JSONObject();
+
+    models.put(
+        SIMONA_POWER_GRID_ENVIRONMENT, createObject(true, List.of("simona_config"), emptyList()));
+
+    models.put(
+        PRIMARY_INPUT_ENTITIES,
+        createObject(
+            true,
+            emptyList(),
+            List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER, MOSAIK_VOLTAGE_DEVIATION)));
+
+    models.put(
+        RESULT_OUTPUT_ENTITIES,
+        createObject(
+            true,
+            emptyList(),
+            List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER, MOSAIK_VOLTAGE_DEVIATION)));
+
+    map.put("models", models);
+
+    return map;
+  }
+
+  @SuppressWarnings("unchecked")
+  static JSONObject createObject(boolean isPublic, List<String> params, List<String> attrs) {
+    JSONArray paramArray = new JSONArray();
+    if (params != null) paramArray.addAll(params);
+
+    JSONArray attrArray = new JSONArray();
+    if (attrs != null) attrArray.addAll(attrs);
+
+    JSONObject obj = new JSONObject();
+    obj.put("public", isPublic);
+    obj.put("params", paramArray);
+    obj.put("attrs", attrArray);
+
+    return obj;
   }
 }

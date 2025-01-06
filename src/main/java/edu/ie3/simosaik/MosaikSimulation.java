@@ -18,14 +18,13 @@ import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
 import edu.ie3.simosaik.config.ArgsParser;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
