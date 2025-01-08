@@ -12,4 +12,8 @@ public class SimosaikTranslation {
     public static final String FLEX_OPTION_P_MIN = "PMin[MW]";
     public static final String FLEX_OPTION_P_REF = "PRef[MW]";
     public static final String FLEX_OPTION_P_MAX = "PMax[MW]";
+
+    public static final String FLEX_OPTION_MAP_P_MIN = "idToPMin[MW]";
+    public static final String FLEX_OPTION_MAP_P_REF = "idToPRef[MW]";
+    public static final String FLEX_OPTION_MAP_P_MAX = "idToPMax[MW]";
 }

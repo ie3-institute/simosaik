@@ -6,6 +6,7 @@ import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
 import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.ontology.DesaggFlexOptionsResult;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.SimonaSimulator;
@@ -42,6 +43,7 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
             + "            'public': true,"
             + "            'params': [],"
             + "            'attrs': ['" + MOSAIK_ACTIVE_POWER + "', '" + MOSAIK_REACTIVE_POWER + "', '" + FLEX_OPTION_P_MIN + "', '" + FLEX_OPTION_P_REF + "', '" + FLEX_OPTION_P_MAX + "']"
+            //+ "            'attrs': ['" + MOSAIK_ACTIVE_POWER + "', '" + MOSAIK_REACTIVE_POWER + "', '" + FLEX_OPTION_MAP_P_MIN + "', '" + FLEX_OPTION_MAP_P_REF + "', '" + FLEX_OPTION_MAP_P_MAX + "']"
             + "            'trigger': ['" + MOSAIK_ACTIVE_POWER + "', '" + MOSAIK_REACTIVE_POWER + "']"
             + "        }"
             //+ "        '" + FLEX_OPTION_ENTITIES + "': {"
@@ -99,40 +101,40 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
             Map<String, Object> entity = new HashMap<>();
             entity.put("eid", model);
             entity.put("type", model);
+
+            List<Map<String, Object>> childEntities = new ArrayList<>();
+
+            // EM_AGENT_ENTITIES
+
+            for (String simonaEmAgent : simonaEmAgents) {
+                Map<String, Object> childEntity = new HashMap<>();
+                childEntity.put("eid", simonaEmAgent);
+                childEntity.put("type", EM_AGENT_ENTITIES);
+                childEntities.add(childEntity);
+            }
+
+            // RESULT_OUTPUT_ENTITIES
+
+            for (String simonaResultOutputEntity : simonaResultOutputEntities) {
+                Map<String, Object> childEntity = new HashMap<>();
+                childEntity.put("eid", simonaResultOutputEntity);
+                childEntity.put("type", RESULT_OUTPUT_ENTITIES);
+                childEntities.add(childEntity);
+            }
+
+            // FLEX_OPTION_ENTITIES
+
+            /*
+            for (String simonaFlexOptionEntity : simonaFlexOptionEntities) {
+                Map<String, Object> childEntity = new HashMap<>();
+                childEntity.put("eid", simonaFlexOptionEntity);
+                childEntity.put("type", FLEX_OPTION_ENTITIES);
+                childEntities.add(childEntity);
+            }
+            */
+
+            entity.put("children", childEntities);
             entities.add(entity);
-            return entities;
-        } else if (Objects.equals(model, EM_AGENT_ENTITIES)) {
-            if (num != simonaEmAgents.length) {
-                throw new IllegalArgumentException("Requested number (" + num + ") of " + EM_AGENT_ENTITIES + " entities is not possible.");
-            }
-            for (int i = 0; i < num; i++) {
-                Map<String, Object> entity = new HashMap<>();
-                entity.put("eid", simonaEmAgents[i]);
-                entity.put("type", model);
-                entities.add(entity);
-            }
-            return entities;
-        } else if (Objects.equals(model, RESULT_OUTPUT_ENTITIES)) {
-            if (num != simonaResultOutputEntities.length) {
-                throw new IllegalArgumentException("Requested number (" + num + ") of " + RESULT_OUTPUT_ENTITIES + " entities is not possible.");
-            }
-            for (int i = 0; i < num; i++) {
-                Map<String, Object> entity = new HashMap<>();
-                entity.put("eid", simonaResultOutputEntities[i]);
-                entity.put("type", model);
-                entities.add(entity);
-            }
-            return entities;
-        } else if (Objects.equals(model, FLEX_OPTION_ENTITIES)) {
-            if (num != simonaFlexOptionEntities.length) {
-                throw new IllegalArgumentException("Requested number (" + num + ") of " + FLEX_OPTION_ENTITIES + " entities is not possible.");
-            }
-            for (int i = 0; i < num; i++) {
-                Map<String, Object> entity = new HashMap<>();
-                entity.put("eid", simonaFlexOptionEntities[i]);
-                entity.put("type", model);
-                entities.add(entity);
-            }
             return entities;
         } else {
             throw new IllegalArgumentException("The model " + model + " is not supported by SimonaSimulator.");
@@ -237,16 +239,33 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
     private double[] getFlexOptions(ExtResultContainer results, String id) {
         Map<String, ModelResultEntity> resultMap = results.getResults();
         if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
-            double[] flexOptions = {
-                    flexOptionsResult.getpMin().getValue().doubleValue(),
-                    flexOptionsResult.getpRef().getValue().doubleValue(),
-                    flexOptionsResult.getpMax().getValue().doubleValue()
-            };
-            return flexOptions;
+            return getFlexMinRefMaxFlexOptions(flexOptionsResult);
         } else {
             throw new IllegalArgumentException(
                     "FlexOptions is only available for FlexOptionsResult's!");
         }
+    }
+
+    private DetailedFlexOptions getConnectedFlexOptions(
+            ExtResultContainer results, String id
+    ) {
+        Map<String, ModelResultEntity> resultMap = results.getResults();
+        if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
+            return new DetailedFlexOptions(flexOptionsResult);
+        } else {
+            throw new IllegalArgumentException(
+                    "FlexOptions is only available for FlexOptionsResult's!");
+        }
+    }
+
+    private double[] getFlexMinRefMaxFlexOptions(
+            FlexOptionsResult flexOptionsResult
+    ) {
+        return new double[]{
+                flexOptionsResult.getpMin().getValue().doubleValue(),
+                flexOptionsResult.getpRef().getValue().doubleValue(),
+                flexOptionsResult.getpMax().getValue().doubleValue()
+        };
     }
 
     public Map<String, Object> createSimosaikOutputMap(
@@ -269,7 +288,10 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
                         } else if(
                                 attr.equals(FLEX_OPTION_P_MIN) ||
                                         attr.equals(FLEX_OPTION_P_REF) ||
-                                        attr.equals(FLEX_OPTION_P_MAX)
+                                        attr.equals(FLEX_OPTION_P_MAX) ||
+                                        attr.equals(FLEX_OPTION_MAP_P_MIN) ||
+                                        attr.equals(FLEX_OPTION_MAP_P_REF) ||
+                                        attr.equals(FLEX_OPTION_MAP_P_MAX)
                         ) {
                             addFlexOptions(
                                     simonaResults,
@@ -316,7 +338,10 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
                         } else if(
                                 attr.equals(FLEX_OPTION_P_MIN) ||
                                         attr.equals(FLEX_OPTION_P_REF) ||
-                                        attr.equals(FLEX_OPTION_P_MAX)
+                                        attr.equals(FLEX_OPTION_P_MAX) ||
+                                        attr.equals(FLEX_OPTION_MAP_P_MIN) ||
+                                        attr.equals(FLEX_OPTION_MAP_P_REF) ||
+                                        attr.equals(FLEX_OPTION_MAP_P_MAX)
                         ) {
                             addFlexOptions(
                                     simonaResults,
@@ -354,5 +379,59 @@ public class SimonaOptimizerSimulator extends SimonaSimulator {
         if (attr.equals(FLEX_OPTION_P_MAX)) {
             outputMap.put(attr, getFlexOptions(results, id)[2]);
         }
+        if (attr.equals(FLEX_OPTION_MAP_P_MAX)) {
+            outputMap.put(attr, getConnectedFlexOptions(results, id).getMinFlexOptions());
+        }
+        if (attr.equals(FLEX_OPTION_MAP_P_REF)) {
+            outputMap.put(attr, getConnectedFlexOptions(results, id).getRefFlexOptions());
+        }
+        if (attr.equals(FLEX_OPTION_MAP_P_MIN)) {
+            outputMap.put(attr, getConnectedFlexOptions(results, id).getMaxFlexOptions());
+        }
     }
+
+
+    private class DetailedFlexOptions {
+        private final Map<String, Double> minFlexOptions;
+        private final Map<String, Double> refFlexOptions;
+        private final Map<String, Double> maxFlexOptions;
+
+        public DetailedFlexOptions(
+                FlexOptionsResult flexOptionsResult
+        ) {
+            Map<String, Double> connectedPmin = new HashMap<>();
+            Map<String, Double> connectedPref = new HashMap<>();
+            Map<String, Double> connectedPmax = new HashMap<>();
+            double[] flexOptionArray = getFlexMinRefMaxFlexOptions(flexOptionsResult);
+            connectedPmin.put("EM", flexOptionArray[0]);
+            connectedPref.put("EM", flexOptionArray[1]);
+            connectedPmax.put("EM", flexOptionArray[2]);
+            if (flexOptionsResult instanceof DesaggFlexOptionsResult desaggFlexOptionsResult) {
+                Map<String, FlexOptionsResult> connectedFlexOptions = desaggFlexOptionsResult.getConnectedFlexOptionResults();
+                for (String key : connectedFlexOptions.keySet()) {
+                    flexOptionArray = getFlexMinRefMaxFlexOptions(connectedFlexOptions.get(key));
+                    connectedPmin.put(key, flexOptionArray[0]);
+                    connectedPref.put(key, flexOptionArray[1]);
+                    connectedPmax.put(key, flexOptionArray[2]);
+                }
+            }
+            this.minFlexOptions = connectedPmin;
+            this.refFlexOptions = connectedPref;
+            this.maxFlexOptions = connectedPmax;
+        }
+
+        public Map<String, Double> getMinFlexOptions() {
+            return this.minFlexOptions;
+        }
+
+        public Map<String, Double> getRefFlexOptions() {
+            return this.refFlexOptions;
+        }
+
+        public Map<String, Double> getMaxFlexOptions() {
+            return this.maxFlexOptions;
+        }
+    }
+
 }
+
