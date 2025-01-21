@@ -7,26 +7,19 @@
 package edu.ie3.simosaik;
 
 import edu.ie3.datamodel.exceptions.SourceException;
-import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
-import edu.ie3.simona.api.simulation.mapping.DataType;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
 import edu.ie3.simosaik.config.SimosaikConfig;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -62,31 +55,14 @@ public final class MosaikSimulation extends ExtCoSimulation {
     }
 
     // set up connections
-    if (!mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT).isEmpty()) {
-      this.extPrimaryDataConnection = Optional.of(buildPrimaryConnection(mapping, log));
-    } else {
-      this.extPrimaryDataConnection = Optional.empty();
-    }
-
-    if (!mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT).isEmpty()) {
-      this.extEmDataConnection = Optional.of(buildEmConnection(mapping, log));
-    } else {
-      this.extEmDataConnection = Optional.empty();
-    }
-
-    if (!mapping.getExtId2UuidMapping(DataType.EXT_GRID_RESULT).isEmpty() || !mapping.getExtId2UuidMapping(DataType.EXT_PARTICIPANT_RESULT).isEmpty()) {
-      this.extResultDataConnection = Optional.of(buildResultConnection(mapping, log));
-    } else {
-      this.extResultDataConnection = Optional.empty();
-    }
+    this.extPrimaryDataConnection = buildPrimaryConnection(mapping, log);
+    this.extEmDataConnection = buildEmConnection(mapping, log);
+    this.extResultDataConnection = buildResultConnection(mapping, log);
   }
 
   @Override
   public Set<ExtDataConnection> getDataConnections() {
-    return Stream.of(extPrimaryDataConnection, extEmDataConnection, extResultDataConnection)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-        .collect(Collectors.toSet());
+    return toSet(extPrimaryDataConnection, extEmDataConnection, extResultDataConnection);
   }
 
   @Override
@@ -95,7 +71,8 @@ public final class MosaikSimulation extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
     if (!startedMosasik) {
       startedMosasik = true;
-      mosaikSimulator.setDataConnectionToAPI(dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
+      mosaikSimulator.setDataConnectionToAPI(
+          dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
       mosaikSimulator.setMapping(mapping);
       SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
     }
@@ -112,17 +89,12 @@ public final class MosaikSimulation extends ExtCoSimulation {
     try {
       Thread.sleep(500);
 
-      ExtInputDataContainer inputData = dataQueueExtCoSimulatorToSimonaApi.takeData();
-      Map<String, Value> data = inputData.getSimonaInputMap();
-
-      Optional<Long> maybeNextTickSimona = inputData.getMaybeNextTick();
-      extPrimaryDataConnection.ifPresent(con -> sendPrimaryDataToSimona(con, tick, data, maybeNextTickSimona, log));
-      extEmDataConnection.ifPresent(con -> sendEmDataToSimona(con, tick, data, maybeNextTickSimona, log));
-
+      Optional<Long> maybeNextTickSimona =
+          sendDataToSIMONA(Set.of(extPrimaryDataConnection, extEmDataConnection), log);
 
       Optional<Long> maybeNextTickExt = Optional.of(tick + stepSize);
       if (extResultDataConnection.isPresent()) {
-        sendDataToExt(extResultDataConnection.get(), tick, maybeNextTickExt, log);
+        sendResultDataToExt(extResultDataConnection.get(), tick, maybeNextTickExt, log);
       }
 
       if (maybeNextTickSimona.isPresent() && maybeNextTickSimona.get() < maybeNextTickExt.get()) {

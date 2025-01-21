@@ -13,7 +13,6 @@ import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.SimosaikUtils;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -39,7 +38,8 @@ public abstract class MosaikSimulator extends Simulator implements Meta {
     long nextTick = time + this.stepSize;
     try {
       logger.info("Got inputs from MOSAIK for tick = " + time);
-      ExtInputDataContainer extDataForSimona = SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
+      ExtInputDataContainer extDataForSimona =
+          SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
       logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
       dataQueueMosaikToSimona.queueData(extDataForSimona);
       logger.info("Sent converted input for tick " + time + " to SIMONA!");
@@ -60,13 +60,11 @@ public abstract class MosaikSimulator extends Simulator implements Meta {
   }
 
   public void setDataConnectionToAPI(
-          DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
-          DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator
-  ) {
+      DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
     this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
   }
-
 
   public abstract void setMapping(ExtEntityMapping mapping);
 

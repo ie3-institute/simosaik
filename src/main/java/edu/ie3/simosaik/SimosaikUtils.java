@@ -6,6 +6,8 @@
 
 package edu.ie3.simosaik;
 
+import static edu.ie3.simosaik.SimosaikTranslation.*;
+
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
@@ -13,16 +15,12 @@ import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simosaik.exceptions.ConversionException;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
-import tech.units.indriya.ComparableQuantity;
-import tech.units.indriya.quantity.Quantities;
-
+import java.util.*;
 import javax.measure.Quantity;
 import javax.measure.Unit;
-import javax.measure.quantity.ElectricPotential;
 import javax.measure.quantity.Power;
-import java.util.*;
-
-import static edu.ie3.simosaik.SimosaikTranslation.*;
+import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
@@ -63,13 +61,13 @@ public class SimosaikUtils {
    * @return a new value
    */
   public static Value convertMosaikDataToValue(Map<String, Map<String, Number>> inputValue)
-          throws ConversionException {
+      throws ConversionException {
     Map<String, Double> valueMap = new HashMap<>();
 
     for (Map.Entry<String, Map<String, Number>> attr : inputValue.entrySet()) {
       valueMap.put(
-              attr.getKey(),
-              attr.getValue().values().stream().map(Number::doubleValue).reduce(0d, Double::sum));
+          attr.getKey(),
+          attr.getValue().values().stream().map(Number::doubleValue).reduce(0d, Double::sum));
     }
 
     // convert power
@@ -85,8 +83,6 @@ public class SimosaikUtils {
 
     throw new ConversionException("No supported unit found!");
   }
-
-
 
   /**
    * Converts the results sent by SIMONA for the requested entities and attributes in a format that
@@ -108,7 +104,7 @@ public class SimosaikUtils {
 
   private static void addResult(
       ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
-    if (attr.equals(MOSAIK_VOLTAGE_DEVIATION)) {
+    if (attr.equals(MOSAIK_VOLTAGE_DEVIATION_PU)) {
       if (results.getTick() == 0L) {
         outputMap.put(attr, 0d);
       } else { // grid related results are not sent in time step zero
@@ -125,7 +121,8 @@ public class SimosaikUtils {
 
   @SuppressWarnings("unchecked")
   private static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> extract(
-          Map<String, Double> valueMap, String field) {
-    return Optional.ofNullable(valueMap.get(field)).map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)));
+      Map<String, Double> valueMap, String field) {
+    return Optional.ofNullable(valueMap.get(field))
+        .map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)));
   }
 }
