@@ -20,6 +20,10 @@ public class DefaultPrimaryResultSimulator extends MosaikSimulator {
   protected String[] simonaPrimaryEntities;
   protected String[] simonaResultEntities;
 
+  public DefaultPrimaryResultSimulator() {
+    this(900);
+  }
+
   public DefaultPrimaryResultSimulator(int stepSize) {
     super(stepSize);
   }

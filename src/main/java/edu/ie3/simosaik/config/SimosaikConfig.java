@@ -10,15 +10,9 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
-public class SimosaikConfig {
-  public final Path mappingPath;
-  public final String simulator;
-
-  public SimosaikConfig(Path mappingPath, String simulator) {
-    this.mappingPath = mappingPath;
-    this.simulator = simulator;
-  }
+public record SimosaikConfig(Path mappingPath, Optional<String> simulator) {
 
   public static SimosaikConfig load(Path filePath) {
     if (!Files.isReadable(filePath)) {
@@ -27,7 +21,13 @@ public class SimosaikConfig {
 
     Config config = ConfigFactory.parseFile(filePath.toFile()).getConfig("simosaik");
 
-    return new SimosaikConfig(
-        Path.of(config.getString("mappingPath")), config.getString("simulator"));
+    Optional<String> simulator;
+    try {
+      simulator = Optional.ofNullable(config.getString("simulator"));
+    } catch (Exception e) {
+      simulator = Optional.empty();
+    }
+
+    return new SimosaikConfig(Path.of(config.getString("mappingPath")), simulator);
   }
 }

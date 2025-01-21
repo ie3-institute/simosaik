@@ -49,7 +49,7 @@ public final class MosaikSimulation extends ExtCoSimulation {
     this.mosaikIP = mosaikIP;
 
     try {
-      this.mapping = ExtEntityMappingSource.fromFile(config.mappingPath);
+      this.mapping = ExtEntityMappingSource.fromFile(config.mappingPath());
     } catch (SourceException e) {
       throw new RuntimeException(e);
     }
