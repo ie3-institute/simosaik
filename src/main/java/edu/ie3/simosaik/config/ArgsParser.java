@@ -6,8 +6,6 @@
 
 package edu.ie3.simosaik.config;
 
-import com.typesafe.config.ConfigFactory;
-import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,9 +18,9 @@ public class ArgsParser {
    *
    * @param mainArgs provided arguments
    * @param mosaikIP the IP of the socket
-   * @param mappingPath of the ext mapping source
+   * @param config the simosaik config
    */
-  public record Arguments(String[] mainArgs, String mosaikIP, Path mappingPath) {}
+  public record Arguments(String[] mainArgs, String mosaikIP, SimosaikConfig config) {}
 
   /**
    * Method for parsing the provided arguments.
@@ -40,12 +38,10 @@ public class ArgsParser {
 
     String mosaikIP = extract(parsedArgs, "--ext-address");
 
-    SimosaikConfig config =
-        new SimosaikConfig(ConfigFactory.parseFile(new File(extract(parsedArgs, "--config"))));
+    Path configPath = Path.of(extract(parsedArgs, "--config"));
+    SimosaikConfig config = SimosaikConfig.load(configPath);
 
-    Path mappingPath = Path.of(config.simosaik.mappingPath);
-
-    return new Arguments(args, mosaikIP, mappingPath);
+    return new Arguments(args, mosaikIP, config);
   }
 
   /**

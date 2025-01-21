@@ -6,14 +6,14 @@
 
 package edu.ie3.simosaik.mosaik;
 
-import static edu.ie3.simosaik.SimosaikTranslation.*;
-import static edu.ie3.simosaik.SimosaikTranslation.MOSAIK_VOLTAGE_DEVIATION;
-import static java.util.Collections.emptyList;
-
 import de.offis.mosaik.api.Simulator;
-import java.util.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+
+import java.util.List;
+import java.util.Map;
+
+import static java.util.Collections.emptyList;
 
 public interface Meta {
 
@@ -21,35 +21,23 @@ public interface Meta {
   String PRIMARY_INPUT_ENTITIES = "PrimaryInputEntities";
   String RESULT_OUTPUT_ENTITIES = "ResultOutputEntities";
 
+
   @SuppressWarnings("unchecked")
-  static Map<String, Object> getMeta() {
-    Map<String, Object> map = new HashMap<>();
-    map.put("api_version", Simulator.API_VERSION);
-    map.put("type", "time-based");
+  static Map<String, Object> createMeta(String type, Model ...models) {
+    JSONObject meta = new JSONObject();
+    meta.put("api_version", Simulator.API_VERSION);
+    meta.put("type", type);
 
-    JSONObject models = new JSONObject();
+    JSONObject mosaikModels = new JSONObject();
+    meta.put("models", mosaikModels);
 
-    models.put(
-        SIMONA_POWER_GRID_ENVIRONMENT, createObject(true, List.of("simona_config"), emptyList()));
+    for (Model model: models) {
+      mosaikModels.put(model.type, model.toJson());
+    }
 
-    models.put(
-        PRIMARY_INPUT_ENTITIES,
-        createObject(
-            true,
-            emptyList(),
-            List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER, MOSAIK_VOLTAGE_DEVIATION)));
-
-    models.put(
-        RESULT_OUTPUT_ENTITIES,
-        createObject(
-            true,
-            emptyList(),
-            List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER, MOSAIK_VOLTAGE_DEVIATION)));
-
-    map.put("models", models);
-
-    return map;
+    return meta;
   }
+
 
   @SuppressWarnings("unchecked")
   static JSONObject createObject(boolean isPublic, List<String> params, List<String> attrs) {
@@ -65,5 +53,33 @@ public interface Meta {
     obj.put("attrs", attrArray);
 
     return obj;
+  }
+
+
+  record Model(
+          String type,
+          boolean isPublic,
+          List<String> params,
+          List<String> attrs
+  ) {
+    public static Model withoutParams(String type, String ...attrs) {
+      return withoutParams(type, true, attrs);
+    }
+
+    public static Model withoutParams(String type, boolean isPublic, String ...attrs) {
+      return new Model(type, isPublic, emptyList(), List.of(attrs));
+    }
+
+    public static Model withoutAttrs(String type, boolean isPublic, String ...params) {
+      return new Model(type, isPublic, List.of(params), emptyList());
+    }
+
+    public static Model simonaPowerGridEnvironment() {
+      return withoutAttrs(SIMONA_POWER_GRID_ENVIRONMENT, true, "simona_config");
+    }
+
+    public JSONObject toJson() {
+      return createObject(isPublic, params, attrs);
+    }
   }
 }

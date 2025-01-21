@@ -9,6 +9,8 @@ package edu.ie3.simosaik;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
+import edu.ie3.simosaik.mosaik.MosaikSimulator;
+import edu.ie3.simosaik.mosaik.DefaultPrimaryResultSimulator;
 
 public class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
@@ -22,7 +24,10 @@ public class SimosaikExtLink implements ExtLinkInterface {
   public void setup(ExtSimAdapterData data) {
     ArgsParser.Arguments arguments = ArgsParser.parse(data.getMainArgs());
 
-    extSim = new MosaikSimulation(arguments);
+    int stepSize = 900;
+    MosaikSimulator simulator = new DefaultPrimaryResultSimulator(stepSize);
+
+    extSim = new MosaikSimulation(arguments.mosaikIP(), arguments.config(), simulator);
     extSim.setAdapterData(data);
   }
 }

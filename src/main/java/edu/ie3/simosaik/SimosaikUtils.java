@@ -6,14 +6,23 @@
 
 package edu.ie3.simosaik;
 
-import static edu.ie3.simosaik.SimosaikTranslation.*;
-
+import edu.ie3.datamodel.models.value.PValue;
+import edu.ie3.datamodel.models.value.SValue;
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
+import edu.ie3.simosaik.exceptions.ConversionException;
 import edu.ie3.simosaik.mosaik.MosaikSimulator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
+
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.ElectricPotential;
+import javax.measure.quantity.Power;
+import java.util.*;
+
+import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
@@ -48,6 +57,38 @@ public class SimosaikUtils {
   }
 
   /**
+   * Method to translate a MOSAIK input value into a {@link Value}.
+   *
+   * @param inputValue map: mosaik field name to value map
+   * @return a new value
+   */
+  public static Value convertMosaikDataToValue(Map<String, Map<String, Number>> inputValue)
+          throws ConversionException {
+    Map<String, Double> valueMap = new HashMap<>();
+
+    for (Map.Entry<String, Map<String, Number>> attr : inputValue.entrySet()) {
+      valueMap.put(
+              attr.getKey(),
+              attr.getValue().values().stream().map(Number::doubleValue).reduce(0d, Double::sum));
+    }
+
+    // convert power
+    Optional<ComparableQuantity<Power>> activePower = extract(valueMap, MOSAIK_ACTIVE_POWER);
+    Optional<ComparableQuantity<Power>> reactivePower = extract(valueMap, MOSAIK_REACTIVE_POWER);
+
+    if (activePower.isPresent()) {
+      if (reactivePower.isPresent()) {
+        return new SValue(activePower.get(), reactivePower.get());
+      }
+      return new PValue(activePower.get());
+    }
+
+    throw new ConversionException("No supported unit found!");
+  }
+
+
+
+  /**
    * Converts the results sent by SIMONA for the requested entities and attributes in a format that
    * can be read by MOSAIK
    */
@@ -80,5 +121,11 @@ public class SimosaikUtils {
     if (attr.equals(MOSAIK_REACTIVE_POWER)) {
       outputMap.put(attr, results.getReactivePower(id));
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> extract(
+          Map<String, Double> valueMap, String field) {
+    return Optional.ofNullable(valueMap.get(field)).map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)));
   }
 }

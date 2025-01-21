@@ -14,7 +14,6 @@ ext {
   scalaVersion = '2.13'
   scalaBinaryVersion = '2.13.12'
   pekkoVersion = "1.1.1"
-  tscfgVersion = '1.1.3'
 
   scriptsLocation = 'gradle' + File.separator + 'scripts' + File.separator // location of script plugins
 }
@@ -77,10 +76,14 @@ dependencies {
 
   /* config */
   implementation 'com.typesafe:config:1.4.3'
-  implementation "com.github.carueda:tscfg_2.13:$tscfgVersion"
+
 
   /* CORE Pekko */
   implementation "org.apache.pekko:pekko-actor_${scalaVersion}:${pekkoVersion}"
   implementation "org.apache.pekko:pekko-actor-typed_${scalaVersion}:${pekkoVersion}"
   implementation "org.apache.pekko:pekko-slf4j_${scalaVersion}:${pekkoVersion}"
+}
+
+tasks.withType(JavaCompile) {
+  options.encoding = 'UTF-8'
 }
