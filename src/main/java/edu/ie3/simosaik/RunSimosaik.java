@@ -7,7 +7,6 @@
 package edu.ie3.simosaik;
 
 import de.offis.mosaik.api.SimProcess;
-import edu.ie3.simosaik.mosaik.MosaikSimulator;
 
 /** Class to run SIMONA and MOSAIK in different threads */
 public class RunSimosaik implements Runnable {

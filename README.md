@@ -41,3 +41,15 @@ Add the following to your SIMONA configuration file:
 - ``simona.input.extSimDir = "path/to/simosaik.jar"``
 
 - ``simosaik.mappingPath = "path/to/ext_entity_mapping.csv"``
+
+- ``simosaik.simulation = "name_of_the_simosaik_simulation"``
+
+
+## Simosaik simulations
+
+The following simulations can be selected:
+
+- `PrimaryResult`: Provides SIMONA with primary data and MOSAIK with SIMONA results
+- `MosaikOptimizer`: Optimizer for em agents in SIMONA
+
+If no simulation is selected, simosaik will use the `PrimaryResult` simulation.

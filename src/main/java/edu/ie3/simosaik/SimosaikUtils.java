@@ -14,16 +14,20 @@ import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simosaik.exceptions.ConversionException;
-import edu.ie3.simosaik.mosaik.MosaikSimulator;
 import java.util.*;
+import java.util.stream.Stream;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(SimosaikUtils.class);
 
   private SimosaikUtils() {}
 
@@ -50,7 +54,8 @@ public class SimosaikUtils {
     mosaikInput.forEach(
         (assetId, inputValue) ->
             extInputDataContainer.addValue(
-                assetId, convertMosaikDataToValue((Map<String, Map<String, Number>>) inputValue)));
+                assetId,
+                convertMosaikDataToValue(assetId, (Map<String, Map<String, Number>>) inputValue)));
     return extInputDataContainer;
   }
 
@@ -60,28 +65,45 @@ public class SimosaikUtils {
    * @param inputValue map: mosaik field name to value map
    * @return a new value
    */
-  public static Value convertMosaikDataToValue(Map<String, Map<String, Number>> inputValue)
-      throws ConversionException {
+  public static Value convertMosaikDataToValue(
+      String assetId, Map<String, Map<String, Number>> inputValue) throws ConversionException {
     Map<String, Double> valueMap = new HashMap<>();
 
+    // check data
     for (Map.Entry<String, Map<String, Number>> attr : inputValue.entrySet()) {
-      valueMap.put(
-          attr.getKey(),
-          attr.getValue().values().stream().map(Number::doubleValue).reduce(0d, Double::sum));
-    }
+      Collection<Number> values = attr.getValue().values();
 
-    // convert power
-    Optional<ComparableQuantity<Power>> activePower = extract(valueMap, MOSAIK_ACTIVE_POWER);
-    Optional<ComparableQuantity<Power>> reactivePower = extract(valueMap, MOSAIK_REACTIVE_POWER);
-
-    if (activePower.isPresent()) {
-      if (reactivePower.isPresent()) {
-        return new SValue(activePower.get(), reactivePower.get());
+      if (values.contains(null)) {
+        log.warn("Received null value for attribute '{}' of asset '{}'.", attr.getKey(), assetId);
+      } else {
+        valueMap.put(
+            attr.getKey(),
+            values.stream()
+                .filter(Objects::nonNull)
+                .map(Number::doubleValue)
+                .reduce(0d, Double::sum));
       }
-      return new PValue(activePower.get());
     }
 
-    throw new ConversionException("No supported unit found!");
+    return toValue(valueMap);
+  }
+
+  private static Value toValue(Map<String, Double> valueMap) {
+    // convert power
+    Optional<ComparableQuantity<Power>> active =
+        extractAny(valueMap, MOSAIK_ACTIVE_POWER, MOSAIK_ACTIVE_POWER_IN);
+    Optional<ComparableQuantity<Power>> reactive =
+        extractAny(valueMap, MOSAIK_REACTIVE_POWER, MOSAIK_REACTIVE_POWER_IN);
+
+    if (reactive.isPresent()) {
+      ComparableQuantity<Power> activePower = active.orElse(null);
+      return new SValue(activePower, reactive.get());
+    }
+    if (active.isPresent()) {
+      return new PValue(extract(valueMap, MOSAIK_REACTIVE_POWER));
+    }
+
+    throw new ConversionException("This method only supports active and reactive power!");
   }
 
   /**
@@ -102,27 +124,47 @@ public class SimosaikUtils {
     return outputMap;
   }
 
-  private static void addResult(
+  public static void addResult(
       ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
-    if (attr.equals(MOSAIK_VOLTAGE_DEVIATION_PU)) {
+    if (equalsAny(attr, MOSAIK_VOLTAGE_DEVIATION_PU, MOSAIK_VOLTAGE_PU)) {
       if (results.getTick() == 0L) {
         outputMap.put(attr, 0d);
-      } else { // grid related results are not sent in time step zero
+      } else {
+        // grid related results are not sent in time step zero
         outputMap.put(attr, results.getVoltageDeviation(id));
       }
     }
-    if (attr.equals(MOSAIK_ACTIVE_POWER)) {
+    if (equalsAny(attr, MOSAIK_ACTIVE_POWER, MOSAIK_ACTIVE_POWER_IN)) {
       outputMap.put(attr, results.getActivePower(id));
     }
-    if (attr.equals(MOSAIK_REACTIVE_POWER)) {
+    if (equalsAny(attr, MOSAIK_REACTIVE_POWER, MOSAIK_REACTIVE_POWER_IN)) {
       outputMap.put(attr, results.getReactivePower(id));
     }
   }
 
+  private static boolean equalsAny(String attr, String... units) {
+    for (String unit : units) {
+      if (attr.equals(unit)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @SuppressWarnings("unchecked")
-  private static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> extract(
+  private static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> extractAny(
+      Map<String, Double> valueMap, String... fields) {
+    return Stream.of(fields)
+        .map(field -> (ComparableQuantity<Q>) extract(valueMap, field))
+        .filter(Objects::nonNull)
+        .findFirst();
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <Q extends Quantity<Q>> ComparableQuantity<Q> extract(
       Map<String, Double> valueMap, String field) {
     return Optional.ofNullable(valueMap.get(field))
-        .map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)));
+        .map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)))
+        .orElse(null);
   }
 }

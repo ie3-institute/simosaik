@@ -9,9 +9,9 @@ package edu.ie3.simosaik;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
-import edu.ie3.simosaik.config.SimosaikConfig;
-import edu.ie3.simosaik.mosaik.DefaultPrimaryResultSimulator;
-import edu.ie3.simosaik.mosaik.MosaikSimulator;
+import edu.ie3.simosaik.primaryResultSimulator.PrimaryResultSimulation;
+import edu.ie3.simosaik.simosaikFlexOptionOptimizer.MosaikOptimizerSimulation;
+import java.nio.file.Path;
 
 public class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
@@ -24,14 +24,16 @@ public class SimosaikExtLink implements ExtLinkInterface {
   @Override
   public void setup(ExtSimAdapterData data) {
     ArgsParser.Arguments arguments = ArgsParser.parse(data.getMainArgs());
-    SimosaikConfig config = arguments.config();
 
-    MosaikSimulator simulator =
-        switch (config.simulator().orElse("")) {
-          default -> new DefaultPrimaryResultSimulator();
+    String mosaikIP = arguments.mosaikIP();
+    Path mappingPath = arguments.mappingPath();
+
+    extSim =
+        switch (arguments.simulation()) {
+          case PRIMARY_RESULT -> new PrimaryResultSimulation(mosaikIP, mappingPath);
+          case MOSAIK_OPTIMIZER -> new MosaikOptimizerSimulation(mosaikIP, mappingPath);
         };
 
-    extSim = new MosaikSimulation(arguments.mosaikIP(), config, simulator);
     extSim.setAdapterData(data);
   }
 }

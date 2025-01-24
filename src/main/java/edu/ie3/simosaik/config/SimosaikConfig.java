@@ -12,7 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public record SimosaikConfig(Path mappingPath, Optional<String> simulator) {
+public record SimosaikConfig(Path mappingPath, Simulation simulation) {
 
   public static SimosaikConfig load(Path filePath) {
     if (!Files.isReadable(filePath)) {
@@ -21,13 +21,14 @@ public record SimosaikConfig(Path mappingPath, Optional<String> simulator) {
 
     Config config = ConfigFactory.parseFile(filePath.toFile()).getConfig("simosaik");
 
-    Optional<String> simulator;
+    String simulation;
     try {
-      simulator = Optional.ofNullable(config.getString("simulator"));
+      simulation = Optional.of(config.getString("simulation")).orElse("PrimaryResult");
     } catch (Exception e) {
-      simulator = Optional.empty();
+      simulation = "PrimaryResult";
     }
 
-    return new SimosaikConfig(Path.of(config.getString("mappingPath")), simulator);
+    return new SimosaikConfig(
+        Path.of(config.getString("mappingPath")), Simulation.parse(simulation));
   }
 }

@@ -7,17 +7,11 @@
 package edu.ie3.simosaik;
 
 import edu.ie3.datamodel.exceptions.SourceException;
-import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.em.ExtEmDataConnection;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
-import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
-import edu.ie3.simosaik.config.SimosaikConfig;
-import edu.ie3.simosaik.mosaik.MosaikSimulator;
+import java.nio.file.Path;
 import java.util.Optional;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,55 +19,45 @@ import org.slf4j.LoggerFactory;
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
  * primary and em data. Also, this simulation can send result data back to mosaik.
  */
-public final class MosaikSimulation extends ExtCoSimulation {
+public abstract class MosaikSimulation extends ExtCoSimulation {
 
-  private static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
-
-  private final Optional<ExtPrimaryDataConnection> extPrimaryDataConnection;
-  private final Optional<ExtEmDataConnection> extEmDataConnection;
-  private final Optional<ExtResultDataConnection> extResultDataConnection;
+  protected static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
 
   private final String mosaikIP;
-  private final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
+  protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
 
-  private final int stepSize;
+  protected final int stepSize;
   private boolean startedMosasik = false;
 
-  private final ExtEntityMapping mapping;
+  protected final ExtEntityMapping mapping;
 
-  public MosaikSimulation(String mosaikIP, SimosaikConfig config, MosaikSimulator simulator) {
-    super("MosaikSimulation", "MosaikSimulator");
+  public MosaikSimulation(String mosaikIP, Path mappingPath, MosaikSimulator simulator) {
+    this("MosaikSimulation", mosaikIP, mappingPath, simulator);
+  }
+
+  public MosaikSimulation(
+      String name, String mosaikIP, Path mappingPath, MosaikSimulator simulator) {
+    super(name, simulator.getSimName());
 
     this.mosaikSimulator = simulator;
     this.stepSize = simulator.stepSize;
     this.mosaikIP = mosaikIP;
 
     try {
-      this.mapping = ExtEntityMappingSource.fromFile(config.mappingPath());
+      this.mapping = ExtEntityMappingSource.fromFile(mappingPath);
     } catch (SourceException e) {
       throw new RuntimeException(e);
     }
-
-    // set up connections
-    this.extPrimaryDataConnection = buildPrimaryConnection(mapping, log);
-    this.extEmDataConnection = buildEmConnection(mapping, log);
-    this.extResultDataConnection = buildResultConnection(mapping, log);
   }
 
   @Override
-  public Set<ExtDataConnection> getDataConnections() {
-    return toSet(extPrimaryDataConnection, extEmDataConnection, extResultDataConnection);
-  }
-
-  @Override
-  protected Long initialize() {
+  protected final Long initialize() {
     log.info(
         "+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
     if (!startedMosasik) {
       startedMosasik = true;
-      mosaikSimulator.setDataConnectionToAPI(
-          dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
-      mosaikSimulator.setMapping(mapping);
+      mosaikSimulator.setConnectionToSimonaApi(
+          mapping, dataQueueExtCoSimulatorToSimonaApi, dataQueueSimonaApiToExtCoSimulator);
       SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
     }
     log.info(
@@ -82,28 +66,19 @@ public final class MosaikSimulation extends ExtCoSimulation {
   }
 
   @Override
-  protected Optional<Long> doActivity(long tick) {
+  protected final Optional<Long> doActivity(long tick) {
     log.info(
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
     try {
       Thread.sleep(500);
 
-      Optional<Long> maybeNextTickSimona =
-          sendDataToSIMONA(Set.of(extPrimaryDataConnection, extEmDataConnection), log);
-
-      Optional<Long> maybeNextTickExt = Optional.of(tick + stepSize);
-      if (extResultDataConnection.isPresent()) {
-        sendResultDataToExt(extResultDataConnection.get(), tick, maybeNextTickExt, log);
-      }
-
-      if (maybeNextTickSimona.isPresent() && maybeNextTickSimona.get() < maybeNextTickExt.get()) {
-        return maybeNextTickSimona;
-      } else {
-        return maybeNextTickExt;
-      }
+      long nextTick = tick + stepSize;
+      return activity(tick, nextTick);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
   }
+
+  protected abstract Optional<Long> activity(long tick, long nextTick) throws InterruptedException;
 }

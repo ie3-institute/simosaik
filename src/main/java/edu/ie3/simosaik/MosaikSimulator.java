@@ -4,7 +4,7 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.mosaik;
+package edu.ie3.simosaik;
 
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
@@ -12,15 +12,11 @@ import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.SimosaikUtils;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 /** The mosaik simulator that exchanges information with mosaik. */
-public abstract class MosaikSimulator extends Simulator implements Meta {
+public abstract class MosaikSimulator extends Simulator implements SimonaEntities, MetaUtils {
   protected final Logger logger = SimProcess.logger;
 
   public final int stepSize;
@@ -28,13 +24,13 @@ public abstract class MosaikSimulator extends Simulator implements Meta {
   protected DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
   protected DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
 
-  public MosaikSimulator(int stepSize) {
-    super("SimonaPowerGrid");
+  public MosaikSimulator(String name, int stepSize) {
+    super(name);
     this.stepSize = stepSize;
   }
 
   @Override
-  public final long step(long time, Map<String, Object> inputs, long maxAdvance) {
+  public long step(long time, Map<String, Object> inputs, long maxAdvance) {
     long nextTick = time + this.stepSize;
     try {
       logger.info("Got inputs from MOSAIK for tick = " + time);
@@ -50,7 +46,7 @@ public abstract class MosaikSimulator extends Simulator implements Meta {
   }
 
   @Override
-  public final Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
+  public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
     logger.info("Got a request from MOSAIK to provide data!");
     ExtResultContainer results = dataQueueSimonaToMosaik.takeData();
     logger.info("Got results from SIMONA for MOSAIK!");
@@ -59,16 +55,19 @@ public abstract class MosaikSimulator extends Simulator implements Meta {
     return data;
   }
 
-  public void setDataConnectionToAPI(
+  public abstract void setConnectionToSimonaApi(
+      ExtEntityMapping mapping,
       DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
-      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
-    this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
-    this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
-  }
+      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator);
 
-  public abstract void setMapping(ExtEntityMapping mapping);
-
-  protected List<Map<String, Object>> buildMap(String[] simonaEntities, String model) {
+  /**
+   * Builds a map for each given entity.
+   *
+   * @param model type of entities
+   * @param simonaEntities set of entities
+   * @return a list of maps
+   */
+  protected List<Map<String, Object>> buildMap(String model, Set<String> simonaEntities) {
     List<Map<String, Object>> entities = new ArrayList<>();
 
     for (String simonaEntity : simonaEntities) {

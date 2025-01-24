@@ -6,6 +6,8 @@
 
 package edu.ie3.simosaik.config;
 
+import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.MosaikSimulator;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,9 +20,11 @@ public class ArgsParser {
    *
    * @param mainArgs provided arguments
    * @param mosaikIP the IP of the socket
-   * @param config the simosaik config
+   * @param mappingPath path for the {@link ExtEntityMapping}
+   * @param simulation the {@link MosaikSimulator}
    */
-  public record Arguments(String[] mainArgs, String mosaikIP, SimosaikConfig config) {}
+  public record Arguments(
+      String[] mainArgs, String mosaikIP, Path mappingPath, Simulation simulation) {}
 
   /**
    * Method for parsing the provided arguments.
@@ -41,7 +45,7 @@ public class ArgsParser {
     Path configPath = Path.of(extract(parsedArgs, "--config"));
     SimosaikConfig config = SimosaikConfig.load(configPath);
 
-    return new Arguments(args, mosaikIP, config);
+    return new Arguments(args, mosaikIP, config.mappingPath(), config.simulation());
   }
 
   /**
