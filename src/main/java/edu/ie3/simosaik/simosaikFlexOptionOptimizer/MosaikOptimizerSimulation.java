@@ -36,7 +36,7 @@ public class MosaikOptimizerSimulation extends MosaikSimulation {
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     sendFlexOptionResultsToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
 
-    sendEmDataToSimona(extEmDataConnection, tick, Optional.of(nextTick), log);
+    sendEmDataToSimona(extEmDataConnection, tick,  Optional.of(nextTick), log);
 
     sendGridResultsToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
 
