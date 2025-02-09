@@ -21,8 +21,8 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   public final int stepSize;
 
-  protected DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
-  protected DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
+  public DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
+  public DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
 
   public MosaikSimulator(String name, int stepSize) {
     super(name);

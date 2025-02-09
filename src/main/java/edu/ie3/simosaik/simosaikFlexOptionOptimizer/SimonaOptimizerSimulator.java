@@ -6,9 +6,7 @@
 
 package edu.ie3.simosaik.simosaikFlexOptionOptimizer;
 
-import static edu.ie3.simona.api.simulation.mapping.DataType.*;
-import static edu.ie3.simosaik.SimosaikTranslation.*;
-
+import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.models.result.ModelResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
@@ -16,10 +14,15 @@ import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.MetaUtils;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.SimosaikUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+
 import java.util.*;
+
+import static edu.ie3.simona.api.simulation.mapping.DataType.*;
+import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 public class SimonaOptimizerSimulator extends MosaikSimulator {
   private Set<String> simonaEmAgents; // Agents who receive set points
@@ -32,6 +35,29 @@ public class SimonaOptimizerSimulator extends MosaikSimulator {
   private int counter;
   private Map<String, Object> resultCache;
 
+  private static final JSONObject meta = (JSONObject) JSONValue.parse(("{"
+          + "    'api_version': '" + Simulator.API_VERSION + "',"
+          + "    'type': 'hybrid',"
+          + "    'models': {"
+          + "        '" + SIMONA_POWER_GRID_ENVIRONMENT + "': {"
+          + "            'public': true,"
+          + "            'params': ['simona_config'],"
+          + "            'attrs': []"
+          + "        },"
+          + "        '" + EM_AGENT_ENTITIES + "': {"
+          + "            'public': true,"
+          + "            'params': [],"
+          + "            'attrs': ['" + MOSAIK_ACTIVE_POWER + "', '" + MOSAIK_REACTIVE_POWER + "', '" + FLEX_OPTION_P_MIN + "', '" + FLEX_OPTION_P_REF + "', '" + FLEX_OPTION_P_MAX + "']"
+          + "            'trigger': ['" + MOSAIK_ACTIVE_POWER + "', '" + MOSAIK_REACTIVE_POWER + "']"
+          + "        }"
+          + "        '" + RESULT_OUTPUT_ENTITIES + "': {"
+          + "            'public': true,"
+          + "            'params': [],"
+          + "            'attrs': ['" + MOSAIK_VOLTAGE_PU + "']"
+          + "        }"
+          + "    }"
+          + "}").replace("'", "\""));
+
   public SimonaOptimizerSimulator() {
     super("SimonaPowerGrid", 900);
   }
@@ -41,24 +67,7 @@ public class SimonaOptimizerSimulator extends MosaikSimulator {
     this.counter = 0;
     this.resultCache = Collections.emptyMap();
 
-    List<String> em_agent_units =
-        List.of(
-            MOSAIK_ACTIVE_POWER,
-            MOSAIK_REACTIVE_POWER,
-            FLEX_OPTION_P_MIN,
-            FLEX_OPTION_P_REF,
-            FLEX_OPTION_P_MAX);
-    // List<String> em_agent_units = List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER,
-    // FLEX_OPTION_MAP_P_MIN, FLEX_OPTION_MAP_P_REF, FLEX_OPTION_MAP_P_MAX);
-
-    return MetaUtils.createMeta(
-        "hybrid",
-        ModelParams.simonaPowerGridEnvironment(),
-        ModelParams.of(
-            EM_AGENT_ENTITIES, em_agent_units, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-        // ModelParams.of(FLEX_OPTION_ENTITIES, FLEX_OPTION_P_MIN, FLEX_OPTION_P_REF,
-        // FLEX_OPTION_P_MAX),
-        ModelParams.of(RESULT_OUTPUT_ENTITIES, MOSAIK_VOLTAGE_PU));
+    return meta;
   }
 
   @Override

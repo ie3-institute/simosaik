@@ -6,11 +6,14 @@
 
 package edu.ie3.simosaik.simosaikFlexOptionOptimizer;
 
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
+import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simosaik.MosaikSimulation;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -34,11 +37,17 @@ public class MosaikOptimizerSimulation extends MosaikSimulation {
 
   @Override
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
-    sendFlexOptionResultsToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
+    sendDataToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
 
-    sendEmDataToSimona(extEmDataConnection, tick,  Optional.of(nextTick), log);
+    ExtInputDataContainer rawEmData = mosaikSimulator.dataQueueMosaikToSimona.takeData();
+    if (rawEmData.getTick() != tick) {
+      throw new RuntimeException(String.format("Mosaik provided input data for tick %d, but SIMONA expects input data for tick %d", rawEmData.getTick(), tick));
+    }
+    Map<String, Value> inputMap = rawEmData.getSimonaInputMap();
 
-    sendGridResultsToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
+    sendEmDataToSimona(extEmDataConnection, tick, inputMap, Optional.of(nextTick), log);
+
+    sendDataToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
 
     return Optional.of(nextTick);
   }
