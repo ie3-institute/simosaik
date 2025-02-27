@@ -14,13 +14,21 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
 
-public class MosaikOptimizerSimulation extends MosaikSimulation {
+public class FlexOptionOptimizerSimulation extends MosaikSimulation {
 
   private final ExtEmDataConnection extEmDataConnection;
   private final ExtResultDataConnection extResultDataConnection;
 
-  public MosaikOptimizerSimulation(String mosaikIP, Path mappingPath) {
-    super("MosaikOptimizerSimulation", mosaikIP, mappingPath, new SimonaOptimizerSimulator());
+  public FlexOptionOptimizerSimulation(
+      String mosaikIP,
+      Path mappingPath,
+      int stepSize,
+      boolean useFlexOptionEntitiesInsteadOfEmAgents) {
+    super(
+        "MosaikOptimizerSimulation",
+        mosaikIP,
+        mappingPath,
+        new FlexOptionOptimizerSimulator(stepSize, useFlexOptionEntitiesInsteadOfEmAgents));
 
     // set up connection
     this.extEmDataConnection = buildEmConnection(mapping, log);
@@ -34,12 +42,17 @@ public class MosaikOptimizerSimulation extends MosaikSimulation {
 
   @Override
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
-    sendFlexOptionResultsToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
+    Optional<Long> maybeNextTick = Optional.of(nextTick);
 
-    sendEmDataToSimona(extEmDataConnection, tick, Optional.of(nextTick), log);
+    // sending flexibility options to external mosaik
+    sendFlexOptionResultsToExt(extResultDataConnection, tick, maybeNextTick, log);
 
-    sendGridResultsToExt(extResultDataConnection, tick, Optional.of(nextTick), log);
+    // sending energy management set-points to SIMONA
+    sendEmDataToSimona(extEmDataConnection, tick, maybeNextTick, log);
 
-    return Optional.of(nextTick);
+    // sending grid results to mosaik
+    sendGridResultsToExt(extResultDataConnection, tick, maybeNextTick, log);
+
+    return maybeNextTick;
   }
 }

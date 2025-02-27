@@ -19,8 +19,12 @@ public class PrimaryResultSimulation extends MosaikSimulation {
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
   private final ExtResultDataConnection extResultDataConnection;
 
-  public PrimaryResultSimulation(String mosaikIP, Path mappingPath) {
-    super("MosaikPrimaryResultSimulation", mosaikIP, mappingPath, new PrimaryResultSimulator());
+  public PrimaryResultSimulation(String mosaikIP, Path mappingPath, int stepSize) {
+    super(
+        "MosaikPrimaryResultSimulation",
+        mosaikIP,
+        mappingPath,
+        new PrimaryResultSimulator(stepSize));
 
     // set up connection
     this.extPrimaryDataConnection = buildPrimaryConnection(mapping, log);
@@ -36,7 +40,10 @@ public class PrimaryResultSimulation extends MosaikSimulation {
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
 
+    // sending primary data to SIMONA
     sendPrimaryDataToSimona(extPrimaryDataConnection, tick, maybeNextTick, log);
+
+    // sending results to mosaik
     sendResultToExt(extResultDataConnection, tick, maybeNextTick, log);
 
     return maybeNextTick;

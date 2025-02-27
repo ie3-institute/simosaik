@@ -19,13 +19,17 @@ import org.json.simple.JSONObject;
 /** Methods for simplifying the creation of mosaik meta information. */
 public interface MetaUtils {
 
+  static Map<String, Object> createMetaWithPowerGrid(String type, ModelParams... additionalModels) {
+    return createMeta(type, ModelParams.simonaPowerGridEnvironment(), List.of(additionalModels));
+  }
+
   static Map<String, Object> createMeta(
       String type, ModelParams simonaPowerGrid, ModelParams... additionalModels) {
     return createMeta(type, simonaPowerGrid, List.of(additionalModels));
   }
 
   @SuppressWarnings("unchecked")
-  static Map<String, Object> createMeta(
+  private static Map<String, Object> createMeta(
       String type, ModelParams simonaPowerGrid, List<ModelParams> additionalModels) {
     JSONObject meta = new JSONObject();
     meta.put("api_version", Simulator.API_VERSION);
@@ -45,16 +49,26 @@ public interface MetaUtils {
   @SuppressWarnings("unchecked")
   static JSONObject createObject(
       boolean isPublic, List<String> params, List<String> attrs, List<String> triggers) {
-    JSONArray paramArray = new JSONArray();
-    if (params != null) paramArray.addAll(params);
-
-    JSONArray attrArray = new JSONArray();
-    if (attrs != null) attrArray.addAll(attrs);
-
     JSONObject obj = new JSONObject();
     obj.put("public", isPublic);
-    obj.put("params", paramArray);
-    obj.put("attrs", attrArray);
+
+    if (params != null) {
+      JSONArray paramArray = new JSONArray();
+      paramArray.addAll(params);
+      obj.put("params", paramArray);
+    }
+
+    if (attrs != null) {
+      JSONArray attrArray = new JSONArray();
+      attrArray.addAll(attrs);
+      obj.put("attrs", attrArray);
+    }
+
+    if (triggers != null) {
+      JSONArray triggerArray = new JSONArray();
+      triggerArray.addAll(triggers);
+      obj.put("triggers", triggerArray);
+    }
 
     return obj;
   }

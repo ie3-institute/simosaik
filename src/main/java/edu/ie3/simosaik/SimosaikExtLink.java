@@ -10,7 +10,7 @@ import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
 import edu.ie3.simosaik.primaryResultSimulator.PrimaryResultSimulation;
-import edu.ie3.simosaik.simosaikFlexOptionOptimizer.MosaikOptimizerSimulation;
+import edu.ie3.simosaik.simosaikFlexOptionOptimizer.FlexOptionOptimizerSimulation;
 import java.nio.file.Path;
 
 public class SimosaikExtLink implements ExtLinkInterface {
@@ -27,11 +27,17 @@ public class SimosaikExtLink implements ExtLinkInterface {
 
     String mosaikIP = arguments.mosaikIP();
     Path mappingPath = arguments.mappingPath();
+    int stepSize = arguments.stepSize();
 
     extSim =
         switch (arguments.simulation()) {
-          case PRIMARY_RESULT -> new PrimaryResultSimulation(mosaikIP, mappingPath);
-          case MOSAIK_OPTIMIZER -> new MosaikOptimizerSimulation(mosaikIP, mappingPath);
+          case PRIMARY_RESULT -> new PrimaryResultSimulation(mosaikIP, mappingPath, stepSize);
+          case FLEX_OPTION_OPTIMIZER ->
+              new FlexOptionOptimizerSimulation(
+                  mosaikIP,
+                  mappingPath,
+                  stepSize,
+                  arguments.useFlexOptionEntitiesInsteadOfEmAgents());
         };
 
     extSim.setAdapterData(data);

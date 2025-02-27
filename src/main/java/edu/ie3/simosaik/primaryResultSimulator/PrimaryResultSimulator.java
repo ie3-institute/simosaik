@@ -21,19 +21,14 @@ public class PrimaryResultSimulator extends MosaikSimulator {
   private Set<String> simonaPrimaryEntities;
   private Set<String> simonaResultEntities;
 
-  public PrimaryResultSimulator() {
-    super("PrimaryResultSimulator", 900);
-  }
-
   public PrimaryResultSimulator(int stepSize) {
     super("PrimaryResultSimulator", stepSize);
   }
 
   @Override
   public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
-    return MetaUtils.createMeta(
+    return MetaUtils.createMetaWithPowerGrid(
         "time-based",
-        ModelParams.simonaPowerGridEnvironment(),
         ModelParams.of(PRIMARY_INPUT_ENTITIES),
         ModelParams.of(RESULT_OUTPUT_ENTITIES));
   }

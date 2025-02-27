@@ -126,7 +126,7 @@ public class SimosaikUtils {
 
   public static void addResult(
       ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
-    if (equalsAny(attr, MOSAIK_VOLTAGE_DEVIATION_PU, MOSAIK_VOLTAGE_PU)) {
+    if (equalsAny(attr, MOSAIK_VOLTAGE_DEVIATION_PU)) {
       if (results.getTick() == 0L) {
         outputMap.put(attr, 0d);
       } else {
@@ -134,6 +134,15 @@ public class SimosaikUtils {
         outputMap.put(attr, results.getVoltageDeviation(id));
       }
     }
+    if (equalsAny(attr, MOSAIK_VOLTAGE_PU)) {
+      if (results.getTick() == 0L) {
+        outputMap.put(attr, 1d);
+      } else {
+        // grid related results are not sent in time step zero
+        outputMap.put(attr, results.getVoltageDeviation(id));
+      }
+    }
+
     if (equalsAny(attr, MOSAIK_ACTIVE_POWER, MOSAIK_ACTIVE_POWER_IN)) {
       outputMap.put(attr, results.getActivePower(id));
     }

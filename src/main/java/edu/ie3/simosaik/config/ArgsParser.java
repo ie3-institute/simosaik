@@ -22,9 +22,16 @@ public class ArgsParser {
    * @param mosaikIP the IP of the socket
    * @param mappingPath path for the {@link ExtEntityMapping}
    * @param simulation the {@link MosaikSimulator}
+   * @param stepSize option for the step size
+   * @param useFlexOptionEntitiesInsteadOfEmAgents false, to communicate with em agents
    */
   public record Arguments(
-      String[] mainArgs, String mosaikIP, Path mappingPath, Simulation simulation) {}
+      String[] mainArgs,
+      String mosaikIP,
+      Path mappingPath,
+      Simulation simulation,
+      int stepSize,
+      boolean useFlexOptionEntitiesInsteadOfEmAgents) {}
 
   /**
    * Method for parsing the provided arguments.
@@ -45,7 +52,13 @@ public class ArgsParser {
     Path configPath = Path.of(extract(parsedArgs, "--config"));
     SimosaikConfig config = SimosaikConfig.load(configPath);
 
-    return new Arguments(args, mosaikIP, config.mappingPath(), config.simulation());
+    return new Arguments(
+        args,
+        mosaikIP,
+        config.mappingPath(),
+        config.simulation(),
+        config.stepSize(),
+        config.useFlexOptionEntitiesInsteadOfEmAgents());
   }
 
   /**
