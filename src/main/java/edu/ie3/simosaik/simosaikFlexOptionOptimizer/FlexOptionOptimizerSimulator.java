@@ -9,7 +9,7 @@ package edu.ie3.simosaik.simosaikFlexOptionOptimizer;
 import static edu.ie3.simona.api.simulation.mapping.DataType.*;
 import static edu.ie3.simosaik.SimosaikTranslation.*;
 
-import edu.ie3.datamodel.models.result.ModelResultEntity;
+import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
 import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
@@ -189,7 +189,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
   }
 
   private double getSoc(ExtResultContainer results, String id) {
-    Map<String, ModelResultEntity> resultMap = results.getResults();
+    Map<String, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof StorageResult storageResult) {
       return storageResult.getSoc().getValue().doubleValue();
     } else {
@@ -198,7 +198,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
   }
 
   private double[] getFlexOptions(ExtResultContainer results, String id) {
-    Map<String, ModelResultEntity> resultMap = results.getResults();
+    Map<String, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
       return getFlexMinRefMaxFlexOptions(flexOptionsResult);
     } else {
@@ -207,7 +207,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
   }
 
   private DetailedFlexOptions getConnectedFlexOptions(ExtResultContainer results, String id) {
-    Map<String, ModelResultEntity> resultMap = results.getResults();
+    Map<String, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
       return new DetailedFlexOptions(flexOptionsResult);
     } else {
