@@ -4,18 +4,17 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.simosaikFlexOptionOptimizer;
+package edu.ie3.simosaik.flexibility;
 
-import static edu.ie3.simona.api.simulation.mapping.DataType.*;
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_EM_INPUT;
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_GRID_RESULT;
 import static edu.ie3.simosaik.SimosaikTranslation.*;
 
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
-import edu.ie3.datamodel.models.result.system.StorageResult;
 import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
-import edu.ie3.simona.api.data.results.model.DesaggFlexOptionsResult;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MetaUtils;
 import edu.ie3.simosaik.MosaikSimulator;
@@ -23,23 +22,19 @@ import edu.ie3.simosaik.SimosaikUtils;
 import java.util.*;
 
 // TODO: Refactor this class
-public class FlexOptionOptimizerSimulator extends MosaikSimulator {
-  private Set<String> simonaEmAgents; // Agents who receive set points
-  private Set<String>
-      simonaFlexOptionEntities; // Agents who send flex options for further calculations
-  private Set<String>
-      simonaResultOutputEntities; // Agents who send flex options for further calculations
+public class FlexCommunicationSimulator extends MosaikSimulator {
+  /** Agents who receive set points */
+  protected Set<String> simonaEmAgents;
 
-  private final boolean useFlexOptionEntitiesInsteadOfEmAgents;
+  /** Agents who send flex options for further calculations */
+  protected Set<String> simonaResultOutputEntities;
 
-  private long time;
-  private int counter;
-  private Map<String, Object> resultCache;
+  protected long time;
+  protected int counter;
+  protected Map<String, Object> resultCache;
 
-  public FlexOptionOptimizerSimulator(
-      int stepSize, boolean useFlexOptionEntitiesInsteadOfEmAgents) {
-    super("SimonaPowerGrid", stepSize);
-    this.useFlexOptionEntitiesInsteadOfEmAgents = useFlexOptionEntitiesInsteadOfEmAgents;
+  public FlexCommunicationSimulator(int stepSize) {
+    super("FlexCommunicationSimulator", stepSize);
   }
 
   @Override
@@ -47,14 +42,6 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     this.counter = 0;
     this.resultCache = Collections.emptyMap();
 
-    if (useFlexOptionEntitiesInsteadOfEmAgents) {
-      return flexOptionEntitiesMeta();
-    } else {
-      return emEntitiesMeta();
-    }
-  }
-
-  private Map<String, Object> emEntitiesMeta() {
     List<String> emUnits =
         List.of(
             MOSAIK_ACTIVE_POWER,
@@ -65,28 +52,13 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
 
     return MetaUtils.createMeta(
         "hybrid",
-        ModelParams.of(
-            EM_AGENT_ENTITIES, emUnits, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-        ModelParams.of(RESULT_OUTPUT_ENTITIES, MOSAIK_VOLTAGE_PU));
-  }
-
-  private Map<String, Object> flexOptionEntitiesMeta() {
-    List<String> emUnits =
-        List.of(
-            MOSAIK_ACTIVE_POWER,
-            MOSAIK_REACTIVE_POWER,
-            FLEX_OPTION_MAP_P_MIN,
-            FLEX_OPTION_MAP_P_REF,
-            FLEX_OPTION_MAP_P_MAX);
-
-    return MetaUtils.createMeta(
-        "hybrid",
-        ModelParams.of(FLEX_OPTION_ENTITIES, emUnits),
-        ModelParams.of(RESULT_OUTPUT_ENTITIES, MOSAIK_VOLTAGE_PU));
+        ModelParams.of(EM_AGENT_ENTITIES, emUnits),
+        ModelParams.of(RESULT_OUTPUT_ENTITIES, emUnits));
   }
 
   @Override
-  public List<Map<String, Object>> create(int num, String model, Map<String, Object> modelParams) {
+  public final List<Map<String, Object>> create(
+      int num, String model, Map<String, Object> modelParams) {
     List<Map<String, Object>> entities = new ArrayList<>();
     if (Objects.equals(model, SIMONA_POWER_GRID_ENVIRONMENT)) {
       if (num != 1) {
@@ -103,15 +75,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
 
       List<Map<String, Object>> childEntities = new ArrayList<>();
 
-      if (useFlexOptionEntitiesInsteadOfEmAgents) {
-
-        // FLEX_OPTION_ENTITIES
-        childEntities.addAll(buildMap(FLEX_OPTION_ENTITIES, simonaFlexOptionEntities));
-      } else {
-
-        // EM_AGENT_ENTITIES
-        childEntities.addAll(buildMap(EM_AGENT_ENTITIES, simonaEmAgents));
-      }
+      // EM_AGENT_ENTITIES
+      childEntities.addAll(buildMap(EM_AGENT_ENTITIES, simonaEmAgents));
 
       // RESULT_OUTPUT_ENTITIES
       childEntities.addAll(buildMap(RESULT_OUTPUT_ENTITIES, simonaResultOutputEntities));
@@ -184,20 +149,10 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
 
     this.simonaEmAgents = mapping.getExtId2UuidMapping(EXT_EM_INPUT).keySet();
-    this.simonaFlexOptionEntities = mapping.getExtId2UuidMapping(EXT_FLEX_OPTIONS_RESULT).keySet();
     this.simonaResultOutputEntities = mapping.getExtId2UuidMapping(EXT_GRID_RESULT).keySet();
   }
 
-  private double getSoc(ExtResultContainer results, String id) {
-    Map<String, ResultEntity> resultMap = results.getResults();
-    if (resultMap.get(id) instanceof StorageResult storageResult) {
-      return storageResult.getSoc().getValue().doubleValue();
-    } else {
-      throw new IllegalArgumentException("SOC is only available for StorageResult's!");
-    }
-  }
-
-  private double[] getFlexOptions(ExtResultContainer results, String id) {
+  protected double[] getFlexOptions(ExtResultContainer results, String id) {
     Map<String, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
       return getFlexMinRefMaxFlexOptions(flexOptionsResult);
@@ -206,16 +161,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     }
   }
 
-  private DetailedFlexOptions getConnectedFlexOptions(ExtResultContainer results, String id) {
-    Map<String, ResultEntity> resultMap = results.getResults();
-    if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
-      return new DetailedFlexOptions(flexOptionsResult);
-    } else {
-      throw new IllegalArgumentException("FlexOptions is only available for FlexOptionsResult's!");
-    }
-  }
-
-  private double[] getFlexMinRefMaxFlexOptions(FlexOptionsResult flexOptionsResult) {
+  protected double[] getFlexMinRefMaxFlexOptions(FlexOptionsResult flexOptionsResult) {
     return new double[] {
       flexOptionsResult.getpMin().getValue().doubleValue(),
       flexOptionsResult.getpRef().getValue().doubleValue(),
@@ -282,68 +228,12 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     return outputMap;
   }
 
-  private void addFlexOptions(
+  protected void addFlexOptions(
       ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
-    if (attr.equals(FLEX_OPTION_P_MIN)) {
-      outputMap.put(attr, getFlexOptions(results, id)[0]);
-    }
-    if (attr.equals(FLEX_OPTION_P_REF)) {
-      outputMap.put(attr, getFlexOptions(results, id)[1]);
-    }
-    if (attr.equals(FLEX_OPTION_P_MAX)) {
-      outputMap.put(attr, getFlexOptions(results, id)[2]);
-    }
-    if (attr.equals(FLEX_OPTION_MAP_P_MAX)) {
-      outputMap.put(attr, getConnectedFlexOptions(results, id).getMinFlexOptions());
-    }
-    if (attr.equals(FLEX_OPTION_MAP_P_REF)) {
-      outputMap.put(attr, getConnectedFlexOptions(results, id).getRefFlexOptions());
-    }
-    if (attr.equals(FLEX_OPTION_MAP_P_MIN)) {
-      outputMap.put(attr, getConnectedFlexOptions(results, id).getMaxFlexOptions());
-    }
-  }
-
-  private class DetailedFlexOptions {
-    private final Map<String, Double> minFlexOptions;
-    private final Map<String, Double> refFlexOptions;
-    private final Map<String, Double> maxFlexOptions;
-
-    public DetailedFlexOptions(FlexOptionsResult flexOptionsResult) {
-      Map<String, Double> connectedPmin = new HashMap<>();
-      Map<String, Double> connectedPref = new HashMap<>();
-      Map<String, Double> connectedPmax = new HashMap<>();
-      double[] flexOptionArray = getFlexMinRefMaxFlexOptions(flexOptionsResult);
-      connectedPmin.put("EM", flexOptionArray[0]);
-      connectedPref.put("EM", flexOptionArray[1]);
-      connectedPmax.put("EM", flexOptionArray[2]);
-
-      if (flexOptionsResult instanceof DesaggFlexOptionsResult desaggFlexOptionsResult) {
-        Map<String, FlexOptionsResult> connectedFlexOptions =
-            desaggFlexOptionsResult.getConnectedFlexOptionResults();
-        for (String key : connectedFlexOptions.keySet()) {
-          flexOptionArray = getFlexMinRefMaxFlexOptions(connectedFlexOptions.get(key));
-          connectedPmin.put(key, flexOptionArray[0]);
-          connectedPref.put(key, flexOptionArray[1]);
-          connectedPmax.put(key, flexOptionArray[2]);
-        }
-      }
-
-      this.minFlexOptions = connectedPmin;
-      this.refFlexOptions = connectedPref;
-      this.maxFlexOptions = connectedPmax;
-    }
-
-    public Map<String, Double> getMinFlexOptions() {
-      return this.minFlexOptions;
-    }
-
-    public Map<String, Double> getRefFlexOptions() {
-      return this.refFlexOptions;
-    }
-
-    public Map<String, Double> getMaxFlexOptions() {
-      return this.maxFlexOptions;
+    switch (attr) {
+      case FLEX_OPTION_P_MIN -> outputMap.put(attr, getFlexOptions(results, id)[0]);
+      case FLEX_OPTION_P_REF -> outputMap.put(attr, getFlexOptions(results, id)[1]);
+      case FLEX_OPTION_P_MAX -> outputMap.put(attr, getFlexOptions(results, id)[2]);
     }
   }
 }

@@ -51,6 +51,7 @@ Add the following configuration to your SIMONA configuration file:
 The following simulations can be selected:
 
 - `PrimaryResult`: Provides SIMONA with primary data and MOSAIK with SIMONA results
+- `FlexCommunication`: Provides MOSAIK with flexibility options
 - `FlexOptionOptimizer`: Optimizer for em agents or models with flexibility options in SIMONA
 
 If no simulation is selected, simosaik will use the `PrimaryResult` simulation.

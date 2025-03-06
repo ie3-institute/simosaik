@@ -9,8 +9,9 @@ package edu.ie3.simosaik;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
+import edu.ie3.simosaik.flexibility.FlexCommunicationSimulation;
+import edu.ie3.simosaik.flexibility.FlexOptionOptimizerSimulation;
 import edu.ie3.simosaik.primaryResultSimulator.PrimaryResultSimulation;
-import edu.ie3.simosaik.simosaikFlexOptionOptimizer.FlexOptionOptimizerSimulation;
 import java.nio.file.Path;
 
 public class SimosaikExtLink implements ExtLinkInterface {
@@ -32,6 +33,8 @@ public class SimosaikExtLink implements ExtLinkInterface {
     extSim =
         switch (arguments.simulation()) {
           case PRIMARY_RESULT -> new PrimaryResultSimulation(mosaikIP, mappingPath, stepSize);
+          case FLEX_COMMUNICATION ->
+              new FlexCommunicationSimulation(mosaikIP, mappingPath, stepSize);
           case FLEX_OPTION_OPTIMIZER ->
               new FlexOptionOptimizerSimulation(
                   mosaikIP,

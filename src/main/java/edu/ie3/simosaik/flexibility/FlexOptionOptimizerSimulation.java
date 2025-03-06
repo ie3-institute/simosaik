@@ -4,7 +4,7 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.simosaikFlexOptionOptimizer;
+package edu.ie3.simosaik.flexibility;
 
 import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
@@ -48,7 +48,7 @@ public class FlexOptionOptimizerSimulation extends MosaikSimulation {
     sendFlexOptionResultsToExt(extResultDataConnection, tick, maybeNextTick, log);
 
     // sending energy management set-points to SIMONA
-    sendEmDataToSimona(extEmDataConnection, tick, maybeNextTick, log);
+    sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
 
     // sending grid results to mosaik
     sendGridResultsToExt(extResultDataConnection, tick, maybeNextTick, log);
