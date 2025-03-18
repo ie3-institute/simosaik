@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik;
 
-import static edu.ie3.simosaik.SimonaEntities.SIMONA_POWER_GRID_ENVIRONMENT;
+import static edu.ie3.simosaik.SimonaEntities.*;
 import static edu.ie3.simosaik.SimosaikTranslation.ALL_MOSAIK_UNITS;
 import static java.util.Collections.emptyList;
 
@@ -67,7 +67,7 @@ public interface MetaUtils {
     if (triggers != null) {
       JSONArray triggerArray = new JSONArray();
       triggerArray.addAll(triggers);
-      obj.put("triggers", triggerArray);
+      obj.put("trigger", triggerArray);
     }
 
     return obj;
@@ -91,8 +91,20 @@ public interface MetaUtils {
       return new ModelParams(type, true, emptyList(), units, emptyList());
     }
 
+    public static ModelParams withParams(String type, List<String> params) {
+      return of(type, params, ALL_MOSAIK_UNITS, emptyList());
+    }
+
+    public static ModelParams withParams(String type, List<String> params, List<String> units) {
+      return of(type, params, units, emptyList());
+    }
+
     public static ModelParams of(String type, List<String> units, List<String> triggers) {
       return new ModelParams(type, true, emptyList(), units, triggers);
+    }
+
+    public static ModelParams of(String type, List<String> params, List<String> units, List<String> triggers) {
+      return new ModelParams(type, true, params, units, triggers);
     }
 
     public static ModelParams simonaPowerGridEnvironment() {

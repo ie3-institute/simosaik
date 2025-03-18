@@ -26,6 +26,8 @@ public class PrimaryResultSimulation extends MosaikSimulation {
         mappingPath,
         new PrimaryResultSimulator(stepSize));
 
+      log.info("Initializing MosaikPrimaryResultSimulation with step size: {}", stepSize);
+
     // set up connection
     this.extPrimaryDataConnection = buildPrimaryConnection(mapping, log);
     this.extResultDataConnection = buildResultConnection(mapping, log);

@@ -14,11 +14,14 @@ import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
+import edu.ie3.simona.api.data.em.model.FlexOptionRequestValue;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MetaUtils;
+import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.SimosaikUtils;
+
 import java.util.*;
 
 // TODO: Refactor this class
@@ -44,16 +47,16 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
     List<String> emUnits =
         List.of(
+            FLEX_REQUEST,
             MOSAIK_ACTIVE_POWER,
             MOSAIK_REACTIVE_POWER,
             FLEX_OPTION_P_MIN,
             FLEX_OPTION_P_REF,
             FLEX_OPTION_P_MAX);
 
-    return MetaUtils.createMeta(
+    return MetaUtils.createMetaWithPowerGrid(
         "hybrid",
-        ModelParams.of(EM_AGENT_ENTITIES, emUnits),
-        ModelParams.of(RESULT_OUTPUT_ENTITIES, emUnits));
+        ModelParams.of(EM_AGENT_ENTITIES, emUnits, List.of(FLEX_REQUEST)));
   }
 
   @Override
@@ -102,8 +105,28 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
     long nextTick = time + this.stepSize;
     try {
       if (!inputs.isEmpty()) {
-        ExtInputDataContainer extInputDataContainer =
-            SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
+        logger.info(inputs.toString());
+
+        ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(time, nextTick);
+
+        List<String> emEntities = new ArrayList<>();
+
+        inputs.forEach( (assetId, e) -> {
+          if (e instanceof Map<?, ?> m) {
+
+            if (m.containsKey(FLEX_REQUEST)) {
+              emEntities.add(assetId);
+            }
+          }
+        });
+
+        logger.info(emEntities.toString());
+
+        extInputDataContainer.addValue(
+                FLEX_REQUEST,
+                new FlexOptionRequestValue(emEntities)
+        );
+
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
         dataQueueMosaikToSimona.queueData(extInputDataContainer);
         logger.info("[" + this.time + "] Sent converted input to SIMONA!");

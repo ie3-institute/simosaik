@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.logging.Logger;
 
 /** The mosaik simulator that exchanges information with mosaik. */
-public abstract class MosaikSimulator extends Simulator implements SimonaEntities, MetaUtils {
+public abstract class MosaikSimulator extends Simulator implements SimonaEntities {
   protected final Logger logger = SimProcess.logger;
 
   public final int stepSize;
@@ -37,6 +37,9 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
       ExtInputDataContainer extDataForSimona =
           SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
       logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
+
+      logger.info(inputs.toString());
+
       dataQueueMosaikToSimona.queueData(extDataForSimona);
       logger.info("Sent converted input for tick " + time + " to SIMONA!");
     } catch (InterruptedException e) {
@@ -51,6 +54,9 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     ExtResultContainer results = dataQueueSimonaToMosaik.takeData();
     logger.info("Got results from SIMONA for MOSAIK!");
     Map<String, Object> data = SimosaikUtils.createSimosaikOutputMap(map, results);
+
+    logger.info(data.toString());
+
     logger.info("Converted results for MOSAIK! Now send it to MOSAIK!");
     return data;
   }

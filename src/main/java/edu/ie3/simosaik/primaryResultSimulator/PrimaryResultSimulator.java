@@ -13,6 +13,7 @@ import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MetaUtils;
+import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
 import java.util.*;
 
@@ -29,8 +30,8 @@ public class PrimaryResultSimulator extends MosaikSimulator {
   public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
     return MetaUtils.createMetaWithPowerGrid(
         "time-based",
-        ModelParams.of(PRIMARY_INPUT_ENTITIES),
-        ModelParams.of(RESULT_OUTPUT_ENTITIES));
+        ModelParams.withParams(PRIMARY_INPUT_ENTITIES, List.of("mapping")),
+        ModelParams.withParams(RESULT_OUTPUT_ENTITIES, List.of("mapping")));
   }
 
   @Override
@@ -44,6 +45,8 @@ public class PrimaryResultSimulator extends MosaikSimulator {
               throw new IllegalArgumentException(
                   "The model " + model + " is not supported by SimonaSimulator.");
         };
+
+    logger.warning("Model params for type '" + model +"': " + modelParams);
 
     int allowed = simonaEntities.size();
 

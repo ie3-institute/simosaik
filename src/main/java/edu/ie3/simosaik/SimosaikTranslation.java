@@ -29,6 +29,9 @@ public class SimosaikTranslation {
   // soc unit
   public static final String MOSAIK_SOC = "SOC[percent]";
 
+  // flex request
+  public static final String FLEX_REQUEST = "flex_request";
+
   // flex options
   public static final String FLEX_OPTION_P_MIN = "PMin[MW]";
   public static final String FLEX_OPTION_P_REF = "PRef[MW]";
@@ -67,9 +70,9 @@ public class SimosaikTranslation {
               FLEX_OPTION_MAP_P_MIN,
               FLEX_OPTION_MAP_P_REF,
               FLEX_OPTION_MAP_P_MAX ->
-          (Unit<Q>) ACTIVE_POWER_IN.divide(1000);
+          (Unit<Q>) ACTIVE_POWER_IN.multiply(1000);
       case MOSAIK_REACTIVE_POWER, MOSAIK_REACTIVE_POWER_IN ->
-          (Unit<Q>) REACTIVE_POWER_IN.divide(1000);
+          (Unit<Q>) REACTIVE_POWER_IN.multiply(1000);
       case MOSAIK_VOLTAGE_DEVIATION_PU, MOSAIK_VOLTAGE_PU -> (Unit<Q>) VOLTAGE_MAGNITUDE;
       case MOSAIK_SOC -> (Unit<Q>) SOC;
       default ->

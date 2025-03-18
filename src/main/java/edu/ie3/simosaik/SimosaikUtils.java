@@ -139,7 +139,7 @@ public class SimosaikUtils {
         outputMap.put(attr, 1d);
       } else {
         // grid related results are not sent in time step zero
-        outputMap.put(attr, results.getVoltageDeviation(id));
+        outputMap.put(attr, results.getVoltage(id));
       }
     }
 
