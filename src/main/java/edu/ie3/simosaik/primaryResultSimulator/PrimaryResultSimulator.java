@@ -46,7 +46,7 @@ public class PrimaryResultSimulator extends MosaikSimulator {
                   "The model " + model + " is not supported by SimonaSimulator.");
         };
 
-    logger.warning("Model params for type '" + model +"': " + modelParams);
+    logger.warning("Model params for type '" + model + "': " + modelParams);
 
     int allowed = simonaEntities.size();
 

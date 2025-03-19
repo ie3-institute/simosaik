@@ -7,16 +7,11 @@
 package edu.ie3.simosaik.flexibility;
 
 import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
-import edu.ie3.simona.api.data.em.model.FlexOptionRequestValue;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulation;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Set;
-
-import static edu.ie3.simosaik.SimosaikTranslation.FLEX_REQUEST;
 
 public class FlexCommunicationSimulation extends MosaikSimulation {
 
@@ -41,16 +36,6 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
   @Override
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
-
-    ExtInputDataContainer container = dataQueueExtCoSimulatorToSimonaApi.takeData();
-
-    FlexOptionRequestValue value = (FlexOptionRequestValue) container.getSimonaInputMap().get(FLEX_REQUEST);
-
-    var list = ExtEntityMapping.toSimona(value.emEntities(), extEmDataConnection.simonaMapping);
-
-    log.info("Request flex options for: {}", list);
-    extEmDataConnection.requestEmFlexResults(tick, list);
-
 
     // sending flex options to external
     sendEmFlexResultsToExt(extEmDataConnection, tick, maybeNextTick, log);

@@ -12,6 +12,7 @@ import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.logging.Logger;
 

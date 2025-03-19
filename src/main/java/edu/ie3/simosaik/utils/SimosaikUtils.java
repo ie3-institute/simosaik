@@ -4,15 +4,18 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik;
+package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.SimosaikTranslation.*;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtInputDataContainer;
 import edu.ie3.simona.api.data.results.ExtResultContainer;
+import edu.ie3.simosaik.MosaikMessageParser;
+import edu.ie3.simosaik.MosaikSimulator;
+import edu.ie3.simosaik.RunSimosaik;
 import edu.ie3.simosaik.exceptions.ConversionException;
 import java.util.*;
 import java.util.stream.Stream;
@@ -88,7 +91,7 @@ public class SimosaikUtils {
     return toValue(valueMap);
   }
 
-  private static Value toValue(Map<String, Double> valueMap) {
+  public static Value toValue(Map<String, Double> valueMap) {
     // convert power
     Optional<ComparableQuantity<Power>> active =
         extractAny(valueMap, MOSAIK_ACTIVE_POWER, MOSAIK_ACTIVE_POWER_IN);
@@ -122,6 +125,42 @@ public class SimosaikUtils {
           outputMap.put(id, values);
         });
     return outputMap;
+  }
+
+  public record Tuple3<T>(String sender, String receiver, T value) {}
+
+  public static <Q extends Quantity<Q>> List<Tuple3<ComparableQuantity<Q>>> extract(
+      Collection<MosaikMessageParser.MosaikMessage> messages, String unit) {
+    List<Tuple3<ComparableQuantity<Q>>> tuples = new ArrayList<>();
+
+    for (MosaikMessageParser.MosaikMessage message : messages) {
+      if (message.unit().equals(unit)) {
+
+        Unit<Q> pdsmUnit = getPSDMUnit(message.unit());
+        double value = (double) message.messageValue();
+
+        tuples.add(
+            new Tuple3<>(
+                message.sender(), message.receiver(), Quantities.getQuantity(value, pdsmUnit)));
+      }
+    }
+
+    return tuples;
+  }
+
+  public static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> combineQuantities(
+      List<Tuple3<ComparableQuantity<Q>>> list) {
+    if (list.isEmpty()) {
+      return Optional.empty();
+    }
+
+    ComparableQuantity<Q> combined = list.get(0).value();
+
+    for (int i = 1; i < list.size(); i++) {
+      combined = combined.add(list.get(i).value);
+    }
+
+    return Optional.of(combined);
   }
 
   public static void addResult(

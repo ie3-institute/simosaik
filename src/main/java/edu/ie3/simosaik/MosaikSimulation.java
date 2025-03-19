@@ -10,6 +10,7 @@ import edu.ie3.datamodel.exceptions.SourceException;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
+import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.slf4j.Logger;

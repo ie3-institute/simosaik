@@ -7,7 +7,7 @@
 package edu.ie3.simosaik;
 
 import static edu.ie3.simosaik.SimonaEntities.*;
-import static edu.ie3.simosaik.SimosaikTranslation.ALL_MOSAIK_UNITS;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.ALL_MOSAIK_UNITS;
 import static java.util.Collections.emptyList;
 
 import de.offis.mosaik.api.Simulator;
@@ -103,7 +103,8 @@ public interface MetaUtils {
       return new ModelParams(type, true, emptyList(), units, triggers);
     }
 
-    public static ModelParams of(String type, List<String> params, List<String> units, List<String> triggers) {
+    public static ModelParams of(
+        String type, List<String> params, List<String> units, List<String> triggers) {
       return new ModelParams(type, true, params, units, triggers);
     }
 

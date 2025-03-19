@@ -4,7 +4,7 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik;
+package edu.ie3.simosaik.utils;
 
 import static edu.ie3.datamodel.models.StandardUnits.*;
 
