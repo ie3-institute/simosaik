@@ -120,6 +120,7 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
     ExtResultContainer results = queueToExt.takeAll();
     Map<String, Object> output = FlexUtils.createOutput(results, map);
+    output.put("time", this.time);
 
     logger.info(output.toString());
 

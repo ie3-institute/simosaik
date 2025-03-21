@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MosaikMessageParser {
   public record MosaikMessage(String sender, String receiver, String unit, Object messageValue) {}
@@ -42,9 +44,19 @@ public class MosaikMessageParser {
   }
 
   private static String trim(String sender) {
-    if (sender.contains("SimonaPowerGrid-0.")) {
-      return sender.replace("SimonaPowerGrid-0.", "");
+    Pattern dot = Pattern.compile("\\.");
+    Matcher matcher = dot.matcher(sender);
+
+    int count = 0;
+
+    while (matcher.find()) {
+      count++;
     }
-    return sender;
+
+    if (count == 0) {
+      return sender;
+    } else {
+     return sender.split("\\.")[count];
+    }
   }
 }
