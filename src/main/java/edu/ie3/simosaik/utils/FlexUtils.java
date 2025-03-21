@@ -6,24 +6,39 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.MosaikMessageParser.filterForUnit;
+import edu.ie3.datamodel.models.value.PValue;
+import edu.ie3.datamodel.models.value.SValue;
+import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
+import edu.ie3.simosaik.exceptions.ConversionException;
+import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
+import edu.ie3.simosaik.utils.SimosaikUtils.Tuple3;
+import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
+
+import javax.measure.quantity.Power;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
 import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 import static edu.ie3.simosaik.utils.SimosaikUtils.combineQuantities;
 import static edu.ie3.simosaik.utils.SimosaikUtils.extract;
 import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
 
-import edu.ie3.datamodel.models.value.PValue;
-import edu.ie3.datamodel.models.value.SValue;
-import edu.ie3.simosaik.MosaikMessageParser.MosaikMessage;
-import edu.ie3.simosaik.exceptions.ConversionException;
-import edu.ie3.simosaik.utils.SimosaikUtils.Tuple3;
-import java.util.*;
-import java.util.stream.Collectors;
-import javax.measure.quantity.Power;
-import tech.units.indriya.ComparableQuantity;
-import tech.units.indriya.quantity.Quantities;
-
 public class FlexUtils {
+
+  public static ExtInputDataContainer build(
+          long tick,
+          Long maybeNextTick,
+          List<MosaikMessage> mosaikMessages
+  ) {
+    ExtInputDataContainer container = new ExtInputDataContainer(tick, maybeNextTick);
+
+    getFlexRequests(mosaikMessages).forEach(container::addRequest);
+    getSetPoint(mosaikMessages).forEach(container::addSetPoint);
+
+    return container;
+  }
 
   public static Map<String, List<String>> getFlexRequests(
       Collection<MosaikMessage> mosaikMessages) {

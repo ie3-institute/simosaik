@@ -6,26 +6,26 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
-
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.results.ExtResultContainer;
-import edu.ie3.simosaik.MosaikMessageParser;
+import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
+import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
 import edu.ie3.simosaik.exceptions.ConversionException;
-import java.util.*;
-import java.util.stream.Stream;
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
+
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
+import java.util.*;
+import java.util.stream.Stream;
+
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
@@ -56,7 +56,7 @@ public class SimosaikUtils {
     ExtInputDataContainer extInputDataContainer = new ExtInputDataContainer(currentTick, nextTick);
     mosaikInput.forEach(
         (assetId, inputValue) ->
-            extInputDataContainer.addValue(
+            extInputDataContainer.addPrimaryValue(
                 assetId,
                 convertMosaikDataToValue(assetId, (Map<String, Map<String, Number>>) inputValue)));
     return extInputDataContainer;

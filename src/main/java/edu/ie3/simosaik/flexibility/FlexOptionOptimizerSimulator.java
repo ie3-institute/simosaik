@@ -12,9 +12,9 @@ import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
-import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.results.ExtResultContainer;
+import edu.ie3.simona.api.data.ExtDataContainerQueue;
+import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
+import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.data.results.model.DesaggFlexOptionsResult;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MetaUtils;
@@ -157,7 +157,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     logger.info("[" + this.time + "] Got a request from MOSAIK to provide data!");
 
     if (this.counter == 1 || this.counter == 2) {
-      ExtResultContainer results = dataQueueSimonaToMosaik.takeData();
+      ExtResultContainer results = dataQueueSimonaToMosaik.takeAll();
       Map<String, Object> data;
 
       if (this.counter == 2 && this.time == 0) {
@@ -178,8 +178,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
 
   public void setConnectionToSimonaApi(
       ExtEntityMapping mapping,
-      DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
-      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
+      ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+      ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
     this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
     this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;

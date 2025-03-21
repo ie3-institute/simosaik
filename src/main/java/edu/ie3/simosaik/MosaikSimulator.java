@@ -8,9 +8,9 @@ package edu.ie3.simosaik;
 
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
-import edu.ie3.simona.api.data.DataQueueExtSimulationExtSimulator;
-import edu.ie3.simona.api.data.ExtInputDataContainer;
-import edu.ie3.simona.api.data.results.ExtResultContainer;
+import edu.ie3.simona.api.data.ExtDataContainerQueue;
+import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
+import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
@@ -22,8 +22,8 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   public final int stepSize;
 
-  public DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueMosaikToSimona;
-  public DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaToMosaik;
+  public ExtDataContainerQueue<ExtInputDataContainer> dataQueueMosaikToSimona;
+  public ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaToMosaik;
 
   public MosaikSimulator(String name, int stepSize) {
     super(name);
@@ -52,7 +52,7 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
     logger.info("Got a request from MOSAIK to provide data!");
-    ExtResultContainer results = dataQueueSimonaToMosaik.takeData();
+    ExtResultContainer results = dataQueueSimonaToMosaik.takeAll();
     logger.info("Got results from SIMONA for MOSAIK!");
     Map<String, Object> data = SimosaikUtils.createSimosaikOutputMap(map, results);
 
@@ -64,8 +64,8 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   public abstract void setConnectionToSimonaApi(
       ExtEntityMapping mapping,
-      DataQueueExtSimulationExtSimulator<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
-      DataQueueExtSimulationExtSimulator<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator);
+      ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+      ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator);
 
   /**
    * Builds a map for each given entity.
