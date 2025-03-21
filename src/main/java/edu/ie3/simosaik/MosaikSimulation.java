@@ -57,8 +57,7 @@ public abstract class MosaikSimulation extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
     if (!startedMosasik) {
       startedMosasik = true;
-      mosaikSimulator.setConnectionToSimonaApi(
-          mapping, queueToSimona, queueToExt);
+      mosaikSimulator.setConnectionToSimonaApi(mapping, queueToSimona, queueToExt);
       SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
     }
     log.info(

@@ -61,8 +61,8 @@ public class PrimaryResultSimulator extends MosaikSimulator {
       ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
       ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
-    this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
-    this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
+    this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
+    this.queueToSimona = dataQueueExtCoSimulatorToSimonaApi;
 
     // input entities
     this.simonaPrimaryEntities = mapping.getExtId2UuidMapping(EXT_PRIMARY_INPUT).keySet();

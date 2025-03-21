@@ -22,8 +22,8 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   public final int stepSize;
 
-  public ExtDataContainerQueue<ExtInputDataContainer> dataQueueMosaikToSimona;
-  public ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaToMosaik;
+  public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
+  public ExtDataContainerQueue<ExtResultContainer> queueToExt;
 
   public MosaikSimulator(String name, int stepSize) {
     super(name);
@@ -41,7 +41,7 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
       logger.info(inputs.toString());
 
-      dataQueueMosaikToSimona.queueData(extDataForSimona);
+      queueToSimona.queueData(extDataForSimona);
       logger.info("Sent converted input for tick " + time + " to SIMONA!");
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -52,7 +52,7 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
     logger.info("Got a request from MOSAIK to provide data!");
-    ExtResultContainer results = dataQueueSimonaToMosaik.takeAll();
+    ExtResultContainer results = queueToExt.takeAll();
     logger.info("Got results from SIMONA for MOSAIK!");
     Map<String, Object> data = SimosaikUtils.createSimosaikOutputMap(map, results);
 
@@ -64,8 +64,8 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   public abstract void setConnectionToSimonaApi(
       ExtEntityMapping mapping,
-      ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
-      ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator);
+      ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
+      ExtDataContainerQueue<ExtResultContainer> queueToExt);
 
   /**
    * Builds a map for each given entity.

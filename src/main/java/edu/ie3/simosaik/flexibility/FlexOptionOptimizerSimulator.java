@@ -141,7 +141,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
         ExtInputDataContainer extInputDataContainer =
             SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
-        dataQueueMosaikToSimona.queueData(extInputDataContainer);
+        queueToSimona.queueData(extInputDataContainer);
         logger.info("[" + this.time + "] Sent converted input to SIMONA!");
       } else {
         logger.info("[" + this.time + "] Got an empty input, so we wait for valid data!");
@@ -157,7 +157,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     logger.info("[" + this.time + "] Got a request from MOSAIK to provide data!");
 
     if (this.counter == 1 || this.counter == 2) {
-      ExtResultContainer results = dataQueueSimonaToMosaik.takeAll();
+      ExtResultContainer results = queueToExt.takeAll();
       Map<String, Object> data;
 
       if (this.counter == 2 && this.time == 0) {
@@ -181,8 +181,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
       ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
       ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
-    this.dataQueueSimonaToMosaik = dataQueueSimonaApiToExtCoSimulator;
-    this.dataQueueMosaikToSimona = dataQueueExtCoSimulatorToSimonaApi;
+    this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
+    this.queueToSimona = dataQueueExtCoSimulatorToSimonaApi;
 
     this.simonaEmAgents = mapping.getExtId2UuidMapping(EXT_EM_INPUT).keySet();
     this.simonaFlexOptionEntities = mapping.getExtId2UuidMapping(EXT_FLEX_OPTIONS_RESULT).keySet();

@@ -6,6 +6,8 @@
 
 package edu.ie3.simosaik.utils;
 
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
@@ -14,18 +16,15 @@ import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
 import edu.ie3.simosaik.exceptions.ConversionException;
+import java.util.*;
+import java.util.stream.Stream;
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
-
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
-import java.util.*;
-import java.util.stream.Stream;
-
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
@@ -134,7 +133,7 @@ public class SimosaikUtils {
     List<Tuple3<ComparableQuantity<Q>>> tuples = new ArrayList<>();
 
     for (MosaikMessageParser.MosaikMessage message : messages) {
-      if (message.unit().equals(unit)) {
+      if (message.unit().equals(unit) && message.messageValue() != null) {
 
         Unit<Q> pdsmUnit = getPSDMUnit(message.unit());
         double value = (double) message.messageValue();
