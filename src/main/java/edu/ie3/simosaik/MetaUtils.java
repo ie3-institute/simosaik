@@ -48,7 +48,7 @@ public interface MetaUtils {
 
   @SuppressWarnings("unchecked")
   static JSONObject createObject(
-      boolean isPublic, List<String> params, List<String> attrs, List<String> triggers) {
+      boolean isPublic, List<String> params, List<String> attrs, List<String> triggers, List<String> nonPersistent) {
     JSONObject obj = new JSONObject();
     obj.put("public", isPublic);
 
@@ -70,6 +70,12 @@ public interface MetaUtils {
       obj.put("trigger", triggerArray);
     }
 
+    if (nonPersistent != null) {
+      JSONArray nonPersistentArray = new JSONArray();
+      nonPersistentArray.addAll(triggers);
+      obj.put("non_persistent", nonPersistentArray);
+    }
+
     return obj;
   }
 
@@ -78,7 +84,8 @@ public interface MetaUtils {
       boolean isPublic,
       List<String> params,
       List<String> attrs,
-      List<String> triggers) {
+      List<String> triggers,
+      List<String> nonPersistent) {
     public static ModelParams of(String type) {
       return of(type, ALL_MOSAIK_UNITS);
     }
@@ -88,7 +95,7 @@ public interface MetaUtils {
     }
 
     public static ModelParams of(String type, List<String> units) {
-      return new ModelParams(type, true, emptyList(), units, emptyList());
+      return new ModelParams(type, true, emptyList(), units, emptyList(), emptyList());
     }
 
     public static ModelParams withParams(String type, List<String> params) {
@@ -100,21 +107,21 @@ public interface MetaUtils {
     }
 
     public static ModelParams of(String type, List<String> units, List<String> triggers) {
-      return new ModelParams(type, true, emptyList(), units, triggers);
+      return new ModelParams(type, true, emptyList(), units, triggers, emptyList());
     }
 
     public static ModelParams of(
         String type, List<String> params, List<String> units, List<String> triggers) {
-      return new ModelParams(type, true, params, units, triggers);
+      return new ModelParams(type, true, params, units, triggers, emptyList());
     }
 
     public static ModelParams simonaPowerGridEnvironment() {
       return new ModelParams(
-          SIMONA_POWER_GRID_ENVIRONMENT, true, List.of("simona_config"), emptyList(), emptyList());
+          SIMONA_POWER_GRID_ENVIRONMENT, true, List.of("simona_config"), emptyList(), emptyList(), emptyList());
     }
 
     public JSONObject toJson() {
-      return createObject(isPublic, params, attrs, triggers);
+      return createObject(isPublic, params, attrs, triggers, nonPersistent);
     }
   }
 }
