@@ -48,7 +48,11 @@ public interface MetaUtils {
 
   @SuppressWarnings("unchecked")
   static JSONObject createObject(
-      boolean isPublic, List<String> params, List<String> attrs, List<String> triggers, List<String> nonPersistent) {
+      boolean isPublic,
+      List<String> params,
+      List<String> attrs,
+      List<String> triggers,
+      List<String> nonPersistent) {
     JSONObject obj = new JSONObject();
     obj.put("public", isPublic);
 
@@ -117,7 +121,12 @@ public interface MetaUtils {
 
     public static ModelParams simonaPowerGridEnvironment() {
       return new ModelParams(
-          SIMONA_POWER_GRID_ENVIRONMENT, true, List.of("simona_config"), emptyList(), emptyList(), emptyList());
+          SIMONA_POWER_GRID_ENVIRONMENT,
+          true,
+          List.of("simona_config"),
+          emptyList(),
+          emptyList(),
+          emptyList());
     }
 
     public JSONObject toJson() {

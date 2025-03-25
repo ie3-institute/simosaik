@@ -56,7 +56,7 @@ public class MosaikMessageParser {
     if (count == 0) {
       return sender;
     } else {
-     return sender.split("\\.")[count];
+      return sender.split("\\.")[count];
     }
   }
 }

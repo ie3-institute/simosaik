@@ -22,6 +22,7 @@ import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.utils.FlexUtils;
 import java.util.*;
+import java.util.stream.Collectors;
 
 // TODO: Refactor this class
 public class FlexCommunicationSimulator extends MosaikSimulator {
@@ -30,6 +31,8 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
   /** Agents who send flex options for further calculations */
   protected Set<String> simonaResultOutputEntities;
+
+  private Set<MosaikMessage> cache = new HashSet<>();
 
   protected long time;
 
@@ -95,10 +98,15 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
       if (!inputs.isEmpty()) {
         logger.info(inputs.toString());
 
-        List<MosaikMessage> mosaikMessages = parse(inputs);
+        List<MosaikMessage> mosaikMessages =
+            parse(inputs).stream().filter(msg -> !cache.contains(msg)).collect(Collectors.toList());
+        cache.addAll(mosaikMessages);
+
         logger.info("Parsed messages: " + mosaikMessages);
 
         ExtInputDataContainer container = build(time, nextTick, mosaikMessages);
+        logger.info(container.flexOptionsString());
+
 
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
         queueToSimona.queueData(container);
