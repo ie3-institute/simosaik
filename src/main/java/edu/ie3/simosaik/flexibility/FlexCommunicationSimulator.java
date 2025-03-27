@@ -32,7 +32,7 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
   /** Agents who send flex options for further calculations */
   protected Set<String> simonaResultOutputEntities;
 
-  private Set<MosaikMessage> cache = new HashSet<>();
+  private final Set<MosaikMessage> cache = new HashSet<>();
 
   protected long time;
 
@@ -91,6 +91,10 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
   @Override
   public long step(long time, Map<String, Object> inputs, long maxAdvance) {
+    if (this.time != time) {
+      this.cache.clear();
+    }
+
     this.time = time;
     logger.info("[" + this.time + "] Got inputs from MOSAIK!");
     long nextTick = time + this.stepSize;

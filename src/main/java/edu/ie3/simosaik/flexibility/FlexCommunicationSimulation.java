@@ -71,25 +71,48 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
     boolean notFinished = true;
 
     while (notFinished) {
-      ExtInputDataContainer container = queueToSimona.takeAll();
 
-      log.warn("Flex requests: {}", container.flexRequestsString());
-      log.warn("Flex options: {}", container.flexOptionsString());
-      log.warn("Set points: {}", container.setPointsString());
+      long extTick = queueToSimona.takeData(ExtInputDataContainer::getTick);
 
-      // send received data to SIMONA
-      extEmDataConnection.convertAndSendFlexRequests(
-          tick, container.extractFlexRequests(), maybeNextTick, log);
+      log.warn("Current simulator tick: {}, SIMONA tick: {}", extTick, tick);
 
-      extEmDataConnection.convertAndSendFlexOptions(
-          tick, container.extractFlexOptions(), maybeNextTick, log);
+      if (tick == extTick) {
+        ExtInputDataContainer container = queueToSimona.takeAll();
 
-      extEmDataConnection.convertAndSendSetPoints(
-          tick, container.extractSetPoints(), maybeNextTick, log);
+        log.warn("Flex requests: {}", container.flexRequestsString());
+        log.warn("Flex options: {}", container.flexOptionsString());
+        log.warn("Set points: {}", container.setPointsString());
 
-      log.warn("Unhandled flex requests: {}", container.flexRequestsString());
-      log.warn("Unhandled flex options: {}", container.flexOptionsString());
-      log.warn("Unhandled set points: {}", container.setPointsString());
+        // send received data to SIMONA
+        var requests = container.extractFlexRequests();
+        var options = container.extractFlexOptions();
+        var setPoints = container.extractSetPoints();
+
+        extEmDataConnection.convertAndSendFlexRequests(
+                tick, requests, maybeNextTick, log);
+
+        extEmDataConnection.convertAndSendFlexOptions(
+                tick, options, maybeNextTick, log);
+
+        extEmDataConnection.convertAndSendSetPoints(
+                tick, setPoints, maybeNextTick, log);
+
+        log.warn("Unhandled flex requests: {}", container.flexRequestsString());
+        log.warn("Unhandled flex options: {}", container.flexOptionsString());
+        log.warn("Unhandled set points: {}", container.setPointsString());
+
+
+        if (requests.isEmpty() && options.isEmpty() && setPoints.isEmpty()) {
+          log.info("Requesting a service completion for tick: {}.", tick);
+          extEmDataConnection.requestCompletion(tick);
+        }
+
+      } else {
+        notFinished = false;
+
+        log.info("External simulator finished tick {}. Request completion.", tick);
+        extEmDataConnection.requestCompletion(tick);
+      }
 
       EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
 
@@ -112,7 +135,7 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
         log.warn("Received unsupported data response: {}", received);
       }
 
-      log.warn(results.toString());
+      log.warn("Results to ext: {}", results);
 
       ExtResultContainer resultContainer =
           new ExtResultContainer(tick, ExtEntityMapping.mapToExt(results, map), maybeNextTick);
