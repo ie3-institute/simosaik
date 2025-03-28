@@ -31,7 +31,7 @@ public class FlexOptionOptimizerSimulation extends MosaikSimulation {
         new FlexOptionOptimizerSimulator(stepSize, useFlexOptionEntitiesInsteadOfEmAgents));
 
     // set up connection
-    this.extEmDataConnection = buildEmConnection(mapping, log);
+    this.extEmDataConnection = buildEmConnection(mapping, true, log);
     this.extResultDataConnection = buildResultConnection(mapping, log);
   }
 

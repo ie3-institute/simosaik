@@ -33,7 +33,7 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
     this.map = mapping.getExtUuid2IdMapping(DataType.EXT_EM_INPUT);
 
     // set up connection
-    this.extEmDataConnection = buildEmConnection(mapping, log);
+    this.extEmDataConnection = buildEmConnection(mapping, true, log);
   }
 
   @Override
