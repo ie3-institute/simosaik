@@ -13,7 +13,6 @@ import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simosaik.MetaUtils;
 import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

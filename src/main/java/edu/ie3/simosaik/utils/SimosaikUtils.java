@@ -6,18 +6,17 @@
 
 package edu.ie3.simosaik.utils;
 
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.DataType;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
@@ -39,18 +38,21 @@ public class SimosaikUtils {
     }
   }
 
-  public static ExtInputDataContainer createInputDataContainer(long tick, long nextTick, Map<String, Object> inputs, ExtEntityMapping mapping) {
-    return createInputDataContainer(tick, nextTick,MosaikMessageParser.parse(inputs), mapping);
+  public static ExtInputDataContainer createInputDataContainer(
+      long tick, long nextTick, Map<String, Object> inputs, ExtEntityMapping mapping) {
+    return createInputDataContainer(tick, nextTick, MosaikMessageParser.parse(inputs), mapping);
   }
 
-
-  public static ExtInputDataContainer createInputDataContainer(long tick, long nextTick, List<MosaikMessageParser.MosaikMessage> mosaikMessages, ExtEntityMapping mapping) {
+  public static ExtInputDataContainer createInputDataContainer(
+      long tick,
+      long nextTick,
+      List<MosaikMessageParser.MosaikMessage> mosaikMessages,
+      ExtEntityMapping mapping) {
     ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
 
     // primary data
     Map<String, UUID> primaryMapping = mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT);
     PrimaryUtils.getPrimary(mosaikMessages, primaryMapping).forEach(container::addPrimaryValue);
-
 
     // em data
     Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT);
@@ -60,8 +62,6 @@ public class SimosaikUtils {
 
     return container;
   }
-
-
 
   public static void addResult(
       ExtResultContainer results, UUID id, String attr, Map<String, Object> outputMap) {

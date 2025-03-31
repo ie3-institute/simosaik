@@ -8,10 +8,9 @@ package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.utils.SimosaikUtils;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -30,8 +29,7 @@ public abstract class MosaikSimulation extends ExtCoSimulation {
     this("MosaikSimulation", mosaikIP, simulator);
   }
 
-  public MosaikSimulation(
-      String name, String mosaikIP, MosaikSimulator simulator) {
+  public MosaikSimulation(String name, String mosaikIP, MosaikSimulator simulator) {
     super(name, simulator.getSimName());
 
     this.mosaikSimulator = simulator;

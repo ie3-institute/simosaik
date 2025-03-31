@@ -6,6 +6,9 @@
 
 package edu.ie3.simosaik.flexibility;
 
+import static edu.ie3.simona.api.simulation.mapping.DataType.*;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
@@ -17,11 +20,7 @@ import edu.ie3.simosaik.MetaUtils;
 import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-
 import java.util.*;
-
-import static edu.ie3.simona.api.simulation.mapping.DataType.*;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 // TODO: Refactor this class
 public class FlexOptionOptimizerSimulator extends MosaikSimulator {
@@ -138,7 +137,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     long nextTick = time + this.stepSize;
     try {
       if (!inputs.isEmpty()) {
-        //ExtInputDataContainer extInputDataContainer = SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
+        // ExtInputDataContainer extInputDataContainer =
+        // SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
         queueToSimona.queueData(new ExtInputDataContainer(time));
         logger.info("[" + this.time + "] Sent converted input to SIMONA!");

@@ -12,8 +12,9 @@ import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.em.ontology.*;
+import edu.ie3.simona.api.simulation.mapping.DataType;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simosaik.MosaikSimulation;
-
 import java.util.*;
 
 public class FlexCommunicationSimulation extends MosaikSimulation {
@@ -23,12 +24,19 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
   public FlexCommunicationSimulation(String mosaikIP, FlexCommunicationSimulator simulator) {
     super("FlexCommunicationSimulation", mosaikIP, simulator);
 
-    // set up connection
-      try {
-          this.extEmDataConnection = buildEmConnection(simulator.controlledQueue.take(), true, log);
-      } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-      }
+    try {
+      List<ExtEntityEntry> extEntityEntries = simulator.controlledQueue.take();
+      List<UUID> controlledEms =
+          extEntityEntries.stream()
+              .filter(e -> e.dataType() == DataType.EXT_EM_INPUT)
+              .map(ExtEntityEntry::uuid)
+              .toList();
+
+      // set up connection
+      this.extEmDataConnection = buildEmConnection(controlledEms, true, log);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

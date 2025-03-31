@@ -6,6 +6,11 @@
 
 package edu.ie3.simosaik.flexibility;
 
+import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_EM_INPUT;
+import static edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
+import static edu.ie3.simosaik.utils.MosaikMessageParser.parse;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
@@ -17,17 +22,10 @@ import edu.ie3.simosaik.MetaUtils.Model;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.utils.ResultUtils;
 import edu.ie3.simosaik.utils.SimosaikUtils;
+import java.util.*;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.Collectors;
-
-import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_EM_INPUT;
-import static edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
-import static edu.ie3.simosaik.utils.MosaikMessageParser.parse;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 // TODO: Refactor this class
 public class FlexCommunicationSimulator extends MosaikSimulator {
@@ -39,8 +37,6 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
   private final Set<MosaikMessage> cache = new HashSet<>();
 
   protected long time;
-
-  public final LinkedBlockingQueue<List<UUID>> controlledQueue = new LinkedBlockingQueue<>();
 
   public FlexCommunicationSimulator(int stepSize) {
     super("FlexCommunicationSimulator", stepSize);
@@ -71,15 +67,16 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
               .toList();
       extEntityMapping.put(EXT_EM_INPUT, extEmEntries);
 
-      this.simonaEmAgents = extEmEntries.stream().map(ExtEntityEntry::id).collect(Collectors.toSet());
+      this.simonaEmAgents =
+          extEmEntries.stream().map(ExtEntityEntry::id).collect(Collectors.toSet());
 
       try {
-        controlledQueue.put(extEmEntries.stream().map(ExtEntityEntry::uuid).toList());
+        controlledQueue.put(extEmEntries);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
 
-        List<String> emUnits =
+      List<String> emUnits =
           List.of(
               FLEX_REQUEST,
               MOSAIK_ACTIVE_POWER,
@@ -117,7 +114,8 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
       entity.put("type", model);
 
       // EM_AGENT_ENTITIES
-      List<Map<String, Object>> childEntities = new ArrayList<>(buildMap(EM_AGENT_ENTITIES, simonaEmAgents));
+      List<Map<String, Object>> childEntities =
+          new ArrayList<>(buildMap(EM_AGENT_ENTITIES, simonaEmAgents));
 
       entity.put("children", childEntities);
       entities.add(entity);
@@ -147,7 +145,8 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
         logger.info("Parsed messages: " + mosaikMessages);
 
-        ExtInputDataContainer container = SimosaikUtils.createInputDataContainer(time, nextTick, mosaikMessages, mapping);
+        ExtInputDataContainer container =
+            SimosaikUtils.createInputDataContainer(time, nextTick, mosaikMessages, mapping);
         logger.info(container.flexOptionsString());
 
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");

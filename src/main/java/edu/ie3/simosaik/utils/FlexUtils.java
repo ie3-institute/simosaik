@@ -6,6 +6,10 @@
 
 package edu.ie3.simosaik.utils;
 
+import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
+
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
@@ -14,20 +18,15 @@ import edu.ie3.simona.api.data.em.model.FlexOptions;
 import edu.ie3.simosaik.exceptions.ConversionException;
 import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
 import edu.ie3.util.quantities.PowerSystemUnits;
+import java.util.*;
+import java.util.stream.Collectors;
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
-
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
-import java.util.*;
-import java.util.stream.Collectors;
-
-import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
-import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
 
 class FlexUtils {
   private static final Logger log = LoggerFactory.getLogger(FlexUtils.class);
@@ -212,7 +211,7 @@ class FlexUtils {
   record Tuple3<T>(String sender, String receiver, T value) {}
 
   static <Q extends Quantity<Q>> List<Tuple3<ComparableQuantity<Q>>> extract(
-          Collection<MosaikMessageParser.MosaikMessage> messages, String unit) {
+      Collection<MosaikMessageParser.MosaikMessage> messages, String unit) {
     List<Tuple3<ComparableQuantity<Q>>> tuples = new ArrayList<>();
 
     for (MosaikMessageParser.MosaikMessage message : messages) {
@@ -222,8 +221,8 @@ class FlexUtils {
         double value = (double) message.messageValue();
 
         tuples.add(
-                new Tuple3<>(
-                        message.sender(), message.receiver(), Quantities.getQuantity(value, pdsmUnit)));
+            new Tuple3<>(
+                message.sender(), message.receiver(), Quantities.getQuantity(value, pdsmUnit)));
       }
     }
 
@@ -231,7 +230,7 @@ class FlexUtils {
   }
 
   static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> combineQuantities(
-          List<Tuple3<ComparableQuantity<Q>>> list) {
+      List<Tuple3<ComparableQuantity<Q>>> list) {
     if (list.isEmpty()) {
       return Optional.empty();
     }

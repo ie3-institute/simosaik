@@ -33,18 +33,16 @@ public class SimosaikExtLink implements ExtLinkInterface {
     extSim =
         switch (arguments.simulation()) {
           case PRIMARY_RESULT -> {
-              PrimaryResultSimulator simulator = new PrimaryResultSimulator(stepSize);
-              yield new PrimaryResultSimulation(mosaikIP, simulator);
+            PrimaryResultSimulator simulator = new PrimaryResultSimulator(stepSize);
+            yield new PrimaryResultSimulation(mosaikIP, simulator);
           }
           case FLEX_COMMUNICATION -> {
-              FlexCommunicationSimulator simulator = new FlexCommunicationSimulator(stepSize);
-              yield new FlexCommunicationSimulation(mosaikIP, simulator);
+            FlexCommunicationSimulator simulator = new FlexCommunicationSimulator(stepSize);
+            yield new FlexCommunicationSimulation(mosaikIP, simulator);
           }
           case FLEX_OPTION_OPTIMIZER ->
               new FlexOptionOptimizerSimulation(
-                  mosaikIP,
-                  stepSize,
-                  arguments.useFlexOptionEntitiesInsteadOfEmAgents());
+                  mosaikIP, stepSize, arguments.useFlexOptionEntitiesInsteadOfEmAgents());
         };
 
     extSim.setAdapterData(data);

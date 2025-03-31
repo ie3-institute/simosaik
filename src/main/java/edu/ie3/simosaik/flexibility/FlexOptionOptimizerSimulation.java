@@ -10,7 +10,6 @@ import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simosaik.MosaikSimulation;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,9 +21,7 @@ public class FlexOptionOptimizerSimulation extends MosaikSimulation {
   private final ExtResultDataConnection extResultDataConnection;
 
   public FlexOptionOptimizerSimulation(
-      String mosaikIP,
-      int stepSize,
-      boolean useFlexOptionEntitiesInsteadOfEmAgents) {
+      String mosaikIP, int stepSize, boolean useFlexOptionEntitiesInsteadOfEmAgents) {
     super(
         "MosaikOptimizerSimulation",
         mosaikIP,

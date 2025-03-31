@@ -11,11 +11,12 @@ import de.offis.mosaik.api.Simulator;
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.ResultUtils;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /** The mosaik simulator that exchanges information with mosaik. */
@@ -24,6 +25,9 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   protected ExtEntityMapping mapping;
   public final int stepSize;
+
+  public final LinkedBlockingQueue<List<ExtEntityEntry>> controlledQueue =
+      new LinkedBlockingQueue<>();
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
@@ -38,7 +42,8 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     long nextTick = time + this.stepSize;
     try {
       logger.info("Got inputs from MOSAIK for tick = " + time);
-      ExtInputDataContainer extDataForSimona = SimosaikUtils.createInputDataContainer(time, nextTick, inputs, mapping);
+      ExtInputDataContainer extDataForSimona =
+          SimosaikUtils.createInputDataContainer(time, nextTick, inputs, mapping);
       logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
 
       logger.info(inputs.toString());
