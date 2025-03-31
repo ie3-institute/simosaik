@@ -42,7 +42,7 @@ public record SimosaikConfig(
     // config.getBoolean("useFlexOptionEntitiesInsteadOfEmAgents");
 
     return new SimosaikConfig(
-        Path.of(config.getString("mappingPath")),
+        Path.of("config.getString(mappingPath)"),
         Simulation.parse(simulation),
         stepSize,
         useFlexOptionEntitiesInsteadOfEmAgents);

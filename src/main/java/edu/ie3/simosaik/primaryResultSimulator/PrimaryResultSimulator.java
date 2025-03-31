@@ -6,18 +6,22 @@
 
 package edu.ie3.simosaik.primaryResultSimulator;
 
-import static edu.ie3.simona.api.simulation.mapping.DataType.*;
-
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MetaUtils;
 import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
-import java.util.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 public class PrimaryResultSimulator extends MosaikSimulator {
+
+  private Map<UUID, Class<Value>> assetToValueClasses;
 
   private Set<String> simonaPrimaryEntities;
   private Set<String> simonaResultEntities;
@@ -56,21 +60,15 @@ public class PrimaryResultSimulator extends MosaikSimulator {
     return buildMap(model, simonaEntities);
   }
 
+  public Map<UUID, Class<Value>> getAssetsToValueClasses() {
+    return assetToValueClasses;
+  }
+
   public void setConnectionToSimonaApi(
-      ExtEntityMapping mapping,
       ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
       ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
     this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
     this.queueToSimona = dataQueueExtCoSimulatorToSimonaApi;
-
-    // input entities
-    this.simonaPrimaryEntities = mapping.getExtId2UuidMapping(EXT_PRIMARY_INPUT).keySet();
-
-    // result entities
-    this.simonaResultEntities = new HashSet<>();
-    simonaResultEntities.addAll(mapping.getExtId2UuidMapping(EXT_GRID_RESULT).keySet());
-    simonaResultEntities.addAll(mapping.getExtId2UuidMapping(EXT_PARTICIPANT_RESULT).keySet());
-    simonaResultEntities.addAll(mapping.getExtId2UuidMapping(EXT_FLEX_OPTIONS_RESULT).keySet());
   }
 }

@@ -12,28 +12,23 @@ import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.em.ontology.*;
-import edu.ie3.simona.api.simulation.mapping.DataType;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulation;
-import java.nio.file.Path;
+
 import java.util.*;
 
 public class FlexCommunicationSimulation extends MosaikSimulation {
 
   private final ExtEmDataConnection extEmDataConnection;
-  private final Map<UUID, String> map;
 
-  public FlexCommunicationSimulation(String mosaikIP, Path mappingPath, int stepSize) {
-    super(
-        "FlexCommunicationSimulation",
-        mosaikIP,
-        mappingPath,
-        new FlexCommunicationSimulator(stepSize));
-
-    this.map = mapping.getExtUuid2IdMapping(DataType.EXT_EM_INPUT);
+  public FlexCommunicationSimulation(String mosaikIP, FlexCommunicationSimulator simulator) {
+    super("FlexCommunicationSimulation", mosaikIP, simulator);
 
     // set up connection
-    this.extEmDataConnection = buildEmConnection(mapping, true, log);
+      try {
+          this.extEmDataConnection = buildEmConnection(simulator.controlledQueue.take(), true, log);
+      } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+      }
   }
 
   @Override
@@ -88,19 +83,15 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
         var options = container.extractFlexOptions();
         var setPoints = container.extractSetPoints();
 
-        extEmDataConnection.convertAndSendFlexRequests(
-                tick, requests, maybeNextTick, log);
+        extEmDataConnection.sendFlexRequests(tick, requests, maybeNextTick, log);
 
-        extEmDataConnection.convertAndSendFlexOptions(
-                tick, options, maybeNextTick, log);
+        extEmDataConnection.sendFlexOptions(tick, options, maybeNextTick, log);
 
-        extEmDataConnection.convertAndSendSetPoints(
-                tick, setPoints, maybeNextTick, log);
+        extEmDataConnection.sendSetPoints(tick, setPoints, maybeNextTick, log);
 
         log.warn("Unhandled flex requests: {}", container.flexRequestsString());
         log.warn("Unhandled flex options: {}", container.flexOptionsString());
         log.warn("Unhandled set points: {}", container.setPointsString());
-
 
         if (requests.isEmpty() && options.isEmpty() && setPoints.isEmpty()) {
           log.info("Requesting a service completion for tick: {}.", tick);
@@ -137,8 +128,7 @@ public class FlexCommunicationSimulation extends MosaikSimulation {
 
       log.warn("Results to ext: {}", results);
 
-      ExtResultContainer resultContainer =
-          new ExtResultContainer(tick, ExtEntityMapping.mapToExt(results, map), maybeNextTick);
+      ExtResultContainer resultContainer = new ExtResultContainer(tick, results, maybeNextTick);
 
       queueToExt.queueData(resultContainer);
     }

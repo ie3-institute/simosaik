@@ -19,6 +19,29 @@ import org.json.simple.JSONObject;
 /** Methods for simplifying the creation of mosaik meta information. */
 public interface MetaUtils {
 
+  String PRIMARY_MAPPING = "primary";
+  String EM_COMMUNICATION = "em_communication";
+
+  static Map<String, Object> createMeta(String type, Model... models) {
+    return createMeta(type, List.of(models));
+  }
+
+  @SuppressWarnings("unchecked")
+  public static Map<String, Object> createMeta(String type, List<Model> additionalModels) {
+    JSONObject meta = new JSONObject();
+    meta.put("api_version", Simulator.API_VERSION);
+    meta.put("type", type);
+
+    JSONObject mosaikModels = new JSONObject();
+    meta.put("models", mosaikModels);
+
+    for (Model model : additionalModels) {
+      mosaikModels.put(model.type, model.toJson());
+    }
+
+    return meta;
+  }
+
   static Map<String, Object> createMetaWithPowerGrid(String type, ModelParams... additionalModels) {
     return createMeta(type, ModelParams.simonaPowerGridEnvironment(), List.of(additionalModels));
   }
@@ -81,6 +104,46 @@ public interface MetaUtils {
     }
 
     return obj;
+  }
+
+  record Model(
+      String type,
+      boolean isPublic,
+      List<String> params,
+      List<String> attrs,
+      List<String> triggers,
+      List<String> nonPersistent) {
+    public static Model of(String type) {
+      return new Model(type, true, emptyList(), emptyList(), emptyList(), emptyList());
+    }
+
+    public Model params(String... params) {
+      return params(List.of(params));
+    }
+
+    public Model params(List<String> params) {
+      return new Model(type, isPublic, params, attrs, triggers, nonPersistent);
+    }
+
+    public Model attrs(String... attrs) {
+      return attrs(List.of(attrs));
+    }
+
+    public Model attrs(List<String> attrs) {
+      return new Model(type, isPublic, params, attrs, triggers, nonPersistent);
+    }
+
+    public Model triggers(String... triggers) {
+      return triggers(List.of(triggers));
+    }
+
+    public Model triggers(List<String> triggers) {
+      return new Model(type, isPublic, params, attrs, triggers, nonPersistent);
+    }
+
+    public JSONObject toJson() {
+      return createObject(isPublic, params, attrs, triggers, nonPersistent);
+    }
   }
 
   record ModelParams(

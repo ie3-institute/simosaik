@@ -6,35 +6,41 @@
 
 package edu.ie3.simosaik.flexibility;
 
+import edu.ie3.simona.api.data.ExtDataContainerQueue;
+import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
+import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
+import edu.ie3.simona.api.simulation.mapping.DataType;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.MetaUtils;
+import edu.ie3.simosaik.MetaUtils.Model;
+import edu.ie3.simosaik.MosaikSimulator;
+import edu.ie3.simosaik.utils.ResultUtils;
+import edu.ie3.simosaik.utils.SimosaikUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.Collectors;
+
 import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_EM_INPUT;
-import static edu.ie3.simona.api.simulation.mapping.DataType.EXT_GRID_RESULT;
-import static edu.ie3.simosaik.utils.FlexUtils.build;
 import static edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
 import static edu.ie3.simosaik.utils.MosaikMessageParser.parse;
 import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
-import edu.ie3.simona.api.data.ExtDataContainerQueue;
-import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
-import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.MetaUtils;
-import edu.ie3.simosaik.MetaUtils.ModelParams;
-import edu.ie3.simosaik.MosaikSimulator;
-import edu.ie3.simosaik.utils.FlexUtils;
-import java.util.*;
-import java.util.stream.Collectors;
-
 // TODO: Refactor this class
 public class FlexCommunicationSimulator extends MosaikSimulator {
+  private static final Logger log = LoggerFactory.getLogger(FlexCommunicationSimulator.class);
+
   /** Agents who receive set points */
   protected Set<String> simonaEmAgents;
-
-  /** Agents who send flex options for further calculations */
-  protected Set<String> simonaResultOutputEntities;
 
   private final Set<MosaikMessage> cache = new HashSet<>();
 
   protected long time;
+
+  public final LinkedBlockingQueue<List<UUID>> controlledQueue = new LinkedBlockingQueue<>();
 
   public FlexCommunicationSimulator(int stepSize) {
     super("FlexCommunicationSimulator", stepSize);
@@ -42,17 +48,55 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
   @Override
   public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
-    List<String> emUnits =
-        List.of(
-            FLEX_REQUEST,
-            MOSAIK_ACTIVE_POWER,
-            MOSAIK_REACTIVE_POWER,
-            FLEX_OPTION_P_MIN,
-            FLEX_OPTION_P_REF,
-            FLEX_OPTION_P_MAX);
+    Map<DataType, List<ExtEntityEntry>> extEntityMapping = new HashMap<>();
+    List<Model> models = new ArrayList<>();
 
-    return MetaUtils.createMetaWithPowerGrid(
-        "hybrid", ModelParams.of(EM_AGENT_ENTITIES, emUnits, emUnits));
+    models.add(Model.of(SIMONA_POWER_GRID_ENVIRONMENT).attrs("simona_config"));
+
+    if (simParams.containsKey(MetaUtils.EM_COMMUNICATION)) {
+      Map<String, String> emCommunication =
+          (Map<String, String>) simParams.get(MetaUtils.EM_COMMUNICATION);
+
+      log.warn("Em communication: {}", emCommunication);
+
+      List<ExtEntityEntry> extEmEntries =
+          emCommunication.entrySet().stream()
+              .map(
+                  e ->
+                      new ExtEntityEntry(
+                          UUID.fromString(e.getKey()),
+                          e.getValue(),
+                          Optional.empty(),
+                          EXT_EM_INPUT))
+              .toList();
+      extEntityMapping.put(EXT_EM_INPUT, extEmEntries);
+
+      this.simonaEmAgents = extEmEntries.stream().map(ExtEntityEntry::id).collect(Collectors.toSet());
+
+      try {
+        controlledQueue.put(extEmEntries.stream().map(ExtEntityEntry::uuid).toList());
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+
+        List<String> emUnits =
+          List.of(
+              FLEX_REQUEST,
+              MOSAIK_ACTIVE_POWER,
+              MOSAIK_REACTIVE_POWER,
+              FLEX_OPTION_P_MIN,
+              FLEX_OPTION_P_REF,
+              FLEX_OPTION_P_MAX);
+
+      models.add(Model.of(EM_AGENT_ENTITIES).attrs(emUnits).triggers(emUnits));
+    }
+
+    log.warn("Ext entity mapping: {}", extEntityMapping);
+
+    // set mapping
+    this.mapping = new ExtEntityMapping(extEntityMapping);
+
+    return MetaUtils.createMeta("hybrid", models);
   }
 
   @Override
@@ -72,13 +116,8 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
       entity.put("eid", model);
       entity.put("type", model);
 
-      List<Map<String, Object>> childEntities = new ArrayList<>();
-
       // EM_AGENT_ENTITIES
-      childEntities.addAll(buildMap(EM_AGENT_ENTITIES, simonaEmAgents));
-
-      // RESULT_OUTPUT_ENTITIES
-      childEntities.addAll(buildMap(RESULT_OUTPUT_ENTITIES, simonaResultOutputEntities));
+      List<Map<String, Object>> childEntities = new ArrayList<>(buildMap(EM_AGENT_ENTITIES, simonaEmAgents));
 
       entity.put("children", childEntities);
       entities.add(entity);
@@ -108,9 +147,8 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
 
         logger.info("Parsed messages: " + mosaikMessages);
 
-        ExtInputDataContainer container = build(time, nextTick, mosaikMessages);
+        ExtInputDataContainer container = SimosaikUtils.createInputDataContainer(time, nextTick, mosaikMessages, mapping);
         logger.info(container.flexOptionsString());
-
 
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
         queueToSimona.queueData(container);
@@ -131,7 +169,7 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
     logger.info(map.toString());
 
     ExtResultContainer results = queueToExt.takeAll();
-    Map<String, Object> output = FlexUtils.createOutput(results, map);
+    Map<String, Object> output = ResultUtils.createOutput(results, map, mapping);
     output.put("time", this.time);
 
     logger.info(output.toString());
@@ -141,14 +179,10 @@ public class FlexCommunicationSimulator extends MosaikSimulator {
   }
 
   public void setConnectionToSimonaApi(
-      ExtEntityMapping mapping,
       ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
       ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
     this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
     this.queueToSimona = dataQueueExtCoSimulatorToSimonaApi;
-
-    this.simonaEmAgents = mapping.getExtId2UuidMapping(EXT_EM_INPUT).keySet();
-    this.simonaResultOutputEntities = mapping.getExtId2UuidMapping(EXT_GRID_RESULT).keySet();
   }
 }

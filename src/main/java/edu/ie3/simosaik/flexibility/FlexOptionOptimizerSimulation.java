@@ -10,7 +10,9 @@ import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simosaik.MosaikSimulation;
-import java.nio.file.Path;
+
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -21,18 +23,16 @@ public class FlexOptionOptimizerSimulation extends MosaikSimulation {
 
   public FlexOptionOptimizerSimulation(
       String mosaikIP,
-      Path mappingPath,
       int stepSize,
       boolean useFlexOptionEntitiesInsteadOfEmAgents) {
     super(
         "MosaikOptimizerSimulation",
         mosaikIP,
-        mappingPath,
         new FlexOptionOptimizerSimulator(stepSize, useFlexOptionEntitiesInsteadOfEmAgents));
 
     // set up connection
-    this.extEmDataConnection = buildEmConnection(mapping, true, log);
-    this.extResultDataConnection = buildResultConnection(mapping, log);
+    this.extEmDataConnection = buildEmConnection(List.of(), true, log);
+    this.extResultDataConnection = buildResultConnection(Map.of(), log);
   }
 
   @Override

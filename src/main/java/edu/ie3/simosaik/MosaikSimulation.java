@@ -6,15 +6,12 @@
 
 package edu.ie3.simosaik;
 
-import edu.ie3.datamodel.exceptions.SourceException;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMappingSource;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-import java.nio.file.Path;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -28,38 +25,27 @@ public abstract class MosaikSimulation extends ExtCoSimulation {
   protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
 
   protected final int stepSize;
-  private boolean startedMosasik = false;
 
-  protected final ExtEntityMapping mapping;
-
-  public MosaikSimulation(String mosaikIP, Path mappingPath, MosaikSimulator simulator) {
-    this("MosaikSimulation", mosaikIP, mappingPath, simulator);
+  public MosaikSimulation(String mosaikIP, MosaikSimulator simulator) {
+    this("MosaikSimulation", mosaikIP, simulator);
   }
 
   public MosaikSimulation(
-      String name, String mosaikIP, Path mappingPath, MosaikSimulator simulator) {
+      String name, String mosaikIP, MosaikSimulator simulator) {
     super(name, simulator.getSimName());
 
     this.mosaikSimulator = simulator;
+    mosaikSimulator.setConnectionToSimonaApi(queueToSimona, queueToExt);
+    SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
+
     this.stepSize = simulator.stepSize;
     this.mosaikIP = mosaikIP;
-
-    try {
-      this.mapping = ExtEntityMappingSource.fromFile(mappingPath);
-    } catch (SourceException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @Override
   protected final Long initialize() {
     log.info(
         "+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
-    if (!startedMosasik) {
-      startedMosasik = true;
-      mosaikSimulator.setConnectionToSimonaApi(mapping, queueToSimona, queueToExt);
-      SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
-    }
     log.info(
         "+++++++++++++++++++++++++++ initialization of the external simulation completed +++++++++++++++++++++++++++");
     return 0L;

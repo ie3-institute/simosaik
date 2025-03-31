@@ -10,9 +10,10 @@ import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
 import edu.ie3.simosaik.flexibility.FlexCommunicationSimulation;
+import edu.ie3.simosaik.flexibility.FlexCommunicationSimulator;
 import edu.ie3.simosaik.flexibility.FlexOptionOptimizerSimulation;
 import edu.ie3.simosaik.primaryResultSimulator.PrimaryResultSimulation;
-import java.nio.file.Path;
+import edu.ie3.simosaik.primaryResultSimulator.PrimaryResultSimulator;
 
 public class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
@@ -27,18 +28,21 @@ public class SimosaikExtLink implements ExtLinkInterface {
     ArgsParser.Arguments arguments = ArgsParser.parse(data.getMainArgs());
 
     String mosaikIP = arguments.mosaikIP();
-    Path mappingPath = arguments.mappingPath();
     int stepSize = arguments.stepSize();
 
     extSim =
         switch (arguments.simulation()) {
-          case PRIMARY_RESULT -> new PrimaryResultSimulation(mosaikIP, mappingPath, stepSize);
-          case FLEX_COMMUNICATION ->
-              new FlexCommunicationSimulation(mosaikIP, mappingPath, stepSize);
+          case PRIMARY_RESULT -> {
+              PrimaryResultSimulator simulator = new PrimaryResultSimulator(stepSize);
+              yield new PrimaryResultSimulation(mosaikIP, simulator);
+          }
+          case FLEX_COMMUNICATION -> {
+              FlexCommunicationSimulator simulator = new FlexCommunicationSimulator(stepSize);
+              yield new FlexCommunicationSimulation(mosaikIP, simulator);
+          }
           case FLEX_OPTION_OPTIMIZER ->
               new FlexOptionOptimizerSimulation(
                   mosaikIP,
-                  mappingPath,
                   stepSize,
                   arguments.useFlexOptionEntitiesInsteadOfEmAgents());
         };

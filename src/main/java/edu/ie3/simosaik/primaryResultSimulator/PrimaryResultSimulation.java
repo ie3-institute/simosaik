@@ -10,7 +10,7 @@ import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simosaik.MosaikSimulation;
-import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,18 +19,13 @@ public class PrimaryResultSimulation extends MosaikSimulation {
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
   private final ExtResultDataConnection extResultDataConnection;
 
-  public PrimaryResultSimulation(String mosaikIP, Path mappingPath, int stepSize) {
-    super(
-        "MosaikPrimaryResultSimulation",
-        mosaikIP,
-        mappingPath,
-        new PrimaryResultSimulator(stepSize));
-
-    log.info("Initializing MosaikPrimaryResultSimulation with step size: {}", stepSize);
+  public PrimaryResultSimulation(String mosaikIP, PrimaryResultSimulator simulator) {
+    super("MosaikPrimaryResultSimulation", mosaikIP, simulator);
 
     // set up connection
-    this.extPrimaryDataConnection = buildPrimaryConnection(mapping, log);
-    this.extResultDataConnection = buildResultConnection(mapping, log);
+    this.extPrimaryDataConnection =
+        buildPrimaryConnection(simulator.getAssetsToValueClasses(), log);
+    this.extResultDataConnection = buildResultConnection(Map.of(), log);
   }
 
   @Override

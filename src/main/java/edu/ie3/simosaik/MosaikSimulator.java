@@ -12,7 +12,9 @@ import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.utils.ResultUtils;
 import edu.ie3.simosaik.utils.SimosaikUtils;
+
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -20,6 +22,7 @@ import java.util.logging.Logger;
 public abstract class MosaikSimulator extends Simulator implements SimonaEntities {
   protected final Logger logger = SimProcess.logger;
 
+  protected ExtEntityMapping mapping;
   public final int stepSize;
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
@@ -35,8 +38,7 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     long nextTick = time + this.stepSize;
     try {
       logger.info("Got inputs from MOSAIK for tick = " + time);
-      ExtInputDataContainer extDataForSimona =
-          SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
+      ExtInputDataContainer extDataForSimona = SimosaikUtils.createInputDataContainer(time, nextTick, inputs, mapping);
       logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
 
       logger.info(inputs.toString());
@@ -54,7 +56,7 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     logger.info("Got a request from MOSAIK to provide data!");
     ExtResultContainer results = queueToExt.takeAll();
     logger.info("Got results from SIMONA for MOSAIK!");
-    Map<String, Object> data = SimosaikUtils.createSimosaikOutputMap(map, results);
+    Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
 
     logger.info(data.toString());
 
@@ -63,7 +65,6 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
   }
 
   public abstract void setConnectionToSimonaApi(
-      ExtEntityMapping mapping,
       ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
       ExtDataContainerQueue<ExtResultContainer> queueToExt);
 

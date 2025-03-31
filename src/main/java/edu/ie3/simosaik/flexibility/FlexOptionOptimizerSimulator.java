@@ -6,9 +6,6 @@
 
 package edu.ie3.simosaik.flexibility;
 
-import static edu.ie3.simona.api.simulation.mapping.DataType.*;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
-
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
@@ -16,12 +13,15 @@ import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.data.results.model.DesaggFlexOptionsResult;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MetaUtils;
 import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.utils.SimosaikUtils;
+
 import java.util.*;
+
+import static edu.ie3.simona.api.simulation.mapping.DataType.*;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 // TODO: Refactor this class
 public class FlexOptionOptimizerSimulator extends MosaikSimulator {
@@ -138,10 +138,9 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     long nextTick = time + this.stepSize;
     try {
       if (!inputs.isEmpty()) {
-        ExtInputDataContainer extInputDataContainer =
-            SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
+        //ExtInputDataContainer extInputDataContainer = SimosaikUtils.createExtInputDataContainer(time, inputs, nextTick);
         // logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
-        queueToSimona.queueData(extInputDataContainer);
+        queueToSimona.queueData(new ExtInputDataContainer(time));
         logger.info("[" + this.time + "] Sent converted input to SIMONA!");
       } else {
         logger.info("[" + this.time + "] Got an empty input, so we wait for valid data!");
@@ -177,7 +176,6 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
   }
 
   public void setConnectionToSimonaApi(
-      ExtEntityMapping mapping,
       ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
       ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
@@ -189,8 +187,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     this.simonaResultOutputEntities = mapping.getExtId2UuidMapping(EXT_GRID_RESULT).keySet();
   }
 
-  private double getSoc(ExtResultContainer results, String id) {
-    Map<String, ResultEntity> resultMap = results.getResults();
+  private double getSoc(ExtResultContainer results, UUID id) {
+    Map<UUID, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof StorageResult storageResult) {
       return storageResult.getSoc().getValue().doubleValue();
     } else {
@@ -198,8 +196,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     }
   }
 
-  private double[] getFlexOptions(ExtResultContainer results, String id) {
-    Map<String, ResultEntity> resultMap = results.getResults();
+  private double[] getFlexOptions(ExtResultContainer results, UUID id) {
+    Map<UUID, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
       return getFlexMinRefMaxFlexOptions(flexOptionsResult);
     } else {
@@ -207,8 +205,8 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     }
   }
 
-  private DetailedFlexOptions getConnectedFlexOptions(ExtResultContainer results, String id) {
-    Map<String, ResultEntity> resultMap = results.getResults();
+  private DetailedFlexOptions getConnectedFlexOptions(ExtResultContainer results, UUID id) {
+    Map<UUID, ResultEntity> resultMap = results.getResults();
     if (resultMap.get(id) instanceof FlexOptionsResult flexOptionsResult) {
       return new DetailedFlexOptions(flexOptionsResult);
     } else {
@@ -226,12 +224,14 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
 
   public Map<String, Object> createSimosaikOutputMap(
       Map<String, List<String>> mosaikRequestedAttributes, ExtResultContainer simonaResults) {
+    Map<UUID, String> c = mapping.getExtUuid2IdMapping(EXT_EM_INPUT);
+
     Map<String, Object> outputMap = new HashMap<>();
     simonaResults
         .getResults()
         .forEach(
             (id, result) -> {
-              List<String> attrs = mosaikRequestedAttributes.get(id);
+              List<String> attrs = mosaikRequestedAttributes.get(c.get(id));
               HashMap<String, Object> values = new HashMap<>();
               for (String attr : attrs) {
                 switch (attr) {
@@ -250,13 +250,15 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
                   default -> logger.info("id = " + id + " requested attr = " + attr);
                 }
               }
-              outputMap.put(id, values);
+              outputMap.put(c.get(id), values);
             });
     return outputMap;
   }
 
   public Map<String, Object> createSimosaikOutputMapFromRequestedAttributes(
       Map<String, List<String>> mosaikRequestedAttributes, ExtResultContainer simonaResults) {
+    Map<String, UUID> c = mapping.getExtId2UuidMapping(EXT_EM_INPUT);
+
     Map<String, Object> outputMap = new HashMap<>();
     mosaikRequestedAttributes.forEach(
         (id, attrs) -> {
@@ -264,17 +266,17 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
           for (String attr : attrs) {
             switch (attr) {
               case MOSAIK_ACTIVE_POWER_IN, MOSAIK_REACTIVE_POWER_IN ->
-                  SimosaikUtils.addResult(simonaResults, id, attr, values);
+                  SimosaikUtils.addResult(simonaResults, c.get(id), attr, values);
               case FLEX_OPTION_P_MIN,
                       FLEX_OPTION_P_REF,
                       FLEX_OPTION_P_MAX,
                       FLEX_OPTION_MAP_P_MIN,
                       FLEX_OPTION_MAP_P_REF,
                       FLEX_OPTION_MAP_P_MAX ->
-                  addFlexOptions(simonaResults, id, attr, values);
+                  addFlexOptions(simonaResults, c.get(id), attr, values);
               case MOSAIK_VOLTAGE_DEVIATION_PU, MOSAIK_VOLTAGE_PU ->
                   // Grid assets
-                  SimosaikUtils.addResult(simonaResults, id, attr, values);
+                  SimosaikUtils.addResult(simonaResults, c.get(id), attr, values);
               default -> logger.info("id = " + id + " requested attr = " + attr);
             }
           }
@@ -284,7 +286,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
   }
 
   private void addFlexOptions(
-      ExtResultContainer results, String id, String attr, Map<String, Object> outputMap) {
+      ExtResultContainer results, UUID id, String attr, Map<String, Object> outputMap) {
     if (attr.equals(FLEX_OPTION_P_MIN)) {
       outputMap.put(attr, getFlexOptions(results, id)[0]);
     }
