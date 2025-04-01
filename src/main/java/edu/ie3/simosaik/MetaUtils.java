@@ -19,7 +19,6 @@ import org.json.simple.JSONObject;
 /** Methods for simplifying the creation of mosaik meta information. */
 public interface MetaUtils {
 
-  String PRIMARY_MAPPING = "primary";
   String EM_COMMUNICATION = "em_communication";
 
   static Map<String, Object> createMeta(String type, Model... models) {
@@ -27,7 +26,7 @@ public interface MetaUtils {
   }
 
   @SuppressWarnings("unchecked")
-  public static Map<String, Object> createMeta(String type, List<Model> additionalModels) {
+  static Map<String, Object> createMeta(String type, List<Model> additionalModels) {
     JSONObject meta = new JSONObject();
     meta.put("api_version", Simulator.API_VERSION);
     meta.put("type", type);
@@ -146,6 +145,7 @@ public interface MetaUtils {
     }
   }
 
+  @Deprecated
   record ModelParams(
       String type,
       boolean isPublic,

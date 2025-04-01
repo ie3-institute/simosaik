@@ -8,9 +8,11 @@ package edu.ie3.simosaik;
 
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
+import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
+import edu.ie3.simona.api.simulation.mapping.DataType;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.ResultUtils;
@@ -31,6 +33,11 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
+
+  // entities
+  protected final Set<String> simonaPrimaryEntities = new HashSet<>();
+  protected final Set<String> simonaResultEntities = new HashSet<>();
+  protected final Set<String> simonaEmEntities = new HashSet<>();
 
   public MosaikSimulator(String name, int stepSize) {
     super(name);
@@ -91,6 +98,85 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     }
 
     return entities;
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void process(Map<String, Object> simParams) throws InterruptedException {
+    logger.info("Sim parameters: " + simParams);
+
+    Map<DataType, Map<String, ExtEntityEntry>> mapping = new HashMap<>();
+
+    for (DataType dataType : DataType.values()) {
+      if (simParams.containsKey(dataType.type)) {
+
+        Map<String, Object> mosaikMap = (Map<String, Object>) simParams.get(dataType.type);
+
+        Map<String, ExtEntityEntry> entities = new HashMap<>();
+
+        for (Map.Entry<String, Object> entry : mosaikMap.entrySet()) {
+          String uuid = entry.getKey();
+          Object data = entry.getValue();
+
+          if (dataType == DataType.EXT_PRIMARY_INPUT) {
+
+            Optional<ColumnScheme> columnScheme = Optional.empty();
+            String id = "";
+
+            if (data instanceof List<?>) {
+              List<String> list = (List<String>) data;
+
+              if (list.size() == 2) {
+                columnScheme = ColumnScheme.parse(list.get(1));
+                id = list.get(0);
+              }
+            } else {
+              columnScheme = Optional.of(ColumnScheme.ACTIVE_POWER);
+              id = (String) data;
+              logger.warning("Received no value class for primary asset with id: "+ id +"! Use default: 'p'");
+            }
+
+            entities.put(
+                    id,
+                    new ExtEntityEntry(UUID.fromString(uuid), id, columnScheme, dataType));
+          } else {
+            String id = (String) data;
+
+            entities.put(
+                id,
+                new ExtEntityEntry(UUID.fromString(uuid), id, Optional.empty(), dataType));
+          }
+        }
+
+        mapping.put(dataType, entities);
+      }
+    }
+
+    List<ExtEntityEntry> extEntities = new ArrayList<>();
+
+    for (DataType dataType : mapping.keySet()) {
+      switch (dataType) {
+        case EXT_PRIMARY_INPUT -> {
+          Map<String, ExtEntityEntry> primary = mapping.get(dataType);
+          this.simonaPrimaryEntities.addAll(primary.keySet());
+          extEntities.addAll(primary.values());
+        }
+        case EXT_GRID_RESULT, EXT_PARTICIPANT_RESULT, EXT_FLEX_OPTIONS_RESULT -> {
+          Map<String, ExtEntityEntry> result = mapping.get(dataType);
+          this.simonaResultEntities.addAll(result.keySet());
+          extEntities.addAll(result.values());
+        }
+        case EXT_EM_INPUT -> {
+          Map<String, ExtEntityEntry> em = mapping.get(dataType);
+          this.simonaEmEntities.addAll(em.keySet());
+          extEntities.addAll(em.values());
+        }
+      }
+    }
+
+    // set mapping
+    this.mapping = new ExtEntityMapping(extEntities);
+
+    controlledQueue.put(extEntities);
   }
 
   protected void throwException(int num, int allowed, String type) {

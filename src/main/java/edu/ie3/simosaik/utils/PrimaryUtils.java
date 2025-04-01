@@ -28,6 +28,10 @@ class PrimaryUtils {
 
   static Map<UUID, Value> getPrimary(
       Collection<MosaikMessage> mosaikMessages, Map<String, UUID> idToUuid) {
+    if (idToUuid.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     Map<UUID, Value> primary = new HashMap<>();
 
     Map<String, List<MosaikMessage>> receiverToMessages =
@@ -69,7 +73,7 @@ class PrimaryUtils {
               unitToValues.put(unit, d);
             }
           } else {
-            log.warn("Received value '{}' for unit '{}'.", value, unit);
+            log.debug("Received value '{}' for unit '{}'.", value, unit);
           }
         });
 

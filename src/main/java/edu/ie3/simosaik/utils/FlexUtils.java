@@ -33,6 +33,10 @@ class FlexUtils {
 
   static Map<UUID, List<UUID>> getFlexRequests(
       Collection<MosaikMessage> mosaikMessages, Map<String, UUID> idToUuid) {
+    if (idToUuid.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     Map<UUID, List<UUID>> flexRequests = new HashMap<>();
 
     List<MosaikMessage> filtered = filterForUnit(mosaikMessages, FLEX_REQUEST);
@@ -55,6 +59,10 @@ class FlexUtils {
 
   static Map<UUID, List<FlexOptions>> getFlexOptions(
       Collection<MosaikMessage> mosaikMessages, Map<String, UUID> idToUuid) {
+    if (idToUuid.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     Map<UUID, List<FlexOptions>> flexOptions = new HashMap<>();
 
     mosaikMessages.stream()
@@ -112,6 +120,10 @@ class FlexUtils {
 
   static Map<UUID, PValue> getSetPoint(
       Collection<MosaikMessage> mosaikMessages, Map<String, UUID> idToUuid) {
+    if (idToUuid.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
     Map<UUID, PValue> setPoints = new HashMap<>();
 
     List<Tuple3<ComparableQuantity<Power>>> activePowerMap =

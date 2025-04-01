@@ -14,12 +14,17 @@ import edu.ie3.simona.api.simulation.mapping.DataType;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
+
+  private static final Logger log = LoggerFactory.getLogger(SimosaikUtils.class);
 
   private SimosaikUtils() {}
 
@@ -48,6 +53,8 @@ public class SimosaikUtils {
       long nextTick,
       List<MosaikMessageParser.MosaikMessage> mosaikMessages,
       ExtEntityMapping mapping) {
+    log.info("Parsed messages: {}", mosaikMessages);
+
     ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
 
     // primary data
