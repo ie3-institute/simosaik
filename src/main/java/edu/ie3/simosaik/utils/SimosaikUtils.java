@@ -8,18 +8,20 @@ package edu.ie3.simosaik.utils;
 
 import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
-import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
+import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
+import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
+import edu.ie3.simona.api.data.em.EmMode;
 import edu.ie3.simona.api.simulation.mapping.DataType;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
+import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public class SimosaikUtils {
@@ -43,31 +45,68 @@ public class SimosaikUtils {
     }
   }
 
-  public static ExtInputDataContainer createInputDataContainer(
-      long tick, long nextTick, Map<String, Object> inputs, ExtEntityMapping mapping) {
-    return createInputDataContainer(tick, nextTick, MosaikMessageParser.parse(inputs), mapping);
+  public static Map<UUID, Class<Value>> buildAssetsToValueClasses(ExtEntityMapping entityMapping) {
+    Map<UUID, Class<Value>> assetsToValueClasses = new HashMap<>();
+
+    for (ExtEntityEntry extEntityEntry : entityMapping.getEntries(DataType.EXT_PRIMARY_INPUT)) {
+      Optional<ColumnScheme> scheme = extEntityEntry.columnScheme();
+
+      if (scheme.isPresent()) {
+        assetsToValueClasses.put(
+            extEntityEntry.uuid(), (Class<Value>) scheme.get().getValueClass());
+      }
+    }
+
+    return assetsToValueClasses;
   }
 
-  public static ExtInputDataContainer createInputDataContainer(
-      long tick,
-      long nextTick,
-      List<MosaikMessageParser.MosaikMessage> mosaikMessages,
-      ExtEntityMapping mapping) {
-    log.info("Parsed messages: {}", mosaikMessages);
+  public static Optional<Map.Entry<EmMode, List<UUID>>> findEmMode(ExtEntityMapping entityMapping) {
+    Set<DataType> dataTypes = entityMapping.getDataTypes();
 
-    ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
+    Function<DataType, Map.Entry<EmMode, List<UUID>>> fcn =
+        dataType ->
+            Map.entry(
+                EmMode.fromDataType(dataType),
+                entityMapping.getEntries(dataType).stream().map(ExtEntityEntry::uuid).toList());
 
-    // primary data
-    Map<String, UUID> primaryMapping = mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT);
-    PrimaryUtils.getPrimary(mosaikMessages, primaryMapping).forEach(container::addPrimaryValue);
+    if (dataTypes.contains(DataType.EXT_EM_INPUT)) {
+      return Optional.of(fcn.apply(DataType.EXT_EM_INPUT));
 
-    // em data
-    Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT);
-    FlexUtils.getFlexRequests(mosaikMessages, idToUuid).forEach(container::addRequest);
-    FlexUtils.getFlexOptions(mosaikMessages, idToUuid).forEach(container::addFlexOptions);
-    FlexUtils.getSetPoint(mosaikMessages, idToUuid).forEach(container::addSetPoint);
+    } else if (dataTypes.contains(DataType.EXT_EM_COMMUNICATION)) {
+      return Optional.of(fcn.apply(DataType.EXT_EM_COMMUNICATION));
 
-    return container;
+    } else if (dataTypes.contains(DataType.EXT_EM_OPTIMIZER)) {
+      return Optional.of(fcn.apply(DataType.EXT_EM_OPTIMIZER));
+
+    } else {
+      int count = 0;
+      if (dataTypes.contains(DataType.EXT_EM_INPUT)) count++;
+      if (dataTypes.contains(DataType.EXT_EM_COMMUNICATION)) count++;
+      if (dataTypes.contains(DataType.EXT_EM_OPTIMIZER)) count++;
+
+      log.warn("Em mapping for {} mode(s) were provided! Returning no em mode!", count);
+      return Optional.empty();
+    }
+  }
+
+  public static Map<DataType, List<UUID>> buildResultMapping(ExtEntityMapping entityMapping) {
+    Map<DataType, List<UUID>> resultMapping = new HashMap<>();
+
+    Consumer<DataType> consumer =
+        type -> {
+          List<UUID> assets =
+              entityMapping.getEntries(type).stream().map(ExtEntityEntry::uuid).toList();
+
+          if (!assets.isEmpty()) {
+            resultMapping.put(type, assets);
+          }
+        };
+
+    consumer.accept(DataType.EXT_GRID_RESULT);
+    consumer.accept(DataType.EXT_PARTICIPANT_RESULT);
+    consumer.accept(DataType.EXT_FLEX_OPTIONS_RESULT);
+
+    return resultMapping;
   }
 
   public static void addResult(

@@ -6,6 +6,8 @@
 
 package edu.ie3.simosaik;
 
+import static edu.ie3.simosaik.utils.MetaUtils.*;
+
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
@@ -15,33 +17,130 @@ import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
 import edu.ie3.simona.api.simulation.mapping.DataType;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.ResultUtils;
-import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /** The mosaik simulator that exchanges information with mosaik. */
-public abstract class MosaikSimulator extends Simulator implements SimonaEntities {
+public class MosaikSimulator extends Simulator {
   protected final Logger logger = SimProcess.logger;
 
+  protected final Map<SimonaEntity, Optional<List<ExtEntityEntry>>> extEntityEntries =
+      new HashMap<>();
   protected ExtEntityMapping mapping;
   public final int stepSize;
 
-  public final LinkedBlockingQueue<List<ExtEntityEntry>> controlledQueue =
-      new LinkedBlockingQueue<>();
+  public final LinkedBlockingQueue<ExtEntityMapping> controlledQueue = new LinkedBlockingQueue<>();
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
 
-  // entities
-  protected final Set<String> simonaPrimaryEntities = new HashSet<>();
-  protected final Set<String> simonaResultEntities = new HashSet<>();
-  protected final Set<String> simonaEmEntities = new HashSet<>();
-
   public MosaikSimulator(String name, int stepSize) {
     super(name);
     this.stepSize = stepSize;
+  }
+
+  public void setConnectionToSimonaApi(
+      ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+      ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
+    logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
+    this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
+    this.queueToSimona = dataQueueExtCoSimulatorToSimonaApi;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
+    List<Model> models = new ArrayList<>();
+
+    if (simParams.containsKey("models")) {
+      List<String> modelTypes = (List<String>) simParams.get("models");
+
+      logger.info("Ext entity types: " + modelTypes);
+
+      for (String model : modelTypes) {
+        SimonaEntity simonaEntity = SimonaEntity.parseType(model);
+        extEntityEntries.put(simonaEntity, Optional.empty());
+        models.add(from(simonaEntity));
+      }
+    } else {
+      logger.warning(
+          "No models provided! Valid models are: " + Arrays.toString(SimonaEntity.values()));
+    }
+
+    return createMeta(getType(extEntityEntries.keySet()), models);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<Map<String, Object>> create(int num, String model, Map<String, Object> modelParams) {
+    List<Map<String, Object>> entities = new ArrayList<>();
+
+    if (modelParams.containsKey("mapping")) {
+      try {
+        Map<String, String> mapping = (Map<String, String>) modelParams.get("mapping");
+
+        // check model params
+        checkModelParams(num, mapping.size());
+
+        SimonaEntity modelType = SimonaEntity.parseType(model);
+        List<ExtEntityEntry> entries = new ArrayList<>();
+
+        for (Map.Entry<String, String> entry : mapping.entrySet()) {
+          UUID uuid = UUID.fromString(entry.getKey());
+          String id = entry.getValue();
+
+          // add mosaik model
+          Map<String, Object> entity = new HashMap<>();
+          entity.put("eid", id);
+          entity.put("type", model);
+          entities.add(entity);
+
+          Optional<ColumnScheme> scheme =
+              switch (modelType) {
+                case PRIMARY_P -> Optional.of(ColumnScheme.ACTIVE_POWER);
+                case PRIMARY_PQ -> Optional.of(ColumnScheme.APPARENT_POWER);
+                default -> Optional.empty();
+              };
+
+          DataType dataType = SimonaEntity.toType(modelType);
+
+          // add simona external entity entry
+          entries.add(new ExtEntityEntry(uuid, id, scheme, dataType));
+        }
+
+        extEntityEntries.put(modelType, Optional.of(entries));
+
+      } catch (Exception e) {
+        throw new RuntimeException("Could not build models of type '" + model + "', due to: ", e);
+      }
+    } else {
+      logger.warning("No models are build, because no mapping was provided!");
+    }
+
+    boolean allInitialized = extEntityEntries.values().stream().allMatch(Optional::isPresent);
+
+    if (allInitialized) {
+      try {
+        List<ExtEntityEntry> entries =
+            extEntityEntries.values().stream()
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .flatMap(Collection::stream)
+                .toList();
+
+        this.mapping = new ExtEntityMapping(entries);
+
+        this.controlledQueue.put(mapping);
+
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    return entities;
   }
 
   @Override
@@ -50,7 +149,7 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     try {
       logger.info("Got inputs from MOSAIK for tick = " + time);
       ExtInputDataContainer extDataForSimona =
-          SimosaikUtils.createInputDataContainer(time, nextTick, inputs, mapping);
+          InputUtils.createInputDataContainer(time, nextTick, inputs, mapping);
       logger.info("Converted input for SIMONA! Now try to send it to SIMONA!");
 
       logger.info(inputs.toString());
@@ -76,116 +175,21 @@ public abstract class MosaikSimulator extends Simulator implements SimonaEntitie
     return data;
   }
 
-  public abstract void setConnectionToSimonaApi(
-      ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
-      ExtDataContainerQueue<ExtResultContainer> queueToExt);
-
-  /**
-   * Builds a map for each given entity.
-   *
-   * @param model type of entities
-   * @param simonaEntities set of entities
-   * @return a list of maps
-   */
-  protected List<Map<String, Object>> buildMap(String model, Set<String> simonaEntities) {
-    List<Map<String, Object>> entities = new ArrayList<>();
-
-    for (String simonaEntity : simonaEntities) {
-      Map<String, Object> entity = new HashMap<>();
-      entity.put("eid", simonaEntity);
-      entity.put("type", model);
-      entities.add(entity);
+  protected void checkModelParams(int expected, int received) {
+    if (received < expected) {
+      throw new IllegalArgumentException(
+          "Requested "
+              + expected
+              + " entities, but the provided mapping contains only information for "
+              + received
+              + " entities!");
+    } else if (received > expected) {
+      throw new IllegalArgumentException(
+          "Requested "
+              + expected
+              + " entities, but the provided mapping contains information for more entities ("
+              + received
+              + ")!");
     }
-
-    return entities;
-  }
-
-  @SuppressWarnings("unchecked")
-  protected void process(Map<String, Object> simParams) throws InterruptedException {
-    logger.info("Sim parameters: " + simParams);
-
-    Map<DataType, Map<String, ExtEntityEntry>> mapping = new HashMap<>();
-
-    for (DataType dataType : DataType.values()) {
-      if (simParams.containsKey(dataType.type)) {
-
-        Map<String, Object> mosaikMap = (Map<String, Object>) simParams.get(dataType.type);
-
-        Map<String, ExtEntityEntry> entities = new HashMap<>();
-
-        for (Map.Entry<String, Object> entry : mosaikMap.entrySet()) {
-          String uuid = entry.getKey();
-          Object data = entry.getValue();
-
-          if (dataType == DataType.EXT_PRIMARY_INPUT) {
-
-            Optional<ColumnScheme> columnScheme = Optional.empty();
-            String id = "";
-
-            if (data instanceof List<?>) {
-              List<String> list = (List<String>) data;
-
-              if (list.size() == 2) {
-                columnScheme = ColumnScheme.parse(list.get(1));
-                id = list.get(0);
-              }
-            } else {
-              columnScheme = Optional.of(ColumnScheme.ACTIVE_POWER);
-              id = (String) data;
-              logger.warning("Received no value class for primary asset with id: "+ id +"! Use default: 'p'");
-            }
-
-            entities.put(
-                    id,
-                    new ExtEntityEntry(UUID.fromString(uuid), id, columnScheme, dataType));
-          } else {
-            String id = (String) data;
-
-            entities.put(
-                id,
-                new ExtEntityEntry(UUID.fromString(uuid), id, Optional.empty(), dataType));
-          }
-        }
-
-        mapping.put(dataType, entities);
-      }
-    }
-
-    List<ExtEntityEntry> extEntities = new ArrayList<>();
-
-    for (DataType dataType : mapping.keySet()) {
-      switch (dataType) {
-        case EXT_PRIMARY_INPUT -> {
-          Map<String, ExtEntityEntry> primary = mapping.get(dataType);
-          this.simonaPrimaryEntities.addAll(primary.keySet());
-          extEntities.addAll(primary.values());
-        }
-        case EXT_GRID_RESULT, EXT_PARTICIPANT_RESULT, EXT_FLEX_OPTIONS_RESULT -> {
-          Map<String, ExtEntityEntry> result = mapping.get(dataType);
-          this.simonaResultEntities.addAll(result.keySet());
-          extEntities.addAll(result.values());
-        }
-        case EXT_EM_INPUT -> {
-          Map<String, ExtEntityEntry> em = mapping.get(dataType);
-          this.simonaEmEntities.addAll(em.keySet());
-          extEntities.addAll(em.values());
-        }
-      }
-    }
-
-    // set mapping
-    this.mapping = new ExtEntityMapping(extEntities);
-
-    controlledQueue.put(extEntities);
-  }
-
-  protected void throwException(int num, int allowed, String type) {
-    throw new IllegalArgumentException(
-        "Requested number ("
-            + num
-            + ") of "
-            + type
-            + " entities is not possible. Allowed: "
-            + allowed);
   }
 }
