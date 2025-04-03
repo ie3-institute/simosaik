@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik;
 
-import edu.ie3.simona.api.simulation.mapping.DataType;
+import edu.ie3.simona.api.data.mapping.DataType;
 import java.util.stream.Stream;
 
 public enum SimonaEntity {
@@ -18,7 +18,7 @@ public enum SimonaEntity {
   PARTICIPANT_RESULTS("ParticipantResults"),
   FLEX_RESULTS("FlexResults");
 
-  public String name;
+  public final String name;
 
   SimonaEntity(String name) {
     this.name = name;

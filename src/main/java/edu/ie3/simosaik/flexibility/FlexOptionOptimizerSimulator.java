@@ -6,18 +6,16 @@
 
 package edu.ie3.simosaik.flexibility;
 
-import static edu.ie3.simona.api.simulation.mapping.DataType.*;
+import static edu.ie3.simona.api.data.mapping.DataType.*;
 import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
 
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.StorageResult;
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
-import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
-import edu.ie3.simona.api.data.datacontainer.ExtResultContainer;
+import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.results.model.DesaggFlexOptionsResult;
-import edu.ie3.simosaik.MetaUtils;
-import edu.ie3.simosaik.MetaUtils.ModelParams;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
@@ -42,6 +40,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
     this.useFlexOptionEntitiesInsteadOfEmAgents = useFlexOptionEntitiesInsteadOfEmAgents;
   }
 
+  /*
   @Override
   public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
     this.counter = 0;
@@ -65,9 +64,9 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
 
     return MetaUtils.createMeta(
         "hybrid",
-        ModelParams.of(
-            EM_AGENT_ENTITIES, emUnits, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-        ModelParams.of(RESULT_OUTPUT_ENTITIES, MOSAIK_VOLTAGE_PU));
+        Model.of(
+            , emUnits, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
+        Model.of(RESULT_OUTPUT_ENTITIES, MOSAIK_VOLTAGE_PU));
   }
 
   private Map<String, Object> flexOptionEntitiesMeta() {
@@ -124,6 +123,7 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
           "The model " + model + " is not supported by SimonaSimulator.");
     }
   }
+   */
 
   @Override
   public long step(long time, Map<String, Object> inputs, long maxAdvance) {

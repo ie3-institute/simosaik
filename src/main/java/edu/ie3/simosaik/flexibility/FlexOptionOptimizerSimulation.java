@@ -7,6 +7,7 @@
 package edu.ie3.simosaik.flexibility;
 
 import edu.ie3.simona.api.data.ExtDataConnection;
+import edu.ie3.simona.api.data.em.EmMode;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simosaik.MosaikSimulation;
@@ -28,7 +29,7 @@ public class FlexOptionOptimizerSimulation extends MosaikSimulation {
         new FlexOptionOptimizerSimulator(stepSize, useFlexOptionEntitiesInsteadOfEmAgents));
 
     // set up connection
-    this.extEmDataConnection = buildEmConnection(List.of(), true, log);
+    this.extEmDataConnection = buildEmConnection(List.of(), EmMode.EM_OPTIMIZATION, log);
     this.extResultDataConnection = buildResultConnection(Map.of(), log);
   }
 

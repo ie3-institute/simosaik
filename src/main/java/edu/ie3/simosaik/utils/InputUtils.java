@@ -6,9 +6,9 @@
 
 package edu.ie3.simosaik.utils;
 
-import edu.ie3.simona.api.data.datacontainer.ExtInputDataContainer;
-import edu.ie3.simona.api.simulation.mapping.DataType;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.mapping.DataType;
+import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

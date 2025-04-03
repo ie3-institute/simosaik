@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik.config;
 
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import java.nio.file.Path;
 import java.util.HashMap;

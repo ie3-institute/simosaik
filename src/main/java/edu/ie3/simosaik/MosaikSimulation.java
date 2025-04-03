@@ -13,8 +13,8 @@ import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
-import edu.ie3.simona.api.simulation.mapping.DataType;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.data.mapping.DataType;
+import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,9 +36,9 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
 
   // connections
-  private ExtPrimaryDataConnection extPrimaryDataConnection;
-  private ExtEmDataConnection extEmDataConnection;
-  private ExtResultDataConnection extResultDataConnection;
+  private final ExtPrimaryDataConnection extPrimaryDataConnection;
+  private final ExtEmDataConnection extEmDataConnection;
+  private final ExtResultDataConnection extResultDataConnection;
 
   public MosaikSimulation(String mosaikIP, MosaikSimulator simulator) {
     this("MosaikSimulation", mosaikIP, simulator);
