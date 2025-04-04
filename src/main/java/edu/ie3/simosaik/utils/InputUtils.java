@@ -7,7 +7,6 @@
 package edu.ie3.simosaik.utils;
 
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
-import edu.ie3.simona.api.data.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import java.util.List;
 import java.util.Map;
@@ -31,13 +30,12 @@ public class InputUtils {
     log.info("Parsed messages: {}", mosaikMessages);
 
     ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
+    Map<String, UUID> idToUuid = mapping.getFullMapping();
 
     // primary data
-    Map<String, UUID> primaryMapping = mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT);
-    PrimaryUtils.getPrimary(mosaikMessages, primaryMapping).forEach(container::addPrimaryValue);
+    PrimaryUtils.getPrimary(mosaikMessages, idToUuid).forEach(container::addPrimaryValue);
 
     // em data
-    Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT);
     FlexUtils.getFlexRequests(mosaikMessages, idToUuid).forEach(container::addRequest);
     FlexUtils.getFlexOptions(mosaikMessages, idToUuid).forEach(container::addFlexOptions);
     FlexUtils.getSetPoint(mosaikMessages, idToUuid).forEach(container::addSetPoint);

@@ -93,9 +93,9 @@ public class MosaikSimulation extends ExtCoSimulation {
   @Override
   protected final Long initialize() {
     log.info(
-        "+++++++++++++++++++++++++++ initialization of the external simulation +++++++++++++++++++++++++++");
+        "+++++++++++++++++++++++++++ Initialization of the external simulation +++++++++++++++++++++++++++");
     log.info(
-        "+++++++++++++++++++++++++++ initialization of the external simulation completed +++++++++++++++++++++++++++");
+        "+++++++++++++++++++++++++++ Initialization of the external simulation completed +++++++++++++++++++++++++++");
     return 0L;
   }
 
