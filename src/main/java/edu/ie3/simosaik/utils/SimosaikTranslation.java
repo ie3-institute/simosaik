@@ -31,7 +31,9 @@ public class SimosaikTranslation {
 
   // em communication
   public static final String FLEX_REQUEST = "Flex[request]"; // valueType = uuid
-  public static final String FLEX_OPTIONS = "Flex[options]"; // valueType = Map{receiver=uuid, sender=uuid, PMin[MW]=double, PRef[MW]=double, PMax[MW]=double}
+  public static final String FLEX_OPTIONS =
+      "Flex[options]"; // valueType = Map{receiver=uuid, sender=uuid, PMin[MW]=double,
+  // PRef[MW]=double, PMax[MW]=double}
 
   // flex options
   public static final String FLEX_OPTION_P_MIN = "PMin[MW]";

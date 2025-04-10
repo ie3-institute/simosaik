@@ -159,16 +159,18 @@ public class MosaikSimulator extends Simulator {
     }
 
     long nextTick = time + this.stepSize;
-    logger.info("["+time+"] Got inputs from MOSAIK for tick = " + time+". Inputs: " + inputs);
+    logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
-    List<MosaikMessageInformation> information = MosaikMessageParser.extractInformation(inputs, cache);
+    List<MosaikMessageInformation> information =
+        MosaikMessageParser.extractInformation(inputs, cache);
     List<MosaikMessage> messages = MosaikMessageParser.parse(information);
-    ExtInputDataContainer extDataForSimona = InputUtils.createInputDataContainer(time, nextTick, messages, mapping);
+    ExtInputDataContainer extDataForSimona =
+        InputUtils.createInputDataContainer(time, nextTick, messages, mapping);
 
     try {
-      logger.info("["+time+"] Converted input for SIMONA! Now try to send it to SIMONA!");
+      logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
       queueToSimona.queueData(extDataForSimona);
-      logger.info("["+time+"] Sent converted input for tick " + time + " to SIMONA!");
+      logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -177,14 +179,14 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
-    logger.info("["+time+"] Got a request from MOSAIK to provide data!");
+    logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
     ExtResultContainer results = queueToExt.takeAll();
-    logger.info("["+time+"] Got results from SIMONA for MOSAIK!");
+    logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
     Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
 
     logger.info("Data for MOSAIK: " + data);
 
-    logger.info("["+time+"] Converted results for MOSAIK! Now send it to MOSAIK!");
+    logger.info("[" + time + "] Converted results for MOSAIK! Now send it to MOSAIK!");
     return data;
   }
 

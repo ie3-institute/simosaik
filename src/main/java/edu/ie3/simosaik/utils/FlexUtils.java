@@ -6,6 +6,11 @@
 
 package edu.ie3.simosaik.utils;
 
+import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
+import static edu.ie3.simosaik.utils.MosaikMessageParser.trim;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
+
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
@@ -14,25 +19,20 @@ import edu.ie3.simona.api.data.em.model.FlexOptions;
 import edu.ie3.simosaik.exceptions.ConversionException;
 import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
 import edu.ie3.util.quantities.PowerSystemUnits;
+import java.util.*;
+import java.util.function.Function;
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
-import java.util.*;
-
-import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
-import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
-
 class FlexUtils {
   private static final Logger log = LoggerFactory.getLogger(FlexUtils.class);
 
   /**
-   *
    * @param mosaikMessages to extract flex requests from
    * @param idToUuid mapping to convert mosaik eid to SIMONA uuid
    * @return map: receiver to option of sender
@@ -55,7 +55,18 @@ class FlexUtils {
       log.warn("Received values: {}", unitToValues);
 
       if (unitToValues.containsKey(FLEX_REQUEST)) {
-        Optional<UUID> sender = unitToValues.getFirst(FLEX_REQUEST).map(id -> idToUuid.get((String) id));
+
+        Function<Object, Optional<UUID>> convert =
+            obj -> {
+              if (obj instanceof String str) {
+                String sender = trim(str);
+                // log.info("Converting sender '{}'.", sender);
+                return Optional.ofNullable(idToUuid.get(sender));
+              }
+              return Optional.empty();
+            };
+
+        Optional<UUID> sender = unitToValues.getFirst(FLEX_REQUEST).flatMap(convert);
 
         if (flexRequests.containsKey(receiver)) {
           log.warn("Receiver {} has received flex request from multiple em agents!", receiver);
@@ -79,53 +90,33 @@ class FlexUtils {
 
     Map<UUID, List<FlexOptions>> flexOptions = new HashMap<>();
 
-    mosaikMessages.forEach(mosaikMessage -> {
-      UUID receiver = idToUuid.get(mosaikMessage.receiver());
-      MultiValueMap<String, Object> unitToValues = mosaikMessage.unitToValues();
+    mosaikMessages.forEach(
+        mosaikMessage -> {
+          UUID receiver = idToUuid.get(mosaikMessage.receiver());
+          MultiValueMap<String, Object> unitToValues = mosaikMessage.unitToValues();
 
-      List<Object> options = unitToValues.get(FLEX_OPTIONS);
+          Optional<Map<String, Map<String, Object>>> mapOption =
+              unitToValues.getFirst(FLEX_OPTIONS);
 
-      List<FlexOptions> flexOptionsList = new ArrayList<>();
+          List<FlexOptions> flexOptionsList = new ArrayList<>();
 
-      for (Object option : options) {
-        UUID sender;
+          mapOption.ifPresent(
+              map ->
+                  map.values()
+                      .forEach(
+                          options ->
+                              flexOptionsList.add(
+                                  new FlexOptions(
+                                      receiver,
+                                      idToUuid.get((String) options.get("sender")),
+                                      extract(options, FLEX_OPTION_P_MIN),
+                                      extract(options, FLEX_OPTION_P_REF),
+                                      extract(options, FLEX_OPTION_P_MAX)))));
 
-        if (option instanceof Map<?,?> map) {
-
-          if (map.get("sender") instanceof String str) {
-            sender = idToUuid.get(str);
-          } else {
-            sender = null;
-            log.warn("Could not find sender for option {}", option);
+          if (!flexOptionsList.isEmpty()) {
+            flexOptions.put(receiver, flexOptionsList);
           }
-
-          // TODO: Consider default values
-          ComparableQuantity<Power> pMin = null;
-          ComparableQuantity<Power> pRef = null;
-          ComparableQuantity<Power> pMax = null;
-
-          if (map.get(FLEX_OPTION_P_MIN) instanceof Double d) {
-            pMin = Quantities.getQuantity(d, PowerSystemUnits.MEGAWATT);
-          }
-
-          if (map.get(FLEX_OPTION_P_REF) instanceof Double d) {
-            pRef = Quantities.getQuantity(d, PowerSystemUnits.MEGAWATT);
-          }
-
-          if (map.get(FLEX_OPTION_P_MAX) instanceof Double d) {
-            pMax = Quantities.getQuantity(d, PowerSystemUnits.MEGAWATT);
-          }
-
-          flexOptionsList.add(new FlexOptions(receiver, sender, pMin, pRef, pMax));
-        } else {
-          log.warn("Received '{}' for type '{}', which is not supported!", option, FLEX_OPTIONS);
-        }
-      }
-
-      if (!flexOptionsList.isEmpty()) {
-        flexOptions.put(receiver, flexOptionsList);
-      }
-    });
+        });
 
     return flexOptions;
   }
@@ -138,8 +129,10 @@ class FlexUtils {
 
     Map<UUID, PValue> setPoints = new HashMap<>();
 
-    Map<String, ComparableQuantity<Power>> activePowerMap = extract(mosaikMessages, MOSAIK_ACTIVE_POWER);
-    Map<String, ComparableQuantity<Power>> reactivePowerMap = extract(mosaikMessages, MOSAIK_REACTIVE_POWER);
+    Map<String, ComparableQuantity<Power>> activePowerMap =
+        extract(mosaikMessages, MOSAIK_ACTIVE_POWER);
+    Map<String, ComparableQuantity<Power>> reactivePowerMap =
+        extract(mosaikMessages, MOSAIK_REACTIVE_POWER);
 
     Set<String> receivers = new HashSet<>(activePowerMap.keySet());
     receivers.addAll(reactivePowerMap.keySet());
@@ -211,21 +204,34 @@ class FlexUtils {
             });
   }
 
+  static <Q extends Quantity<Q>> ComparableQuantity<Q> extract(
+      Map<String, Object> map, String field) {
+    double d = (double) map.get(field);
+    Unit<Q> unit = getPSDMUnit(field);
+    return Quantities.getQuantity(d, unit);
+  }
+
   static <Q extends Quantity<Q>> Map<String, ComparableQuantity<Q>> extract(
-          Collection<MosaikMessage> messages, String unit) {
+      Collection<MosaikMessage> messages, String unit) {
     Map<String, ComparableQuantity<Q>> result = new HashMap<>();
 
     for (MosaikMessage message : messages) {
       MultiValueMap<String, Object> map = message.unitToValues();
 
       // all values that are not null and of type double
-      List<Double> values = map.get(unit).stream().filter(Objects::nonNull).map(o -> {
-        if (o instanceof Double d) {
-          return d;
-        } else {
-          return null;
-        }
-      }).filter(Objects::nonNull).toList();
+      List<Double> values =
+          map.get(unit).stream()
+              .filter(Objects::nonNull)
+              .map(
+                  o -> {
+                    if (o instanceof Double d) {
+                      return d;
+                    } else {
+                      return null;
+                    }
+                  })
+              .filter(Objects::nonNull)
+              .toList();
 
       if (!values.isEmpty()) {
         String receiver = message.receiver();
@@ -243,5 +249,4 @@ class FlexUtils {
 
     return result;
   }
-
 }

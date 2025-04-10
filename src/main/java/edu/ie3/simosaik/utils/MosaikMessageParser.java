@@ -6,13 +6,12 @@
 
 package edu.ie3.simosaik.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MosaikMessageParser {
   private static final Logger log = LoggerFactory.getLogger(MosaikMessageParser.class);
@@ -25,7 +24,8 @@ public class MosaikMessageParser {
     return messages.stream().filter(m -> m.unitToValues.containsKey(unit)).toList();
   }
 
-  public static List<MosaikMessageInformation> extractInformation(Map<String, Object> mosaikInput, List<MosaikMessageInformation> cache) {
+  public static List<MosaikMessageInformation> extractInformation(
+      Map<String, Object> mosaikInput, List<MosaikMessageInformation> cache) {
     List<MosaikMessageInformation> messageParts = new ArrayList<>();
 
     for (Map.Entry<String, Object> entry : mosaikInput.entrySet()) {
@@ -44,7 +44,8 @@ public class MosaikMessageParser {
       }
     }
 
-    List<MosaikMessageInformation> information = messageParts.stream().filter(msg -> !cache.contains(msg)).toList();
+    List<MosaikMessageInformation> information =
+        messageParts.stream().filter(msg -> !cache.contains(msg)).toList();
 
     // adding new messages to the cache
     cache.addAll(information);
@@ -55,19 +56,22 @@ public class MosaikMessageParser {
   public static List<MosaikMessage> parse(List<MosaikMessageInformation> information) {
     List<MosaikMessage> messages = new ArrayList<>();
 
-    information.stream().collect(Collectors.groupingBy(MosaikMessageInformation::receiver)).forEach((receiver, parts) -> {
-      MultiValueMap<String, Object> unitToValues = new MultiValueMap<>();
-      parts.forEach(part -> unitToValues.put(part.unit, part.messageValue));
+    information.stream()
+        .collect(Collectors.groupingBy(MosaikMessageInformation::receiver))
+        .forEach(
+            (receiver, parts) -> {
+              MultiValueMap<String, Object> unitToValues = new MultiValueMap<>();
+              parts.forEach(part -> unitToValues.put(part.unit, part.messageValue));
 
-      messages.add(new MosaikMessage(receiver, unitToValues));
-    });
+              messages.add(new MosaikMessage(receiver, unitToValues));
+            });
 
     log.info("Parsed mosaik messages: {}", messages);
 
     return messages;
   }
 
-  private static String trim(String sender) {
+  public static String trim(String sender) {
     Pattern dot = Pattern.compile("\\.");
     Matcher matcher = dot.matcher(sender);
 

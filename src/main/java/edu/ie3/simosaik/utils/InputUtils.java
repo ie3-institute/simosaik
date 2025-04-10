@@ -8,7 +8,6 @@ package edu.ie3.simosaik.utils;
 
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

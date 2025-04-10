@@ -33,7 +33,7 @@ public class SimosaikExtLink implements ExtLinkInterface {
             yield new MosaikSimulation("PrimaryResultSimulation", mosaikIP, simulator);
           }
           case FLEX_COMMUNICATION -> {
-              MosaikSimulator simulator = new MosaikSimulator("FlexCommunicationSimulator", stepSize);
+            MosaikSimulator simulator = new MosaikSimulator("FlexCommunicationSimulator", stepSize);
             yield new MosaikSimulation("FlexCommunicationSimulation", mosaikIP, simulator);
           }
           case FLEX_OPTION_OPTIMIZER ->

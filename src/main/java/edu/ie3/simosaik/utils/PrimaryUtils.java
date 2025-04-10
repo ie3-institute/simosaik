@@ -56,18 +56,19 @@ class PrimaryUtils {
   static List<Value> handleUnitToValues(MultiValueMap<String, Object> unitToValues) {
     Map<String, Double> results = new HashMap<>();
 
-    unitToValues.forEachValue((unit, value) -> {
-      if (value instanceof Double d) {
-        if (unitToValues.containsKey(unit)) {
-          double sum = results.get(unit) + d;
-          unitToValues.put(unit, sum);
-        } else {
-          unitToValues.put(unit, d);
-        }
-      } else {
-        log.debug("Received value '{}' for unit '{}'.", value, unit);
-      }
-    });
+    unitToValues.forEachValue(
+        (unit, value) -> {
+          if (value instanceof Double d) {
+            if (unitToValues.containsKey(unit)) {
+              double sum = results.get(unit) + d;
+              unitToValues.put(unit, sum);
+            } else {
+              unitToValues.put(unit, d);
+            }
+          } else {
+            log.debug("Received value '{}' for unit '{}'.", value, unit);
+          }
+        });
 
     return toValues(results);
   }
