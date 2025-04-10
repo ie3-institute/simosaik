@@ -8,6 +8,7 @@ package edu.ie3.simosaik.utils;
 
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -16,11 +17,6 @@ import org.slf4j.LoggerFactory;
 
 public class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
-
-  public static ExtInputDataContainer createInputDataContainer(
-      long tick, long nextTick, Map<String, Object> inputs, ExtEntityMapping mapping) {
-    return createInputDataContainer(tick, nextTick, MosaikMessageParser.parse(inputs), mapping);
-  }
 
   public static ExtInputDataContainer createInputDataContainer(
       long tick,

@@ -13,7 +13,6 @@ import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.measure.Quantity;
 import javax.measure.Unit;
@@ -34,13 +33,10 @@ class PrimaryUtils {
 
     Map<UUID, Value> primary = new HashMap<>();
 
-    Map<String, List<MosaikMessage>> receiverToMessages =
-        mosaikMessages.stream().collect(Collectors.groupingBy(MosaikMessage::receiver));
+    for (MosaikMessage mosaikMessage : mosaikMessages) {
+      String receiver = mosaikMessage.receiver();
 
-    for (Map.Entry<String, List<MosaikMessage>> rtm : receiverToMessages.entrySet()) {
-      String receiver = rtm.getKey();
-
-      List<Value> values = handleMessages(rtm.getValue());
+      List<Value> values = handleUnitToValues(mosaikMessage.unitToValues());
 
       if (values.isEmpty()) {
         log.warn("No value found for asset {}.", receiver);
@@ -57,27 +53,23 @@ class PrimaryUtils {
     return primary;
   }
 
-  static List<Value> handleMessages(List<MosaikMessage> messages) {
-    Map<String, Double> unitToValues = new HashMap<>();
+  static List<Value> handleUnitToValues(MultiValueMap<String, Object> unitToValues) {
+    Map<String, Double> results = new HashMap<>();
 
-    messages.forEach(
-        msg -> {
-          String unit = msg.unit();
-          Object value = msg.messageValue();
+    unitToValues.forEachValue((unit, value) -> {
+      if (value instanceof Double d) {
+        if (unitToValues.containsKey(unit)) {
+          double sum = results.get(unit) + d;
+          unitToValues.put(unit, sum);
+        } else {
+          unitToValues.put(unit, d);
+        }
+      } else {
+        log.debug("Received value '{}' for unit '{}'.", value, unit);
+      }
+    });
 
-          if (value instanceof Double d) {
-            if (unitToValues.containsKey(unit)) {
-              double sum = unitToValues.get(unit) + d;
-              unitToValues.put(unit, sum);
-            } else {
-              unitToValues.put(unit, d);
-            }
-          } else {
-            log.debug("Received value '{}' for unit '{}'.", value, unit);
-          }
-        });
-
-    return toValues(unitToValues);
+    return toValues(results);
   }
 
   static List<Value> toValues(Map<String, Double> values) {

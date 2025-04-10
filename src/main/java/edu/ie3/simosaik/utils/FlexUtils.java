@@ -6,10 +6,6 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
-import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
-
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
@@ -18,39 +14,57 @@ import edu.ie3.simona.api.data.em.model.FlexOptions;
 import edu.ie3.simosaik.exceptions.ConversionException;
 import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
 import edu.ie3.util.quantities.PowerSystemUnits;
-import java.util.*;
-import java.util.stream.Collectors;
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
+import java.util.*;
+
+import static edu.ie3.simosaik.utils.MosaikMessageParser.filterForUnit;
+import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+import static edu.ie3.util.quantities.PowerSystemUnits.KILOWATT;
+
 class FlexUtils {
   private static final Logger log = LoggerFactory.getLogger(FlexUtils.class);
 
-  static Map<UUID, List<UUID>> getFlexRequests(
+  /**
+   *
+   * @param mosaikMessages to extract flex requests from
+   * @param idToUuid mapping to convert mosaik eid to SIMONA uuid
+   * @return map: receiver to option of sender
+   */
+  static Map<UUID, Optional<UUID>> getFlexRequests(
       Collection<MosaikMessage> mosaikMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
       return Collections.emptyMap();
     }
 
-    Map<UUID, List<UUID>> flexRequests = new HashMap<>();
+    Map<UUID, Optional<UUID>> flexRequests = new HashMap<>();
 
     List<MosaikMessage> filtered = filterForUnit(mosaikMessages, FLEX_REQUEST);
 
     for (MosaikMessage mosaikMessage : filtered) {
-      UUID sender = idToUuid.get(mosaikMessage.sender());
       UUID receiver = idToUuid.get(mosaikMessage.receiver());
 
-      if (flexRequests.containsKey(sender)) {
-        flexRequests.get(sender).add(receiver);
+      MultiValueMap<String, Object> unitToValues = mosaikMessage.unitToValues();
+
+      log.warn("Received values: {}", unitToValues);
+
+      if (unitToValues.containsKey(FLEX_REQUEST)) {
+        Optional<UUID> sender = unitToValues.getFirst(FLEX_REQUEST).map(id -> idToUuid.get((String) id));
+
+        if (flexRequests.containsKey(receiver)) {
+          log.warn("Receiver {} has received flex request from multiple em agents!", receiver);
+        } else {
+          flexRequests.put(receiver, sender);
+        }
+
       } else {
-        List<UUID> receivers = new ArrayList<>();
-        receivers.add(receiver);
-        flexRequests.put(sender, receivers);
+        log.warn("No sender found for mosaik message {}", mosaikMessage);
       }
     }
 
@@ -65,55 +79,53 @@ class FlexUtils {
 
     Map<UUID, List<FlexOptions>> flexOptions = new HashMap<>();
 
-    mosaikMessages.stream()
-        .collect(Collectors.groupingBy(MosaikMessage::receiver))
-        .forEach(
-            (receiver, msgs) -> {
-              Map<String, List<MosaikMessage>> senderToMessages =
-                  msgs.stream().collect(Collectors.groupingBy(MosaikMessage::sender));
+    mosaikMessages.forEach(mosaikMessage -> {
+      UUID receiver = idToUuid.get(mosaikMessage.receiver());
+      MultiValueMap<String, Object> unitToValues = mosaikMessage.unitToValues();
 
-              List<FlexOptions> flexOptionsList = convert(senderToMessages, idToUuid);
+      List<Object> options = unitToValues.get(FLEX_OPTIONS);
 
-              if (!flexOptionsList.isEmpty()) {
-                flexOptions.put(idToUuid.get(receiver), flexOptionsList);
-              }
-            });
+      List<FlexOptions> flexOptionsList = new ArrayList<>();
 
-    return flexOptions;
-  }
+      for (Object option : options) {
+        UUID sender;
 
-  @SuppressWarnings("unchecked")
-  private static List<FlexOptions> convert(
-      Map<String, List<MosaikMessage>> senderToMessage, Map<String, UUID> idToUuid) {
-    List<FlexOptions> flexOptions = new ArrayList<>();
+        if (option instanceof Map<?,?> map) {
 
-    for (Map.Entry<String, List<MosaikMessage>> entry : senderToMessage.entrySet()) {
-      UUID sender = idToUuid.get(entry.getKey());
-      List<MosaikMessage> mosaikMessages = entry.getValue();
+          if (map.get("sender") instanceof String str) {
+            sender = idToUuid.get(str);
+          } else {
+            sender = null;
+            log.warn("Could not find sender for option {}", option);
+          }
 
-      Map<String, ComparableQuantity<Power>> unitToPower = new HashMap<>();
+          // TODO: Consider default values
+          ComparableQuantity<Power> pMin = null;
+          ComparableQuantity<Power> pRef = null;
+          ComparableQuantity<Power> pMax = null;
 
-      for (MosaikMessage mosaikMessage : mosaikMessages) {
-        String unit = mosaikMessage.unit();
-        Object value = mosaikMessage.messageValue();
+          if (map.get(FLEX_OPTION_P_MIN) instanceof Double d) {
+            pMin = Quantities.getQuantity(d, PowerSystemUnits.MEGAWATT);
+          }
 
-        if (value instanceof Double d) {
-          unitToPower.put(unit, Quantities.getQuantity(d, (Unit<Power>) getPSDMUnit(unit)));
+          if (map.get(FLEX_OPTION_P_REF) instanceof Double d) {
+            pRef = Quantities.getQuantity(d, PowerSystemUnits.MEGAWATT);
+          }
+
+          if (map.get(FLEX_OPTION_P_MAX) instanceof Double d) {
+            pMax = Quantities.getQuantity(d, PowerSystemUnits.MEGAWATT);
+          }
+
+          flexOptionsList.add(new FlexOptions(receiver, sender, pMin, pRef, pMax));
         } else {
-          log.warn("Received value '{}' for unit '{}'.", value, unit);
+          log.warn("Received '{}' for type '{}', which is not supported!", option, FLEX_OPTIONS);
         }
       }
 
-      ComparableQuantity<Power> pMin = unitToPower.get(FLEX_OPTION_P_MIN);
-      ComparableQuantity<Power> pRef = unitToPower.get(FLEX_OPTION_P_REF);
-      ComparableQuantity<Power> pMax = unitToPower.get(FLEX_OPTION_P_MAX);
-
-      if (pMin != null && pRef != null && pMax != null) {
-        flexOptions.add(new FlexOptions(sender, pMin, pRef, pMax));
-      } else {
-        log.warn("Received values: pMin={}, pRef={}, pMax={}", pMin, pRef, pMax);
+      if (!flexOptionsList.isEmpty()) {
+        flexOptions.put(receiver, flexOptionsList);
       }
-    }
+    });
 
     return flexOptions;
   }
@@ -126,23 +138,18 @@ class FlexUtils {
 
     Map<UUID, PValue> setPoints = new HashMap<>();
 
-    List<Tuple3<ComparableQuantity<Power>>> activePowerMap =
-        extract(mosaikMessages, MOSAIK_ACTIVE_POWER);
-    List<Tuple3<ComparableQuantity<Power>>> reactivePowerMap =
-        extract(mosaikMessages, MOSAIK_REACTIVE_POWER);
+    Map<String, ComparableQuantity<Power>> activePowerMap = extract(mosaikMessages, MOSAIK_ACTIVE_POWER);
+    Map<String, ComparableQuantity<Power>> reactivePowerMap = extract(mosaikMessages, MOSAIK_REACTIVE_POWER);
 
-    Map<String, ComparableQuantity<Power>> activePowerToReceiver = toMap(activePowerMap);
-    Map<String, ComparableQuantity<Power>> reactivePowerToReceiver = toMap(reactivePowerMap);
-
-    Set<String> receivers = new HashSet<>(activePowerToReceiver.keySet());
-    receivers.addAll(reactivePowerToReceiver.keySet());
+    Set<String> receivers = new HashSet<>(activePowerMap.keySet());
+    receivers.addAll(reactivePowerMap.keySet());
 
     for (String receiver : receivers) {
       Optional<ComparableQuantity<Power>> active =
-          Optional.ofNullable(activePowerToReceiver.get(receiver));
+          Optional.ofNullable(activePowerMap.get(receiver));
 
       Optional<ComparableQuantity<Power>> reactive =
-          Optional.ofNullable(reactivePowerToReceiver.get(receiver));
+          Optional.ofNullable(reactivePowerMap.get(receiver));
 
       UUID receiverId = idToUuid.get(receiver);
 
@@ -204,55 +211,37 @@ class FlexUtils {
             });
   }
 
-  static Map<String, ComparableQuantity<Power>> toMap(
-      List<Tuple3<ComparableQuantity<Power>>> list) {
-    return list.stream().collect(Collectors.groupingBy(Tuple3::receiver)).entrySet().stream()
-        .map(
-            e -> {
-              String receiver = e.getKey();
+  static <Q extends Quantity<Q>> Map<String, ComparableQuantity<Q>> extract(
+          Collection<MosaikMessage> messages, String unit) {
+    Map<String, ComparableQuantity<Q>> result = new HashMap<>();
 
-              Optional<ComparableQuantity<Power>> option = combineQuantities(e.getValue());
+    for (MosaikMessage message : messages) {
+      MultiValueMap<String, Object> map = message.unitToValues();
 
-              return option.map(o -> Map.entry(receiver, o));
-            })
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
+      // all values that are not null and of type double
+      List<Double> values = map.get(unit).stream().filter(Objects::nonNull).map(o -> {
+        if (o instanceof Double d) {
+          return d;
+        } else {
+          return null;
+        }
+      }).filter(Objects::nonNull).toList();
 
-  record Tuple3<T>(String sender, String receiver, T value) {}
+      if (!values.isEmpty()) {
+        String receiver = message.receiver();
+        Unit<Q> pdsmUnit = getPSDMUnit(unit);
 
-  static <Q extends Quantity<Q>> List<Tuple3<ComparableQuantity<Q>>> extract(
-      Collection<MosaikMessageParser.MosaikMessage> messages, String unit) {
-    List<Tuple3<ComparableQuantity<Q>>> tuples = new ArrayList<>();
+        double sum = 0d;
 
-    for (MosaikMessageParser.MosaikMessage message : messages) {
-      if (message.unit().equals(unit) && message.messageValue() != null) {
+        for (double d : values) {
+          sum += d;
+        }
 
-        Unit<Q> pdsmUnit = getPSDMUnit(message.unit());
-        double value = (double) message.messageValue();
-
-        tuples.add(
-            new Tuple3<>(
-                message.sender(), message.receiver(), Quantities.getQuantity(value, pdsmUnit)));
+        result.put(receiver, Quantities.getQuantity(sum, pdsmUnit));
       }
     }
 
-    return tuples;
+    return result;
   }
 
-  static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> combineQuantities(
-      List<Tuple3<ComparableQuantity<Q>>> list) {
-    if (list.isEmpty()) {
-      return Optional.empty();
-    }
-
-    ComparableQuantity<Q> combined = list.get(0).value();
-
-    for (int i = 1; i < list.size(); i++) {
-      combined = combined.add(list.get(i).value);
-    }
-
-    return Optional.of(combined);
-  }
 }

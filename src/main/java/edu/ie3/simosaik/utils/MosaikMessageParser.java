@@ -6,22 +6,27 @@
 
 package edu.ie3.simosaik.utils;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class MosaikMessageParser {
-  public record MosaikMessage(String sender, String receiver, String unit, Object messageValue) {}
+  private static final Logger log = LoggerFactory.getLogger(MosaikMessageParser.class);
+
+  public record MosaikMessageInformation(String receiver, String unit, Object messageValue) {}
+
+  public record MosaikMessage(String receiver, MultiValueMap<String, Object> unitToValues) {}
 
   public static List<MosaikMessage> filterForUnit(Collection<MosaikMessage> messages, String unit) {
-    return messages.stream().filter(m -> m.unit.equals(unit)).toList();
+    return messages.stream().filter(m -> m.unitToValues.containsKey(unit)).toList();
   }
 
-  public static List<MosaikMessage> parse(Map<String, Object> mosaikInput) {
-    List<MosaikMessage> result = new ArrayList<>();
+  public static List<MosaikMessageInformation> extractInformation(Map<String, Object> mosaikInput, List<MosaikMessageInformation> cache) {
+    List<MosaikMessageInformation> messageParts = new ArrayList<>();
 
     for (Map.Entry<String, Object> entry : mosaikInput.entrySet()) {
       String assetId = entry.getKey();
@@ -32,15 +37,34 @@ public class MosaikMessageParser {
         Map<String, Object> senderToValues = (Map<String, Object>) messageEntry.getValue();
 
         for (Map.Entry<String, Object> senderEntry : senderToValues.entrySet()) {
-          String sender = trim(senderEntry.getKey());
           Object messageValue = senderEntry.getValue();
 
-          result.add(new MosaikMessage(sender, assetId, unit, messageValue));
+          messageParts.add(new MosaikMessageInformation(assetId, unit, messageValue));
         }
       }
     }
 
-    return result;
+    List<MosaikMessageInformation> information = messageParts.stream().filter(msg -> !cache.contains(msg)).toList();
+
+    // adding new messages to the cache
+    cache.addAll(information);
+
+    return information;
+  }
+
+  public static List<MosaikMessage> parse(List<MosaikMessageInformation> information) {
+    List<MosaikMessage> messages = new ArrayList<>();
+
+    information.stream().collect(Collectors.groupingBy(MosaikMessageInformation::receiver)).forEach((receiver, parts) -> {
+      MultiValueMap<String, Object> unitToValues = new MultiValueMap<>();
+      parts.forEach(part -> unitToValues.put(part.unit, part.messageValue));
+
+      messages.add(new MosaikMessage(receiver, unitToValues));
+    });
+
+    log.info("Parsed mosaik messages: {}", messages);
+
+    return messages;
   }
 
   private static String trim(String sender) {

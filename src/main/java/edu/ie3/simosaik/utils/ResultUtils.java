@@ -30,7 +30,11 @@ public class ResultUtils {
       ExtResultContainer container,
       Map<String, List<String>> requestedAttributes,
       ExtEntityMapping mapping) {
+    log.info("Requested attributes: {}", requestedAttributes);
+
     Map<String, UUID> idToUuid = mapping.getFullMapping();
+    Map<UUID, String> uuidToId = mapping.getFullMappingReverse();
+
     Map<String, Object> output = new HashMap<>();
 
     for (Map.Entry<String, List<String>> entry : requestedAttributes.entrySet()) {
@@ -42,7 +46,7 @@ public class ResultUtils {
 
         ResultEntity result = container.getResult(asset);
 
-        Map<String, Object> data = handleResult(result, attrs);
+        Map<String, Object> data = handleResult(result, attrs, uuidToId);
 
         if (!data.isEmpty()) {
           output.put(receiver, data);
@@ -56,11 +60,13 @@ public class ResultUtils {
     return output;
   }
 
-  private static Map<String, Object> handleResult(ResultEntity result, List<String> attrs) {
+  private static Map<String, Object> handleResult(ResultEntity result, List<String> attrs, Map<UUID, String> uuidToId) {
 
-    if (result instanceof FlexRequestResult) {
+    if (result instanceof FlexRequestResult r) {
       if (attrs.contains(FLEX_REQUEST)) {
-        return Map.of(FLEX_REQUEST, FLEX_REQUEST);
+        Map<String, Object> data = new HashMap<>();
+        data.put(FLEX_REQUEST, r.getReceivers().stream().map(uuidToId::get).toList());
+        return data;
       }
     } else if (result instanceof FlexOptionsResult options) {
       Map<String, Object> data = new HashMap<>();
