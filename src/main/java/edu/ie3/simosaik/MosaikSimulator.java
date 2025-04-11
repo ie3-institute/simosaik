@@ -19,8 +19,7 @@ import edu.ie3.simona.api.data.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
-import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessage;
-import edu.ie3.simosaik.utils.MosaikMessageParser.MosaikMessageInformation;
+import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -34,7 +33,7 @@ public class MosaikSimulator extends Simulator {
       new HashMap<>();
 
   protected ExtEntityMapping mapping;
-  private final List<MosaikMessageInformation> cache = new ArrayList<>();
+  private final List<ParsedMessage> cache = new ArrayList<>();
 
   private long time;
   public final int stepSize;
@@ -161,11 +160,12 @@ public class MosaikSimulator extends Simulator {
     long nextTick = time + this.stepSize;
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
-    List<MosaikMessageInformation> information =
-        MosaikMessageParser.extractInformation(inputs, cache);
-    List<MosaikMessage> messages = MosaikMessageParser.parse(information);
+    List<ParsedMessage> parsedMessages = MosaikMessageParser.parse(inputs);
+    List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
+    cache.addAll(filtered);
+
     ExtInputDataContainer extDataForSimona =
-        InputUtils.createInputDataContainer(time, nextTick, messages, mapping);
+        InputUtils.createInputDataContainer(time, nextTick, filtered, mapping);
 
     try {
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
@@ -182,11 +182,15 @@ public class MosaikSimulator extends Simulator {
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
     ExtResultContainer results = queueToExt.takeAll();
     logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
+
     Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
 
-    logger.info("Data for MOSAIK: " + data);
+    logger.info(
+        "["
+            + time
+            + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
+            + data);
 
-    logger.info("[" + time + "] Converted results for MOSAIK! Now send it to MOSAIK!");
     return data;
   }
 

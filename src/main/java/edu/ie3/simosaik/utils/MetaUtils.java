@@ -28,8 +28,8 @@ public final class MetaUtils {
       Map.ofEntries(
           entry(PRIMARY_P, List.of(MOSAIK_ACTIVE_POWER)),
           entry(PRIMARY_PQ, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-          entry(EM, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-          entry(EM_COMMUNICATION, List.of(FLEX_REQUEST, FLEX_OPTIONS, MOSAIK_ACTIVE_POWER)),
+          entry(EM, List.of(FLEX_SET_POINT)),
+          entry(EM_COMMUNICATION, List.of(FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT)),
           entry(GRID_RESULTS, ALL_MOSAIK_UNITS),
           entry(PARTICIPANT_RESULTS, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
           entry(FLEX_RESULTS, List.of(FLEX_OPTION_P_MIN, FLEX_OPTION_P_REF, FLEX_OPTION_P_MAX)));

@@ -12,12 +12,11 @@ import edu.ie3.datamodel.models.result.NodeResult;
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
-import edu.ie3.datamodel.models.value.PValue;
+import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.em.model.EmSetPointResult;
 import edu.ie3.simona.api.data.em.model.ExtendedFlexOptionsResult;
 import edu.ie3.simona.api.data.em.model.FlexRequestResult;
-import edu.ie3.simona.api.data.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.util.quantities.PowerSystemUnits;
 import java.util.*;
@@ -87,6 +86,35 @@ public class ResultUtils {
 
       return Map.of(FLEX_OPTIONS, data);
 
+    } else if (result instanceof EmSetPointResult setPointResult
+        && attrs.contains(FLEX_SET_POINT)) {
+      String sender = uuidToId.get(setPointResult.getSender());
+      Map<String, Object> dataMap = new HashMap<>();
+
+      setPointResult
+          .getReceiverToSetPoint()
+          .forEach(
+              (receiverUuid, setPoint) -> {
+                String receiver = uuidToId.get(receiverUuid);
+
+                Double active = setPoint.getP().map(ResultUtils::toDouble).orElse(null);
+                Double reactive = null;
+
+                if (setPoint instanceof SValue sValue) {
+                  reactive = sValue.getQ().map(ResultUtils::toDouble).orElse(null);
+                }
+
+                Map<String, Object> data = new HashMap<>();
+                data.put("receiver", receiver);
+                data.put("sender", sender);
+                data.put(MOSAIK_ACTIVE_POWER, active);
+                data.put(MOSAIK_REACTIVE_POWER, reactive);
+
+                dataMap.put(receiver, data);
+              });
+
+      return Map.of(FLEX_SET_POINT, dataMap);
+
     } else if (result instanceof FlexOptionsResult options) {
       Map<String, Object> data = new HashMap<>();
 
@@ -104,13 +132,6 @@ public class ResultUtils {
 
       return data;
 
-    } else if (result instanceof EmSetPointResult setPoint && attrs.contains(MOSAIK_ACTIVE_POWER)) {
-      Optional<Double> optional =
-          setPoint.getSetPoint().flatMap(PValue::getP).map(ResultUtils::toDouble);
-      if (optional.isPresent()) {
-        return Map.of(MOSAIK_ACTIVE_POWER, optional.get());
-      }
-
     } else if (result instanceof SystemParticipantResult) {
       log.warn("Participant result handling currently not implemented.");
 
@@ -120,82 +141,6 @@ public class ResultUtils {
     }
 
     return Collections.emptyMap();
-  }
-
-  private static Map<String, Object> flexResults(
-      ExtResultContainer container,
-      Map<String, List<String>> requestedAttributes,
-      ExtEntityMapping mapping) {
-    Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT);
-
-    Map<String, Object> output = new HashMap<>();
-
-    Map<UUID, FlexRequestResult> flexRequest = container.getResults(FlexRequestResult.class);
-
-    Map<UUID, FlexOptionsResult> flexResults = container.getResults(FlexOptionsResult.class);
-
-    Map<UUID, EmSetPointResult> setPointResults = container.getResults(EmSetPointResult.class);
-
-    for (Map.Entry<String, List<String>> requested : requestedAttributes.entrySet()) {
-      String entity = requested.getKey();
-      List<String> attrs = requested.getValue();
-
-      if (idToUuid.containsKey(entity)) {
-        UUID asset = idToUuid.get(entity);
-
-        Optional<Map<String, Double>> flexOptionsResult =
-            Optional.ofNullable(flexResults.get(asset)).map(FlexUtils::getFlexMap);
-
-        Optional<Map<String, Double>> setPointResult =
-            Optional.ofNullable(setPointResults.get(asset)).flatMap(FlexUtils::getSetPoint);
-
-        Map<String, Object> data = new HashMap<>();
-
-        for (String attr : attrs) {
-          switch (attr) {
-            case MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER -> {
-              Optional<Double> val = setPointResult.map(m -> m.get(attr));
-
-              if (val.isPresent()) {
-                data.put(attr, val.get());
-                log.info(
-                    "Data found for attribute '{}' for entity '{}': {}.", attr, entity, val.get());
-
-              } else {
-                log.info("No data found for attribute '{}' for entity '{}'.", attr, entity);
-              }
-            }
-            case FLEX_OPTION_P_MIN, FLEX_OPTION_P_REF, FLEX_OPTION_P_MAX -> {
-              Optional<Double> val = flexOptionsResult.map(m -> m.get(attr));
-
-              if (val.isPresent()) {
-                data.put(attr, val.get());
-                log.info(
-                    "Data found for attribute '{}' for entity '{}': {}.", attr, entity, val.get());
-
-              } else {
-                log.info("No data found for attribute '{}' for entity '{}'.", attr, entity);
-              }
-            }
-            case FLEX_REQUEST -> {
-              if (flexRequest.containsKey(asset)) {
-                data.put(attr, FLEX_REQUEST);
-                log.info("Data found for attribute '{}' for entity '{}'.", attr, entity);
-
-              } else {
-                log.info("No data found for attribute '{}' for entity '{}'.", attr, entity);
-              }
-            }
-          }
-        }
-
-        output.put(entity, data);
-      } else {
-        log.warn("Entity with id '{}' not found.", entity);
-      }
-    }
-
-    return output;
   }
 
   public static double toDouble(ComparableQuantity<Power> power) {

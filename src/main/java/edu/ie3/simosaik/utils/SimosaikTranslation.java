@@ -30,10 +30,9 @@ public class SimosaikTranslation {
   public static final String MOSAIK_SOC = "SOC[percent]";
 
   // em communication
-  public static final String FLEX_REQUEST = "Flex[request]"; // valueType = uuid
-  public static final String FLEX_OPTIONS =
-      "Flex[options]"; // valueType = Map{receiver=uuid, sender=uuid, PMin[MW]=double,
-  // PRef[MW]=double, PMax[MW]=double}
+  public static final String FLEX_REQUEST = "Flex[request]";
+  public static final String FLEX_OPTIONS = "Flex[options]";
+  public static final String FLEX_SET_POINT = "Flex[setPoint]";
 
   // flex options
   public static final String FLEX_OPTION_P_MIN = "PMin[MW]";
