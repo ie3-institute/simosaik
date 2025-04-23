@@ -9,7 +9,6 @@ package edu.ie3.simosaik;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.config.ArgsParser;
-import edu.ie3.simosaik.flexibility.FlexOptionOptimizerSimulation;
 
 public class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
@@ -26,21 +25,8 @@ public class SimosaikExtLink implements ExtLinkInterface {
     String mosaikIP = arguments.mosaikIP();
     int stepSize = arguments.stepSize();
 
-    extSim =
-        switch (arguments.simulation()) {
-          case PRIMARY_RESULT -> {
-            MosaikSimulator simulator = new MosaikSimulator("PrimaryResultSimulator", stepSize);
-            yield new MosaikSimulation("PrimaryResultSimulation", mosaikIP, simulator);
-          }
-          case FLEX_COMMUNICATION -> {
-            MosaikSimulator simulator = new MosaikSimulator("FlexCommunicationSimulator", stepSize);
-            yield new MosaikSimulation("FlexCommunicationSimulation", mosaikIP, simulator);
-          }
-          case FLEX_OPTION_OPTIMIZER ->
-              new FlexOptionOptimizerSimulation(
-                  mosaikIP, stepSize, arguments.useFlexOptionEntitiesInsteadOfEmAgents());
-        };
-
+    MosaikSimulator simulator = new MosaikSimulator(stepSize);
+    extSim = new MosaikSimulation(mosaikIP, simulator);
     extSim.setAdapterData(data);
   }
 }

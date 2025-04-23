@@ -6,9 +6,12 @@
 
 package edu.ie3.simosaik.config;
 
-import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.MosaikSimulator;
+import com.typesafe.config.ConfigException;
+import com.typesafe.config.ConfigFactory;
+import edu.ie3.datamodel.utils.Try;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,18 +23,9 @@ public class ArgsParser {
    *
    * @param mainArgs provided arguments
    * @param mosaikIP the IP of the socket
-   * @param mappingPath path for the {@link ExtEntityMapping}
-   * @param simulation the {@link MosaikSimulator}
    * @param stepSize option for the step size
-   * @param useFlexOptionEntitiesInsteadOfEmAgents false, to communicate with em agents
    */
-  public record Arguments(
-      String[] mainArgs,
-      String mosaikIP,
-      Path mappingPath,
-      Simulation simulation,
-      int stepSize,
-      boolean useFlexOptionEntitiesInsteadOfEmAgents) {}
+  public record Arguments(String[] mainArgs, String mosaikIP, int stepSize) {}
 
   /**
    * Method for parsing the provided arguments.
@@ -48,17 +42,10 @@ public class ArgsParser {
     }
 
     String mosaikIP = extract(parsedArgs, "--ext-address");
-
     Path configPath = Path.of(extract(parsedArgs, "--config"));
-    SimosaikConfig config = SimosaikConfig.load(configPath);
+    int stepSizeFromSimona = getStepSize(configPath);
 
-    return new Arguments(
-        args,
-        mosaikIP,
-        config.mappingPath(),
-        config.simulation(),
-        config.stepSize(),
-        config.useFlexOptionEntitiesInsteadOfEmAgents());
+    return new Arguments(args, mosaikIP, stepSizeFromSimona);
   }
 
   /**
@@ -76,5 +63,28 @@ public class ArgsParser {
     }
 
     return value;
+  }
+
+  /**
+   * Extracts the steps size from the SIMONA config.
+   *
+   * @param configPath path of the config
+   * @return the power flow resolution SIMONA uses
+   */
+  private static int getStepSize(Path configPath) {
+    if (!Files.isReadable(configPath)) {
+      throw new IllegalArgumentException("Config file at " + configPath + " is not readable.");
+    }
+
+    Try.TrySupplier<Duration, ConfigException> supplier =
+        () ->
+            ConfigFactory.parseFile(configPath.toFile())
+                .getConfig("simona")
+                .getConfig("powerflow")
+                .getDuration("resolution");
+
+    return Try.of(supplier, ConfigException.class)
+        .map(duration -> (int) duration.toSeconds())
+        .getOrElse(() -> 3600);
   }
 }

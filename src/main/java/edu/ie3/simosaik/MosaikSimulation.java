@@ -30,7 +30,6 @@ public class MosaikSimulation extends ExtCoSimulation {
 
   protected static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
 
-  private final String mosaikIP;
   protected final int stepSize;
 
   protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
@@ -52,7 +51,6 @@ public class MosaikSimulation extends ExtCoSimulation {
     SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
 
     this.stepSize = simulator.stepSize;
-    this.mosaikIP = mosaikIP;
 
     try {
       ExtEntityMapping entityMapping = simulator.controlledQueue.take();

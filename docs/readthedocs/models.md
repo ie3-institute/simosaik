@@ -6,14 +6,6 @@ provide SIMONA with input data or mosaik with result data.
 
 Some specific models, like the energy management communication model, can do both.
 
-The models, that are available in mosaik to create entities, need to be specified when starting the simulation in mosaik.
-To specify models, you need to add the `models` argument with a list of creatable models to the `world.start` method:
-
-```
-world.start('SimonaPowerGrid', models=["p"])
-```
-
-
 ## Input models
 
 Currently, we support these input models:

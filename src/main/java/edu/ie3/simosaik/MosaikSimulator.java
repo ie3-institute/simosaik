@@ -43,6 +43,10 @@ public class MosaikSimulator extends Simulator {
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
 
+  public MosaikSimulator(int stepSize) {
+    this("MosaikSimulator", stepSize);
+  }
+
   public MosaikSimulator(String name, int stepSize) {
     super(name);
     this.stepSize = stepSize;

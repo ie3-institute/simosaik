@@ -6,6 +6,7 @@
 
 package edu.ie3.simosaik.exceptions;
 
+/** Exception, that is thrown, if the conversion is not possible. */
 public class ConversionException extends RuntimeException {
 
   public ConversionException(String message) {

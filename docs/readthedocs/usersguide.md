@@ -45,4 +45,19 @@ Add the following statement to your mosaik simulation configuration:
 }
 ```
 
+**Step 4:** <br>
+Add the following configuration to the SIMONA config file:
+
+- ``simona.input.extSimDir = "path/to/simosaik.jar"``
+
+
 ## Configure SIMONA models
+
+The models, that are available in mosaik to create entities, need to be specified when starting the simulation in mosaik.
+To specify these models, you need to add the `models` argument with a list of selected models to the `world.start` method:
+
+```
+world.start('SimonaPowerGrid', models=["p"])
+```
+
+An overview of the available models can be found [here](/models).
