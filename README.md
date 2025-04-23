@@ -11,8 +11,8 @@ Simosaik takes care of the communication and value conversion between SIMONA and
 
 ## How to use
 
-Currently, to use simosaik you need the development repository ([here](https://github.com/ie3-institute/simosaik_dev)) and
-with the following branches:
+Currently, to use simosaik you need to use the development repository ([here](https://github.com/ie3-institute/simosaik_dev))
+and select the following branches:
 
 - simosaik: `main`
 - simonaAPI: `ms/ReCoDe`
