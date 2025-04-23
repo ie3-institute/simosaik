@@ -45,15 +45,15 @@ public class SimosaikUtils {
     }
   }
 
-  public static Map<UUID, Class<Value>> buildAssetsToValueClasses(ExtEntityMapping entityMapping) {
-    Map<UUID, Class<Value>> assetsToValueClasses = new HashMap<>();
+  public static Map<UUID, Class<? extends Value>> buildAssetsToValueClasses(
+      ExtEntityMapping entityMapping) {
+    Map<UUID, Class<? extends Value>> assetsToValueClasses = new HashMap<>();
 
     for (ExtEntityEntry extEntityEntry : entityMapping.getEntries(DataType.EXT_PRIMARY_INPUT)) {
       Optional<ColumnScheme> scheme = extEntityEntry.columnScheme();
 
       if (scheme.isPresent()) {
-        assetsToValueClasses.put(
-            extEntityEntry.uuid(), (Class<Value>) scheme.get().getValueClass());
+        assetsToValueClasses.put(extEntityEntry.uuid(), scheme.get().getValueClass());
       }
     }
 

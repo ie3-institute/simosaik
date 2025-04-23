@@ -58,7 +58,8 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   @SuppressWarnings("unchecked")
-  public Map<String, Object> init(String sid, Float timeResolution, Map<String, Object> simParams) {
+  public Map<String, Object> init(
+      String sid, Double timeResolution, Map<String, Object> simParams) {
     List<Model> models = new ArrayList<>();
 
     if (simParams.containsKey("models")) {

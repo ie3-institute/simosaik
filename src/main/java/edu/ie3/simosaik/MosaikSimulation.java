@@ -58,7 +58,8 @@ public class MosaikSimulation extends ExtCoSimulation {
       ExtEntityMapping entityMapping = simulator.controlledQueue.take();
 
       // primary data connection
-      Map<UUID, Class<Value>> primaryInput = SimosaikUtils.buildAssetsToValueClasses(entityMapping);
+      Map<UUID, Class<? extends Value>> primaryInput =
+          SimosaikUtils.buildAssetsToValueClasses(entityMapping);
 
       this.extPrimaryDataConnection =
           !primaryInput.isEmpty() ? buildPrimaryConnection(primaryInput, log) : null;

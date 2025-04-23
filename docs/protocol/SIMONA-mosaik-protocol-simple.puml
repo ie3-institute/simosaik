@@ -1,0 +1,65 @@
+@startuml
+
+== Setup ==
+
+mosaik -> SIMONA: world.start("SimonaPowerGrid")
+
+SIMONA -> SIMONA: RunSimonaStandalone
+
+== Initialization ==
+
+SIMONA -> simosaik: ExtLink.setup(...)
+
+MosaikSimulation -> MosaikSimulator: setConnectionToSimonaAPI(...)
+MosaikSimulation -> MosaikSimulation: SimProcess.startSimulation(...)
+
+
+mosaik -> MosaikSimulator: init(...)
+MosaikSimulator --> mosaik: meta
+
+mosaik -> MosaikSimulator: create(...)
+MosaikSimulator --> mosaik: entities
+
+MosaikSimulator -> MosaikSimulation: extEntityMapping
+MosaikSimulation -> MosaikSimulation: building data connection(s)
+
+SIMONA -> simosaik: getExtSimulation()
+simosaik --> SIMONA: external simulation
+
+SIMONA -> MosaikSimulation: getDataConnections()
+MosaikSimulation --> SIMONA: data connection(s)
+
+SIMONA -> MosaikSimulation: initialize()
+
+
+== Tick 0 ==
+mosaik -> MosaikSimulator: step(time, inputs)
+
+MosaikSimulator ->  queueToSimona: queueData(inputs)
+MosaikSimulator -> mosaik: time + stepSize
+
+SIMONA -> MosaikSimulation: doActivity(tick)
+
+
+MosaikSimulation -> queueToSimona: takeData()
+queueToSimona --> MosaikSimulation: input data
+
+MosaikSimulation -> SIMONA: input data
+
+MosaikSimulation -> SIMONA: requestResults(tick)
+
+SIMONA -> MosaikSimulation: result data
+MosaikSimulation -> queueToExt: queueData(results)
+
+MosaikSimulation --> SIMONA: nextTick
+
+
+mosaik -> MosaikSimulator: getData(map)
+
+MosaikSimulator -> queueToExt: takeData()
+queueToExt -> MosaikSimulator: results
+MosaikSimulator -> mosaik: results
+
+== Tick 900 ==
+
+@enduml
