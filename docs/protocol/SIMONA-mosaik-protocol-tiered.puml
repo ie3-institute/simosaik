@@ -35,7 +35,7 @@ SIMONA -> MosaikSimulation: initialize()
 == Tick 0 ==
 SIMONA -> MosaikSimulation: doActivity(tick)
 
-== Tick 0, 0 ==
+== Tick 0, Sub-Tick 0 ==
 mosaik -> MosaikSimulator: step(time, inputs)
 
 MosaikSimulator ->  queueToSimona: queueData(inputs)
@@ -55,7 +55,7 @@ MosaikSimulator -> queueToExt: takeData()
 queueToExt -> MosaikSimulator: results
 MosaikSimulator -> mosaik: results
 
-== Tick 0, 1 ==
+== Tick 0, Sub-Tick 1 ==
 mosaik -> MosaikSimulator: step(time, inputs)
 
 MosaikSimulator ->  queueToSimona: queueData(inputs)
@@ -75,7 +75,7 @@ MosaikSimulator -> queueToExt: takeData()
 queueToExt -> MosaikSimulator: results
 MosaikSimulator -> mosaik: results
 
-== Tick 0, n ==
+== Tick 0, Sub-Tick n ==
 mosaik -> MosaikSimulator: step(time, inputs)
 
 MosaikSimulator ->  queueToSimona: queueData(inputs)
