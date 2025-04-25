@@ -37,7 +37,8 @@ public class MosaikSimulation extends ExtCoSimulation {
   // connections
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
   private final ExtEmDataConnection extEmDataConnection;
-  private final ExtResultDataConnection extResultDataConnection;
+  private final ExtResultDataConnection
+      extResultDataConnection; // TODO: Check if we can switch to ResultListener
 
   public MosaikSimulation(String mosaikIP, MosaikSimulator simulator) {
     this("MosaikSimulation", mosaikIP, simulator);

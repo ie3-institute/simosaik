@@ -12,20 +12,20 @@ import de.offis.mosaik.api.SimProcess;
 public class RunSimosaik implements Runnable {
 
   /** Simulator that extends the MOSAIK API */
-  private final MosaikSimulator simonaSimulator;
+  private final MosaikSimulator mosaikSimulator;
 
   /** IP address for the connection to MOSAIK */
   private final String mosaikIP;
 
-  public RunSimosaik(String mosaikIP, MosaikSimulator simonaSimulator) {
-    this.simonaSimulator = simonaSimulator;
+  public RunSimosaik(String mosaikIP, MosaikSimulator mosaikSimulator) {
+    this.mosaikSimulator = mosaikSimulator;
     this.mosaikIP = mosaikIP;
   }
 
   @Override
   public void run() {
     try {
-      SimProcess.startSimulation(new String[] {mosaikIP}, simonaSimulator);
+      SimProcess.startSimulation(new String[] {mosaikIP}, mosaikSimulator);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

@@ -19,15 +19,25 @@ Currently, we support these input models:
   - Supported units
   - Additional information
 
-* - Active
+* - ActivePower
   - "p", "P"
-  - P[MW]
+  - "P[MW]"
   - These models can only provide SIMONA with active power.
 
-* - Complex
+* - ActivePowerAndHeat
+  - "ph", "PH", "Ph"
+  - "P[MW]", "P_th[MW]"
+  - These models can provide SIMONA with active power and thermal power (heat).
+
+* - ComplexPower
   - "pq", "PQ", "Pq"
-  - P[MW], Q[MVAr]
+  - "P[MW]", "Q[MVAr]"
   - These models can provide SIMONA with active and/or reactive power.
+
+* - ComplexPowerAndHeat
+  - "pqh", "PQH", "Pqh"
+  - "P[MW]", "Q[MVAr]", "P_th[MW]"
+  - These models can provide SIMONA with active and/or reactive power and thermal power (heat).
 ```
 
 ## Result models
@@ -43,10 +53,25 @@ Currently, we support these result models:
   - Supported units
   - Additional information
 
-* - Grid results
+* - GridResults
   - "grid", "Grid"
-  - u[pu]
-  - Currently, only node voltages supported.
+  - "u[pu]", "delta[RAD]", "I_Mag[A]", "I_Ang[RAD]"
+  - Returns results for any grid asset.
+
+* - NodeResults
+  - "node_res", "Node_res"
+  - "u[pu]", "delta[RAD]"
+  - Only returns node results.
+
+* - LineResults
+  - "line_res", "Line_res"
+  - "I_Mag[A]", "I_Ang[RAD]"
+  - Only returns line results.
+
+* - ParticipantResults
+  - "participant", "Participant"
+  - "P[MW]", "Q[MVAr]"
+  - Returns the power of the participant.
 ```
 
 ## Energy management models
@@ -62,9 +87,12 @@ Currently, we support these result models:
   - Supported units
   - Additional information
 
-* - Em communication
-  - "Communication", "communication"
-  - "Flex[request]", "Flex[options]", "Flex[setPoint]"
-  - 
+* - EmSetpoint
+  - "em_setpoint"
+  - "EM[setPoint]"
 
+* - EmCommunication
+  - "Communication", "communication"
+  - "Flex[request]", "Flex[options]", "EM[setPoint]"
+  - 
 ```

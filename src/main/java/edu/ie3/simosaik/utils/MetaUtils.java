@@ -6,12 +6,9 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.SimonaEntity.*;
-import static edu.ie3.simosaik.SimonaEntity.FLEX_RESULTS;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
-import static edu.ie3.simosaik.utils.SimosaikTranslation.FLEX_OPTION_P_MAX;
+import static edu.ie3.simosaik.SimonaEntity.EM_COMMUNICATION;
+import static edu.ie3.simosaik.SimosaikUnits.*;
 import static java.util.Collections.emptyList;
-import static java.util.Map.entry;
 
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.simosaik.SimonaEntity;
@@ -24,15 +21,26 @@ import org.json.simple.JSONObject;
 /** Methods for simplifying the creation of mosaik meta information. */
 public final class MetaUtils {
 
-  private static final Map<SimonaEntity, List<String>> attributes =
-      Map.ofEntries(
-          entry(PRIMARY_P, List.of(MOSAIK_ACTIVE_POWER)),
-          entry(PRIMARY_PQ, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-          entry(EM, List.of(FLEX_SET_POINT)),
-          entry(EM_COMMUNICATION, List.of(FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT)),
-          entry(GRID_RESULTS, ALL_MOSAIK_UNITS),
-          entry(PARTICIPANT_RESULTS, List.of(MOSAIK_ACTIVE_POWER, MOSAIK_REACTIVE_POWER)),
-          entry(FLEX_RESULTS, List.of(FLEX_OPTION_P_MIN, FLEX_OPTION_P_REF, FLEX_OPTION_P_MAX)));
+  /**
+   * Method to retrieve all attributes for a given {@link SimonaEntity}.
+   *
+   * @param entity given entity
+   * @return all attributes
+   */
+  private static List<String> getAttributes(SimonaEntity entity) {
+    return switch (entity) {
+      case PRIMARY_P -> List.of(ACTIVE_POWER);
+      case PRIMARY_PH -> List.of(ACTIVE_POWER, THERMAL_POWER);
+      case PRIMARY_PQ -> List.of(ACTIVE_POWER, REACTIVE_POWER);
+      case PRIMARY_PQH -> List.of(ACTIVE_POWER, REACTIVE_POWER, THERMAL_POWER);
+      case EM_SETPOINT -> List.of(FLEX_SET_POINT);
+      case EM_COMMUNICATION -> List.of(FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT);
+      case GRID_RESULTS -> ALL_GRID_UNITS;
+      case NODE_RESULTS -> List.of(VOLTAGE_MAG, VOLTAGE_ANG);
+      case LINE_RESULTS -> List.of(CURRENT_MAG, CURRENT_ANG);
+      case PARTICIPANT_RESULTS -> ALL_PARTICIPANT_UNITS;
+    };
+  }
 
   private MetaUtils() {
     throw new Error("Do not instantiate utility class!");
@@ -47,10 +55,12 @@ public final class MetaUtils {
   }
 
   public static Model from(SimonaEntity entity) {
-    Model model = Model.of(entity.name).params("mapping").attrs(attributes.get(entity));
+    List<String> attributes = getAttributes(entity);
+
+    Model model = Model.of(entity.name).params("mapping").attrs(attributes);
 
     if (entity.equals(EM_COMMUNICATION)) {
-      return model.triggers(attributes.get(entity));
+      return model.triggers(attributes);
     }
 
     return model;

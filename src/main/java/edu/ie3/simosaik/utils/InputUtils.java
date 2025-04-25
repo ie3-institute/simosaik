@@ -6,10 +6,10 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+import static edu.ie3.simosaik.utils.SimosaikUtils.convert;
+import static edu.ie3.simosaik.utils.SimosaikUtils.toPValue;
 
 import edu.ie3.datamodel.models.value.PValue;
-import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.model.FlexOptions;
@@ -17,16 +17,10 @@ import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tech.units.indriya.ComparableQuantity;
-import tech.units.indriya.quantity.Quantities;
 
-public class InputUtils {
+public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
   public static ExtInputDataContainer createInputDataContainer(
@@ -78,7 +72,21 @@ public class InputUtils {
                   .map(DoubleValue.class::cast)
                   .toList();
 
-          List<Value> values = toValues(dvs);
+          Map<String, Double> attrToDouble = new HashMap<>();
+
+          for (DoubleValue dv : dvs) {
+            String attr = dv.attr();
+            double d = dv.value();
+
+            if (attrToDouble.containsKey(attr)) {
+              double sum = attrToDouble.get(attr) + d;
+              attrToDouble.put(attr, sum);
+            } else {
+              attrToDouble.put(attr, d);
+            }
+          }
+
+          List<Value> values = convert(attrToDouble);
 
           if (values.isEmpty()) {
             log.warn("No primary value found for asset {}.", receiver);
@@ -191,8 +199,7 @@ public class InputUtils {
               log.warn("Received multiple set points for asset '{}'!", receiver);
             }
 
-            Optional<PValue> setPoint =
-                toPValue(Optional.ofNullable(setPointValues.get(0).p()), Optional.empty());
+            Optional<PValue> setPoint = toPValue(setPointValues.get(0).p(), null);
 
             if (setPoint.isEmpty()) {
               log.warn("No set point value found for asset {}.", receiver);
@@ -202,69 +209,5 @@ public class InputUtils {
           }
         });
     return setPoints;
-  }
-
-  private static List<Value> toValues(List<DoubleValue> values) {
-    Map<String, Double> attrToDouble = new HashMap<>();
-
-    for (DoubleValue dv : values) {
-      String attr = dv.attr();
-      double d = dv.value();
-
-      if (attrToDouble.containsKey(attr)) {
-        double sum = attrToDouble.get(attr) + d;
-        attrToDouble.put(attr, sum);
-      } else {
-        attrToDouble.put(attr, d);
-      }
-    }
-
-    return toValues(attrToDouble);
-  }
-
-  private static List<Value> toValues(Map<String, Double> values) {
-    List<Value> valueList = new ArrayList<>();
-
-    // convert power
-    Optional<ComparableQuantity<Power>> active =
-        extractAny(values, MOSAIK_ACTIVE_POWER, MOSAIK_ACTIVE_POWER_IN);
-    Optional<ComparableQuantity<Power>> reactive =
-        extractAny(values, MOSAIK_REACTIVE_POWER, MOSAIK_REACTIVE_POWER_IN);
-
-    toPValue(active, reactive).ifPresent(valueList::add);
-
-    return valueList;
-  }
-
-  private static Optional<PValue> toPValue(
-      Optional<ComparableQuantity<Power>> active, Optional<ComparableQuantity<Power>> reactive) {
-    ComparableQuantity<Power> p = active.orElse(null);
-
-    if (reactive.isPresent()) {
-      return Optional.of(new SValue(p, reactive.get()));
-    } else {
-      if (p == null) {
-        return Optional.empty();
-      } else {
-        return Optional.of(new PValue(p));
-      }
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <Q extends Quantity<Q>> Optional<ComparableQuantity<Q>> extractAny(
-      Map<String, Double> valueMap, String... fields) {
-    return Stream.of(fields)
-        .map(field -> (ComparableQuantity<Q>) extract(valueMap, field))
-        .filter(Objects::nonNull)
-        .findFirst();
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <Q extends Quantity<Q>> ComparableQuantity<Q> extract(
-      Map<String, Double> valueMap, String field) {
-    return Optional.ofNullable(valueMap.get(field))
-        .map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)))
-        .orElse(null);
   }
 }

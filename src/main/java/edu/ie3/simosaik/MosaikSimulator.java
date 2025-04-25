@@ -112,7 +112,9 @@ public class MosaikSimulator extends Simulator {
           Optional<ColumnScheme> scheme =
               switch (modelType) {
                 case PRIMARY_P -> Optional.of(ColumnScheme.ACTIVE_POWER);
+                case PRIMARY_PH -> Optional.of(ColumnScheme.ACTIVE_POWER_AND_HEAT_DEMAND);
                 case PRIMARY_PQ -> Optional.of(ColumnScheme.APPARENT_POWER);
+                case PRIMARY_PQH -> Optional.of(ColumnScheme.APPARENT_POWER_AND_HEAT_DEMAND);
                 default -> Optional.empty();
               };
 

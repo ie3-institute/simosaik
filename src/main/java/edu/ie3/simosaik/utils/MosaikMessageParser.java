@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.utils.SimosaikTranslation.*;
+import static edu.ie3.simosaik.SimosaikUnits.*;
 
 import edu.ie3.simosaik.exceptions.ConversionException;
 import java.util.*;
@@ -15,14 +15,10 @@ import java.util.regex.Pattern;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
-public class MosaikMessageParser {
-  private static final Logger log = LoggerFactory.getLogger(MosaikMessageParser.class);
-
+public final class MosaikMessageParser {
   public record ParsedMessage(String receiver, String mosaikSender, Content content) {}
 
   public static List<ParsedMessage> filter(
@@ -92,7 +88,7 @@ public class MosaikMessageParser {
     } else if (attr.equals(FLEX_SET_POINT) && value instanceof Map<?, ?> map) {
       Map<String, Object> setPoint = (Map<String, Object>) map;
 
-      return new FlexSetPointMessage(receiver, extractQuantity(setPoint, MOSAIK_ACTIVE_POWER));
+      return new FlexSetPointMessage(receiver, extractQuantity(setPoint, ACTIVE_POWER));
 
     } else if (value instanceof Double d) {
       return new DoubleValue(attr, d);
