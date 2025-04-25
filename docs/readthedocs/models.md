@@ -1,8 +1,8 @@
 # Models
 
-Simosaik can provide mosaik with mosaik models. Due to the internal mapping, that is used during the translation from mosaik
-to SIMONA and vise versa, most of the models provided by simosaik are either input or result models. Which can either 
-provide SIMONA with input data or mosaik with result data.
+Simosaik can provide mosaik with SIMONA models. Due to the limitations of the internal mapping, that is used during the
+translation from mosaik to SIMONA and vise versa, most of the models provided by simosaik are either input or result models.
+Which can either provide SIMONA with input data or mosaik with result data.
 
 Some specific models, like the energy management communication model, can do both.
 
@@ -56,7 +56,7 @@ Currently, we support these result models:
 * - GridResults
   - "grid", "Grid"
   - "u[pu]", "delta[RAD]", "I_Mag[A]", "I_Ang[RAD]"
-  - Returns results for any grid asset.
+  - The units for which an output is given, depends on the actual asset.
 
 * - NodeResults
   - "node_res", "Node_res"
@@ -70,8 +70,8 @@ Currently, we support these result models:
 
 * - ParticipantResults
   - "participant", "Participant"
-  - "P[MW]", "Q[MVAr]"
-  - Returns the power of the participant.
+  - "P[MW]", "Q[MVAr]", "P_th[MW]", "SOC[%]"
+  - The units for which an output is given, depends on the actual participant.
 ```
 
 ## Energy management models
@@ -90,9 +90,10 @@ Currently, we support these result models:
 * - EmSetpoint
   - "em_setpoint"
   - "EM[setPoint]"
+  -
 
 * - EmCommunication
-  - "Communication", "communication"
+  - "communication", "Communication"
   - "Flex[request]", "Flex[options]", "EM[setPoint]"
   - 
 ```

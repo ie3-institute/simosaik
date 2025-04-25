@@ -15,8 +15,10 @@ import edu.ie3.datamodel.models.result.NodeResult;
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.connector.ConnectorResult;
 import edu.ie3.datamodel.models.result.connector.LineResult;
+import edu.ie3.datamodel.models.result.system.ElectricalEnergyStorageResult;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
+import edu.ie3.datamodel.models.result.system.SystemParticipantWithHeatResult;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.em.model.EmSetPointResult;
@@ -24,7 +26,6 @@ import edu.ie3.simona.api.data.em.model.ExtendedFlexOptionsResult;
 import edu.ie3.simona.api.data.em.model.FlexRequestResult;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import java.util.*;
-import java.util.function.Function;
 import javax.measure.quantity.Angle;
 import javax.measure.quantity.Dimensionless;
 import javax.measure.quantity.ElectricCurrent;
@@ -86,7 +87,7 @@ public final class ResultUtils {
       return handleFlexOptionResults(options, attrs, uuidToId);
 
     } else if (result instanceof SystemParticipantResult participant) {
-      return handleParticipantResult(participant, attrs, uuidToId);
+      return handleParticipantResult(participant, attrs);
 
     } else if (result instanceof NodeResult n) {
       Map<String, Object> data = new HashMap<>();
@@ -141,9 +142,27 @@ public final class ResultUtils {
   }
 
   private static Map<String, Object> handleParticipantResult(
-      SystemParticipantResult result, List<String> attrs, Map<UUID, String> uuidToId) {
-    log.warn("Participant result handling currently not implemented.");
-    return Collections.emptyMap();
+      SystemParticipantResult result, List<String> attrs) {
+    Map<String, Object> data = new HashMap<>();
+
+    if (attrs.contains(ACTIVE_POWER)) {
+      data.put(ACTIVE_POWER, toActive(result.getP()));
+    }
+
+    if (attrs.contains(REACTIVE_POWER)) {
+      data.put(REACTIVE_POWER, toActive(result.getQ()));
+    }
+
+    if (result instanceof SystemParticipantWithHeatResult withHeat
+        && attrs.contains(THERMAL_POWER)) {
+      data.put(THERMAL_POWER, toActive(withHeat.getqDot()));
+    }
+
+    if (result instanceof ElectricalEnergyStorageResult storage && attrs.contains(SOC)) {
+      data.put(SOC, toPercent(storage.getSoc()));
+    }
+
+    return data;
   }
 
   private static Map<String, Object> handleEmSetPointResult(
@@ -157,11 +176,11 @@ public final class ResultUtils {
             (receiverUuid, setPoint) -> {
               String receiver = uuidToId.get(receiverUuid);
 
-              Double active = setPoint.getP().map(toActive).orElse(null);
+              Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
               Double reactive = null;
 
               if (setPoint instanceof SValue sValue) {
-                reactive = sValue.getQ().map(toReactive).orElse(null);
+                reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
               }
 
               Map<String, Object> data = new HashMap<>();
@@ -178,9 +197,9 @@ public final class ResultUtils {
 
   private static Map<String, Object> handleFlexOptionResults(
       FlexOptionsResult result, List<String> attrs, Map<UUID, String> uuidToId) {
-    double pMin = toActive.apply(result.getpMin());
-    double pRef = toActive.apply(result.getpRef());
-    double pMax = toActive.apply(result.getpMax());
+    double pMin = toActive(result.getpMin());
+    double pRef = toActive(result.getpRef());
+    double pMax = toActive(result.getpMax());
 
     // TODO: Add flex optimization
     if (result instanceof ExtendedFlexOptionsResult extended && attrs.contains(FLEX_OPTIONS)) {
@@ -212,11 +231,13 @@ public final class ResultUtils {
   }
 
   // converting results
-  public static Function<ComparableQuantity<Power>, Double> toActive =
-      c -> c.to(MEGAWATT).getValue().doubleValue();
+  public static double toActive(ComparableQuantity<Power> c) {
+    return c.to(MEGAWATT).getValue().doubleValue();
+  }
 
-  public static Function<ComparableQuantity<Power>, Double> toReactive =
-      c -> c.to(MEGAVAR).getValue().doubleValue();
+  public static double toReactive(ComparableQuantity<Power> c) {
+    return c.to(MEGAVAR).getValue().doubleValue();
+  }
 
   public static double toPu(ComparableQuantity<Dimensionless> c) {
     return c.to(PU).getValue().doubleValue();
@@ -228,5 +249,9 @@ public final class ResultUtils {
 
   public static double toRadians(ComparableQuantity<Angle> c) {
     return c.to(RADIAN).getValue().doubleValue();
+  }
+
+  public static double toPercent(ComparableQuantity<Dimensionless> c) {
+    return c.to(PERCENT).getValue().doubleValue();
   }
 }

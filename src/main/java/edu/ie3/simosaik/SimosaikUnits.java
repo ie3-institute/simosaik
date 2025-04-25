@@ -28,7 +28,7 @@ public final class SimosaikUnits {
   public static final String REACTIVE_POWER = "Q[MVAr]";
   public static final String THERMAL_POWER = "P_th[MW]";
 
-  public static final String SOC = "SOC[percent]";
+  public static final String SOC = "SOC[%]";
 
   // em units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   public static final String FLEX_REQUEST = "Flex[request]";

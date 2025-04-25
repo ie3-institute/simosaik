@@ -61,3 +61,24 @@ world.start('SimonaPowerGrid', models=["p"])
 ```
 
 An overview of the available models can be found [here](/models).
+
+## Creating mosaik entities
+
+To create mosaik entities from the SIMONA model, you need to pass two arguments:
+```
+simonaActivePowerEntities = simonaSimulation.ActivePower.create(2, mapping=active_power_mapping)
+```
+
+The first is the number of entities, you want to create. The second argument is the mapping, that will be used by simosaik.
+The mapping contains a SIMONA `Universally Unique Identifier` (`UUID`), that is mapped to a mosaik `eid`. The given `eids`
+are used to identify the entities in mosaik, while the `UUIDs` are used by mosaik to send route the data to the correct model
+in SIMONA.
+
+```
+active_power_mapping = {
+    "4dca3b1d-5d24-444a-b4df-f4fa23b9ef1b": "Load_Node_1",
+    "9c5991bc-24df-496b-b4ce-5ec27657454c": "Load_Node_2"
+}
+```
+
+The number of entries in the mapping must match the number of entities that is parsed as an argument.

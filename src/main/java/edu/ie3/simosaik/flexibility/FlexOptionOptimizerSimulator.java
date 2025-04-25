@@ -306,10 +306,10 @@ public class FlexOptionOptimizerSimulator extends MosaikSimulator {
 
     if (results.get(id) instanceof SystemParticipantResult res) {
       if (attr.contains(ACTIVE_POWER)) {
-        outputMap.put(attr, toActive.apply(res.getP()));
+        outputMap.put(attr, toActive(res.getP()));
       }
       if (attr.contains(REACTIVE_POWER)) {
-        outputMap.put(attr, toReactive.apply(res.getQ()));
+        outputMap.put(attr, toReactive(res.getQ()));
       }
     }
   }
