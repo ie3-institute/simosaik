@@ -197,34 +197,76 @@ public final class ResultUtils {
 
   private static Map<String, Object> handleFlexOptionResults(
       FlexOptionsResult result, List<String> attrs, Map<UUID, String> uuidToId) {
+    // get all information
     double pMin = toActive(result.getpMin());
     double pRef = toActive(result.getpRef());
     double pMax = toActive(result.getpMax());
 
-    // TODO: Add flex optimization
+    Map<String, Double> connectedPmin = new HashMap<>();
+    Map<String, Double> connectedPref = new HashMap<>();
+    Map<String, Double> connectedPmax = new HashMap<>();
+
+    // add aggregated flex options
+    connectedPmin.put("EM", pMin);
+    connectedPref.put("EM", pRef);
+    connectedPmax.put("EM", pMax);
+
+    if (result instanceof ExtendedFlexOptionsResult extended) {
+      // add disaggregated flex options
+      Map<UUID, FlexOptionsResult> disaggregatedOptions = extended.getDisaggregated();
+
+      for (UUID uuid : disaggregatedOptions.keySet()) {
+        String id = uuidToId.get(uuid);
+        FlexOptionsResult partialOption = disaggregatedOptions.get(uuid);
+
+        connectedPmin.put(id, toActive(partialOption.getpMin()));
+        connectedPref.put(id, toActive(partialOption.getpRef()));
+        connectedPmax.put(id, toActive(partialOption.getpMax()));
+      }
+    }
+
+    Map<String, Object> data = new HashMap<>();
+
     if (result instanceof ExtendedFlexOptionsResult extended && attrs.contains(FLEX_OPTIONS)) {
-      Map<String, Object> data = new HashMap<>();
       String receiver = uuidToId.get(extended.getReceiver());
       String sender = uuidToId.get(extended.getSender());
 
       data.put("receiver", receiver);
       data.put("sender", sender);
+
       data.put(FLEX_OPTION_P_MIN, pMin);
       data.put(FLEX_OPTION_P_REF, pRef);
       data.put(FLEX_OPTION_P_MAX, pMax);
 
       log.warn("Options: {}", data);
-
       return Map.of(FLEX_OPTIONS, data);
 
-    } else {
-      Map<String, Object> data = new HashMap<>();
+    } else if (result instanceof ExtendedFlexOptionsResult extended
+        && attrs.contains(FLEX_OPTIONS_DISAGGREGATED)) {
+      String receiver = uuidToId.get(extended.getReceiver());
+      String sender = uuidToId.get(extended.getSender());
 
+      data.put("receiver", receiver);
+      data.put("sender", sender);
+
+      data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
+      data.put(FLEX_OPTION_MAP_P_REF, connectedPref);
+      data.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
+
+      return Map.of(FLEX_OPTIONS_DISAGGREGATED, data);
+
+    } else {
       if (attrs.contains(FLEX_OPTION_P_MIN)) data.put(FLEX_OPTION_P_MIN, pMin);
 
       if (attrs.contains(FLEX_OPTION_P_REF)) data.put(FLEX_OPTION_P_REF, pRef);
 
       if (attrs.contains(FLEX_OPTION_P_MAX)) data.put(FLEX_OPTION_P_MAX, pMax);
+
+      if (attrs.contains(FLEX_OPTION_MAP_P_MIN)) data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
+
+      if (attrs.contains(FLEX_OPTION_MAP_P_REF)) data.put(FLEX_OPTION_MAP_P_REF, connectedPref);
+
+      if (attrs.contains(FLEX_OPTION_MAP_P_MAX)) data.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
 
       return data;
     }

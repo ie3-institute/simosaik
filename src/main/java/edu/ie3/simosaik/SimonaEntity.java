@@ -18,6 +18,7 @@ public enum SimonaEntity {
 
   EM_SETPOINT("EmSetpoint"),
   EM_COMMUNICATION("EmCommunication"),
+  EM_OPTIMIZER("EmOptimizer"),
 
   GRID_RESULTS("GridResults"),
   NODE_RESULTS("NodeResults"),
@@ -36,6 +37,7 @@ public enum SimonaEntity {
       case PRIMARY_P, PRIMARY_PH, PRIMARY_PQ, PRIMARY_PQH -> DataType.EXT_PRIMARY_INPUT;
       case EM_SETPOINT -> DataType.EXT_EM_INPUT;
       case EM_COMMUNICATION -> DataType.EXT_EM_COMMUNICATION;
+      case EM_OPTIMIZER -> DataType.EXT_EM_OPTIMIZER;
       case GRID_RESULTS, NODE_RESULTS, LINE_RESULTS -> DataType.EXT_GRID_RESULT;
       case PARTICIPANT_RESULTS -> DataType.EXT_PARTICIPANT_RESULT;
     };
@@ -51,6 +53,7 @@ public enum SimonaEntity {
               case "pqh", "PQH", "Pqh" -> PRIMARY_PQH;
               case "em_setpoint" -> EM_SETPOINT;
               case "Communication", "communication" -> EM_COMMUNICATION;
+              case "em_optimizer" -> EM_OPTIMIZER;
               case "Grid", "grid" -> GRID_RESULTS;
               case "Participant", "participant" -> PARTICIPANT_RESULTS;
               default -> throw new IllegalArgumentException("Unknown model type: " + modelType);

@@ -34,6 +34,7 @@ public final class SimosaikUnits {
   public static final String FLEX_REQUEST = "Flex[request]";
   public static final String FLEX_OPTIONS = "Flex[options]";
   public static final String FLEX_SET_POINT = "EM[setPoint]";
+  public static final String FLEX_OPTIONS_DISAGGREGATED = "Flex[disaggregated]";
 
   public static final String FLEX_OPTION_P_MIN = "PMin[MW]";
   public static final String FLEX_OPTION_P_REF = "PRef[MW]";

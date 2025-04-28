@@ -128,6 +128,14 @@ public class MosaikSimulation extends ExtCoSimulation {
         case SET_POINT -> sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
         case EM_COMMUNICATION ->
             useFlexCommunication(extEmDataConnection, tick, maybeNextTick, log);
+        case EM_OPTIMIZATION -> {
+          // first we send disaggregated flex options to the external optimizer
+          sendFlexOptionsToExt(extEmDataConnection, tick, true, log);
+
+          // we will send the received set points to SIMONA
+          sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
+        }
+
         default ->
             throw new IllegalStateException(
                 "The mode '" + extEmDataConnection.mode + "' is currently not supported!");
