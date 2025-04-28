@@ -7,6 +7,7 @@
 package edu.ie3.simosaik.utils;
 
 import static edu.ie3.simosaik.SimonaEntity.EM_COMMUNICATION;
+import static edu.ie3.simosaik.SimonaEntity.EM_OPTIMIZER;
 import static edu.ie3.simosaik.SimosaikUnits.*;
 import static java.util.Collections.emptyList;
 
@@ -35,6 +36,16 @@ public final class MetaUtils {
       case PRIMARY_PQH -> List.of(ACTIVE_POWER, REACTIVE_POWER, THERMAL_POWER);
       case EM_SETPOINT -> List.of(FLEX_SET_POINT);
       case EM_COMMUNICATION -> List.of(FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT);
+      case EM_OPTIMIZER ->
+          List.of(
+              ACTIVE_POWER,
+              REACTIVE_POWER,
+              FLEX_OPTION_P_MIN,
+              FLEX_OPTION_P_REF,
+              FLEX_OPTION_P_MAX,
+              FLEX_OPTION_MAP_P_MIN,
+              FLEX_OPTION_MAP_P_REF,
+              FLEX_OPTION_MAP_P_MAX);
       case GRID_RESULTS -> ALL_GRID_UNITS;
       case NODE_RESULTS -> List.of(VOLTAGE_MAG, VOLTAGE_ANG);
       case LINE_RESULTS -> List.of(CURRENT_MAG, CURRENT_ANG);
@@ -47,7 +58,7 @@ public final class MetaUtils {
   }
 
   public static String getType(Collection<SimonaEntity> entities) {
-    if (entities.contains(EM_COMMUNICATION)) {
+    if (entities.contains(EM_COMMUNICATION) || entities.contains(EM_OPTIMIZER)) {
       return "hybrid";
     }
 
@@ -60,6 +71,10 @@ public final class MetaUtils {
     Model model = Model.of(entity.name).params("mapping").attrs(attributes);
 
     if (entity.equals(EM_COMMUNICATION)) {
+      return model.triggers(attributes);
+    }
+
+    if (entity.equals(EM_OPTIMIZER)) {
       return model.triggers(attributes);
     }
 

@@ -55,6 +55,8 @@ public enum SimonaEntity {
               case "Communication", "communication" -> EM_COMMUNICATION;
               case "em_optimizer" -> EM_OPTIMIZER;
               case "Grid", "grid" -> GRID_RESULTS;
+              case "node_res", "Node_res" -> NODE_RESULTS;
+              case "line_res", "Line_res" -> LINE_RESULTS;
               case "Participant", "participant" -> PARTICIPANT_RESULTS;
               default -> throw new IllegalArgumentException("Unknown model type: " + modelType);
             };

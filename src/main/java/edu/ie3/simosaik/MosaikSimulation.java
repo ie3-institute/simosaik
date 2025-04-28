@@ -10,6 +10,7 @@ import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
 import edu.ie3.simona.api.data.em.EmMode;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
+import edu.ie3.simona.api.data.em.ontology.EmCompletion;
 import edu.ie3.simona.api.data.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
@@ -134,6 +135,9 @@ public class MosaikSimulation extends ExtCoSimulation {
 
           // we will send the received set points to SIMONA
           sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
+
+          // we will receive an em completion message
+          extEmDataConnection.receiveWithType(EmCompletion.class);
         }
 
         default ->

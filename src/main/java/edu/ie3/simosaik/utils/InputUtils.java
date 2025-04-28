@@ -6,13 +6,15 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.utils.SimosaikUtils.convert;
-import static edu.ie3.simosaik.utils.SimosaikUtils.toPValue;
+import static edu.ie3.simosaik.SimosaikUnits.ACTIVE_POWER;
+import static edu.ie3.simosaik.SimosaikUnits.REACTIVE_POWER;
+import static edu.ie3.simosaik.utils.SimosaikUtils.*;
 
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.model.FlexOptions;
+import edu.ie3.simona.api.data.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
 import java.util.*;
@@ -40,15 +42,21 @@ public final class InputUtils {
 
     // building input container
     ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
-    Map<String, UUID> idToUuid = mapping.getFullMapping();
 
     // primary data
-    parsePrimary(receiverToMessages, idToUuid).forEach(container::addPrimaryValue);
+    parsePrimary(receiverToMessages, mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT))
+        .forEach(container::addPrimaryValue);
 
     // em data
-    parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
-    parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
-    parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);
+    Map<String, UUID> emIdToUuid =
+        mapping.getExtId2UuidMapping(
+            DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION, DataType.EXT_EM_OPTIMIZER);
+    parseFlexRequests(receiverToMessages, emIdToUuid).forEach(container::addRequest);
+    parseFlexOptions(receiverToMessages, emIdToUuid).forEach(container::addFlexOptions);
+    parseSetPoints(receiverToMessages, emIdToUuid).forEach(container::addSetPoint);
+
+    log.warn("Primary: {}", container.primaryDataString());
+    log.warn("Set points: {}", container.setPointsString());
 
     return container;
   }
@@ -116,22 +124,24 @@ public final class InputUtils {
 
     receiverToMessages.forEach(
         (receiver, messages) -> {
-          UUID receiverUuid = idToUuid.get(receiver);
+          if (idToUuid.containsKey(receiver)) {
+            UUID receiverUuid = idToUuid.get(receiver);
 
-          List<FlexRequestMessage> requests =
-              messages.stream()
-                  .filter(m -> m.getClass() == FlexRequestMessage.class)
-                  .map(FlexRequestMessage.class::cast)
-                  .toList();
+            List<FlexRequestMessage> requests =
+                messages.stream()
+                    .filter(m -> m.getClass() == FlexRequestMessage.class)
+                    .map(FlexRequestMessage.class::cast)
+                    .toList();
 
-          if (requests.size() > 1) {
-            log.warn(
-                "Receiver '{}' received flex requests from multiple senders! This should not be possible!",
-                receiverUuid);
-          }
+            if (requests.size() > 1) {
+              log.warn(
+                  "Receiver '{}' received flex requests from multiple senders! This should not be possible!",
+                  receiverUuid);
+            }
 
-          if (!requests.isEmpty()) {
-            flexRequests.put(receiverUuid, requests.get(0).sender().map(idToUuid::get));
+            if (!requests.isEmpty()) {
+              flexRequests.put(receiverUuid, requests.get(0).sender().map(idToUuid::get));
+            }
           }
         });
 
@@ -149,25 +159,28 @@ public final class InputUtils {
 
     receiverToMessages.forEach(
         (receiver, messages) -> {
-          UUID receiverUuid = idToUuid.get(receiver);
+          if (idToUuid.containsKey(receiver)) {
 
-          List<FlexOptions> options =
-              messages.stream()
-                  .filter(m -> m.getClass() == FlexOptionsMessage.class)
-                  .map(FlexOptionsMessage.class::cast)
-                  .flatMap(m -> m.information().stream())
-                  .map(
-                      optionMessage ->
-                          new FlexOptions(
-                              receiverUuid,
-                              idToUuid.get(optionMessage.sender()),
-                              optionMessage.pMin(),
-                              optionMessage.pRef(),
-                              optionMessage.pMax()))
-                  .toList();
+            UUID receiverUuid = idToUuid.get(receiver);
 
-          if (!options.isEmpty()) {
-            flexOptions.put(receiverUuid, options);
+            List<FlexOptions> options =
+                messages.stream()
+                    .filter(m -> m.getClass() == FlexOptionsMessage.class)
+                    .map(FlexOptionsMessage.class::cast)
+                    .flatMap(m -> m.information().stream())
+                    .map(
+                        optionMessage ->
+                            new FlexOptions(
+                                receiverUuid,
+                                idToUuid.get(optionMessage.sender()),
+                                optionMessage.pMin(),
+                                optionMessage.pRef(),
+                                optionMessage.pMax()))
+                    .toList();
+
+            if (!options.isEmpty()) {
+              flexOptions.put(receiverUuid, options);
+            }
           }
         });
 
@@ -185,26 +198,52 @@ public final class InputUtils {
 
     receiverToMessages.forEach(
         (receiver, messages) -> {
-          UUID receiverUuid = idToUuid.get(receiver);
+          if (idToUuid.containsKey(receiver)) {
 
-          List<FlexSetPointMessage> setPointValues =
-              messages.stream()
-                  .filter(m -> m.getClass() == FlexSetPointMessage.class)
-                  .map(FlexSetPointMessage.class::cast)
-                  .toList();
+            UUID receiverUuid = idToUuid.get(receiver);
 
-          if (!setPointValues.isEmpty()) {
+            List<FlexSetPointMessage> setPointValues =
+                messages.stream()
+                    .filter(m -> m.getClass() == FlexSetPointMessage.class)
+                    .map(FlexSetPointMessage.class::cast)
+                    .toList();
 
-            if (setPointValues.size() > 1) {
-              log.warn("Received multiple set points for asset '{}'!", receiver);
-            }
+            if (!setPointValues.isEmpty()) {
 
-            Optional<PValue> setPoint = toPValue(setPointValues.get(0).p(), null);
+              if (setPointValues.size() > 1) {
+                log.warn("Received multiple set points for asset '{}'!", receiver);
+              }
 
-            if (setPoint.isEmpty()) {
-              log.warn("No set point value found for asset {}.", receiver);
+              Optional<PValue> setPoint = toPValue(setPointValues.get(0).p(), null);
+
+              if (setPoint.isEmpty()) {
+                log.warn("No set point value found for asset {}.", receiver);
+              } else {
+                setPoints.put(receiverUuid, setPoint.get());
+              }
             } else {
-              setPoints.put(receiverUuid, setPoint.get());
+              // if set point is given as double values
+
+              Map<String, Double> attrToValue =
+                  messages.stream()
+                      .filter(m -> m.getClass() == DoubleValue.class)
+                      .map(DoubleValue.class::cast)
+                      .collect(Collectors.toMap(DoubleValue::attr, DoubleValue::value));
+
+              if (attrToValue.size() > 2) {
+                log.warn("Received multiple set point values for asset '{}'!", receiver);
+              } else {
+
+                Optional<PValue> setPoint =
+                    toPValue(
+                        extract(attrToValue, ACTIVE_POWER), extract(attrToValue, REACTIVE_POWER));
+
+                if (setPoint.isEmpty()) {
+                  log.warn("No set point value found for asset {}.", receiver);
+                } else {
+                  setPoints.put(receiverUuid, setPoint.get());
+                }
+              }
             }
           }
         });

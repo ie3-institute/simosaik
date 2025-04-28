@@ -88,7 +88,10 @@ public final class MosaikMessageParser {
     } else if (attr.equals(FLEX_SET_POINT) && value instanceof Map<?, ?> map) {
       Map<String, Object> setPoint = (Map<String, Object>) map;
 
-      return new FlexSetPointMessage(receiver, extractQuantity(setPoint, ACTIVE_POWER));
+      return new FlexSetPointMessage(
+          receiver,
+          extractQuantity(setPoint, ACTIVE_POWER),
+          extractQuantity(setPoint, REACTIVE_POWER));
 
     } else if (value instanceof Double d) {
       return new DoubleValue(attr, d);
@@ -119,7 +122,8 @@ public final class MosaikMessageParser {
   public record FlexOptionsMessage(List<FlexOptionInformation> information)
       implements FlexMessage {}
 
-  public record FlexSetPointMessage(String receiver, ComparableQuantity<Power> p)
+  public record FlexSetPointMessage(
+      String receiver, ComparableQuantity<Power> p, ComparableQuantity<Power> q)
       implements FlexMessage {}
 
   public record FlexOptionInformation(
@@ -131,9 +135,13 @@ public final class MosaikMessageParser {
 
   private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
       Map<String, Object> map, String field) {
-    double d = (double) map.get(field);
-    Unit<Q> unit = getPSDMUnit(field);
-    return Quantities.getQuantity(d, unit);
+    if (map.containsKey(field)) {
+      double d = (double) map.get(field);
+      Unit<Q> unit = getPSDMUnit(field);
+      return Quantities.getQuantity(d, unit);
+    }
+
+    return null;
   }
 
   public static String trim(String sender) {

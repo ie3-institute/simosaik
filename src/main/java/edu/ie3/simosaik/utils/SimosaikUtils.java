@@ -83,12 +83,7 @@ public final class SimosaikUtils {
       return Optional.of(fcn.apply(DataType.EXT_EM_OPTIMIZER));
 
     } else {
-      int count = 0;
-      if (dataTypes.contains(DataType.EXT_EM_INPUT)) count++;
-      if (dataTypes.contains(DataType.EXT_EM_COMMUNICATION)) count++;
-      if (dataTypes.contains(DataType.EXT_EM_OPTIMIZER)) count++;
-
-      log.warn("Em mapping for {} mode(s) were provided! Returning no em mode!", count);
+      log.warn("No em mode found!");
       return Optional.empty();
     }
   }
@@ -179,7 +174,7 @@ public final class SimosaikUtils {
   }
 
   @SuppressWarnings("unchecked")
-  private static <Q extends Quantity<Q>> ComparableQuantity<Q> extract(
+  public static <Q extends Quantity<Q>> ComparableQuantity<Q> extract(
       Map<String, Double> valueMap, String field) {
     return Optional.ofNullable(valueMap.get(field))
         .map(value -> Quantities.getQuantity(value, (Unit<Q>) getPSDMUnit(field)))

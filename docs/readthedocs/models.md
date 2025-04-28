@@ -96,4 +96,9 @@ Currently, we support these result models:
   - "communication", "Communication"
   - "Flex[request]", "Flex[options]", "EM[setPoint]"
   - 
+  
+* - EmOptimizer
+  - "em_optimizer"
+  - "P[MW]", "Q[MVAr]", "PMin[MW]", "PRef[MW]", "PMax[MW]", "idToPMin[MW]", "idToPRef[MW]", "idToPMax[MW]"
+  - 
 ```
