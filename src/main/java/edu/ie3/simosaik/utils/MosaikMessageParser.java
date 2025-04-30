@@ -136,9 +136,12 @@ public final class MosaikMessageParser {
   private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
       Map<String, Object> map, String field) {
     if (map.containsKey(field)) {
-      double d = (double) map.get(field);
-      Unit<Q> unit = getPSDMUnit(field);
-      return Quantities.getQuantity(d, unit);
+      Object value = map.get(field);
+
+      if (value instanceof Double d) {
+        Unit<Q> unit = getPSDMUnit(field);
+        return Quantities.getQuantity(d, unit);
+      }
     }
 
     return null;

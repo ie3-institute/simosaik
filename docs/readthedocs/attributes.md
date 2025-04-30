@@ -53,17 +53,17 @@ These attribute can be only be used for output models.
   - The magnitude of the voltage in per-unit.
 
 * - Voltage angle
-  - delta[RAD]
+  - u[RAD]
   - float
   - The angle of the voltage in radians.
 
 * - Current magnitude
-  - I_Mag[A]
+  - I[A]
   - float
   - The magnitude of the current in ampere.
 
 * - Current angle
-  - I_Ang[RAD]
+  - I[RAD]
   - float
   - The angle of the current in radians.
 
@@ -100,7 +100,7 @@ of these can be found [here](#energy-management-flex-dictionaries).
 
 * - Flexibility options disaggregated
   - Flex[disaggregated]
-  - flex option disaggregated dict
+  - disaggregated flex option dict
   - The sender is needed, the other keys can be dropped.
 
 * - Energy management set points
@@ -171,25 +171,31 @@ There are multiple options for the values of the set point dictionary.
 Option 1: { P[MW]: float, Q[MVAr]: float }
 Option 2: { P[MW]: float }
 Option 3: { Q[MVAr]: float }
+Option 4: { }
 ```
 
 **Flex option dict:** <br>
+There are multiple options for the values of the flex option dictionary.
 ```python
-{ 
+Option 1: { 
     sender: str, 
     PMin[MW]: float, 
     PRef[MW]: float, 
     PMax[MW]: float
 }
+
+Option 2: { sender: str }
 ```
 
-**Flex option disaggregated dict:** <br>
-
+**Disaggregated flex option dict:** <br>
+There are multiple options for the values of the disaggregated flex option dictionary.
 ```python
-{ 
+Option 1: { 
     sender: str, 
     idToPMin[MW]: idToPMin dict, 
     idToPRef[MW]: idToPRef dict, 
     idToPMax[MW]: idToPMax dict
 }
+
+Option 2: { sender: str }
 ```

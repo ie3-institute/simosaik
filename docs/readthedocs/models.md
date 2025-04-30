@@ -20,27 +20,27 @@ Currently, we support these input models:
 
 * - Model name
   - Possible arguments in mosaik
-  - Supported input attributes
+  - Input attributes
   - Additional information
 
 * - ActivePower
   - "p", "P"
-  - "P[MW]"
+  - P[MW]
   - These models can only provide SIMONA with active power.
 
 * - ActivePowerAndHeat
   - "ph", "PH", "Ph"
-  - "P[MW]", "P_th[MW]"
+  - P[MW], P_th[MW]
   - These models can provide SIMONA with active power and thermal power (heat).
 
 * - ComplexPower
   - "pq", "PQ", "Pq"
-  - "P[MW]", "Q[MVAr]"
+  - P[MW], Q[MVAr]
   - These models can provide SIMONA with active and/or reactive power.
 
 * - ComplexPowerAndHeat
   - "pqh", "PQH", "Pqh"
-  - "P[MW]", "Q[MVAr]", "P_th[MW]"
+  - P[MW], Q[MVAr], P_th[MW]
   - These models can provide SIMONA with active and/or reactive power and thermal power (heat).
 ```
 
@@ -56,29 +56,27 @@ Currently, we support these result models:
 
 * - Model name
   - Possible arguments in mosaik
-  - Supported output attributes
+  - Output attributes
   - Additional information
 
 * - GridResults
   - "grid", "Grid"
-  - "u[pu]", "delta[RAD]",
-   "I_Mag[A]", "I_Ang[RAD]"
+  - u[pu], u[RAD], I[A], I[RAD]
   - The attributes for which an output is given, depends on the actual asset.
 
 * - NodeResults
   - "node_res", "Node_res"
-  - "u[pu]", "delta[RAD]"
+  - u[pu], u[RAD]
   - Only returns node results.
 
 * - LineResults
   - "line_res", "Line_res"
-  - "I_Mag[A]", "I_Ang[RAD]"
+  - I[A], I[RAD]
   - Only returns line results.
 
 * - ParticipantResults
   - "participant", "Participant"
-  - "P[MW]", "Q[MVAr]",
-   "P_th[MW]", "SOC[%]"
+  - P[MW], Q[MVAr], P_th[MW], SOC[%]
   - The attributes for which an output is given, depends on the actual participant.
 ```
 
@@ -94,29 +92,25 @@ result models:
 
 * - Model name
   - Possible arguments in mosaik
-  - Supported input attributes
-  - Supported output attributes
+  - Input attributes
+  - Output attributes
   - Additional information
 
 * - EmSetpoint
   - "em_setpoint"
-  - "EM[setPoint]"
-  - "Flex[options]", "Flex[diaggregated]"
+  - EM[setPoint]
+  - Flex[options], Flex[diaggregated]
   -
 
 * - EmCommunication
   - "communication", "Communication"
-  - "Flex[request]", "Flex[options]", "EM[setPoint]"
-  - "Flex[request]", "Flex[options]", "EM[setPoint]"
+  - Flex[request], Flex[options], EM[setPoint]
+  - Flex[request], Flex[options], EM[setPoint]
   -
   
 * - EmOptimizer
   - "em_optimizer"
-  - "P[MW]",
-    "Q[MVAr]",
-    "EM[setPoint]"
-  - "PMin[MW]", PRef[MW], PMax[MW],
-   "idToPMin[MW]", "idToPRef[MW]", "idToPMax[MW]",
-   "Flex[options]", "Flex[diaggregated]"
+  - P[MW], Q[MVAr], EM[setPoint]
+  - PMin[MW], PRef[MW], PMax[MW], idToPMin[MW], idToPRef[MW], idToPMax[MW], Flex[options], Flex[diaggregated]
   -
 ```

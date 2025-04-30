@@ -18,10 +18,10 @@ public final class SimosaikUnits {
 
   // grid units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   public static final String VOLTAGE_MAG = "u[pu]";
-  public static final String VOLTAGE_ANG = "delta[RAD]";
+  public static final String VOLTAGE_ANG = "u[RAD]";
 
-  public static final String CURRENT_MAG = "I_Mag[A]";
-  public static final String CURRENT_ANG = "I_Ang[RAD]";
+  public static final String CURRENT_MAG = "I[A]";
+  public static final String CURRENT_ANG = "I[RAD]";
 
   // participant units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   public static final String ACTIVE_POWER = "P[MW]";
