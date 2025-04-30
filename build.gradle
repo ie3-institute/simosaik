@@ -4,6 +4,7 @@ plugins {
   id "com.gradleup.shadow" version "8.3.6"
   id 'com.diffplug.spotless' version '6.25.0'// code format
   id "de.undercouch.download" version "5.6.0" // downloads plugin
+  id 'kr.motd.sphinx' version '2.10.1' // documentation generation
 }
 
 ext {
@@ -21,6 +22,7 @@ java {
 }
 
 apply from: scriptsLocation + 'spotless.gradle'
+apply from: scriptsLocation + 'documentation.gradle'
 
 configurations {
   scalaCompilerPlugin
