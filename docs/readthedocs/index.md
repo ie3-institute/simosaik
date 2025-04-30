@@ -12,6 +12,7 @@ with the co-simulation framework [MOSAIK](https://mosaik.offis.de/) from [Offis 
 gettingstarted
 usersguide
 models
+attributes
 dataexchange
 ```
 

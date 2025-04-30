@@ -60,7 +60,8 @@ To specify these models, you need to add the `models` argument with a list of se
 world.start('SimonaPowerGrid', models=["p"])
 ```
 
-An overview of the available models can be found [here](/models).
+An overview of the available models can be found [here](/models). Each model has a list of attributes, that can use when
+connecting to other mosaik models. An overview of all available attributes with their units and values can be found [here](/attributes).
 
 ## Creating mosaik entities
 

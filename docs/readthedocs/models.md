@@ -6,17 +6,21 @@ Which can either provide SIMONA with input data or mosaik with result data.
 
 Some specific models, like the energy management communication model, can do both.
 
+An overview of all available attributes with their values can be found [here](/attributes).
+
 ## Input models
 
+Input models are used to provide SIMONA with external data. Therefore, these models are only supporting input attributes.
 Currently, we support these input models:
 
 ```{list-table}
 :widths: auto
+:class: wrapping
 :header-rows: 1
 
 * - Model name
   - Possible arguments in mosaik
-  - Supported units
+  - Supported input attributes
   - Additional information
 
 * - ActivePower
@@ -42,21 +46,24 @@ Currently, we support these input models:
 
 ## Result models
 
+Result models are used to provide mosaik with SIMONA data. Therefore, these models are only supporting output attributes.
 Currently, we support these result models:
 
 ```{list-table}
 :widths: auto
+:class: wrapping
 :header-rows: 1
 
 * - Model name
   - Possible arguments in mosaik
-  - Supported units
+  - Supported output attributes
   - Additional information
 
 * - GridResults
   - "grid", "Grid"
-  - "u[pu]", "delta[RAD]", "I_Mag[A]", "I_Ang[RAD]"
-  - The units for which an output is given, depends on the actual asset.
+  - "u[pu]", "delta[RAD]",
+   "I_Mag[A]", "I_Ang[RAD]"
+  - The attributes for which an output is given, depends on the actual asset.
 
 * - NodeResults
   - "node_res", "Node_res"
@@ -70,35 +77,46 @@ Currently, we support these result models:
 
 * - ParticipantResults
   - "participant", "Participant"
-  - "P[MW]", "Q[MVAr]", "P_th[MW]", "SOC[%]"
-  - The units for which an output is given, depends on the actual participant.
+  - "P[MW]", "Q[MVAr]",
+   "P_th[MW]", "SOC[%]"
+  - The attributes for which an output is given, depends on the actual participant.
 ```
 
 ## Energy management models
 
-Currently, we support these result models:
+The energy management models can support both input and output attributes at the same time. Currently, we support these
+result models:
 
 ```{list-table}
 :widths: auto
+:class: wrapping
 :header-rows: 1
 
 * - Model name
   - Possible arguments in mosaik
-  - Supported units
+  - Supported input attributes
+  - Supported output attributes
   - Additional information
 
 * - EmSetpoint
   - "em_setpoint"
   - "EM[setPoint]"
+  - "Flex[options]", "Flex[diaggregated]"
   -
 
 * - EmCommunication
   - "communication", "Communication"
   - "Flex[request]", "Flex[options]", "EM[setPoint]"
-  - 
+  - "Flex[request]", "Flex[options]", "EM[setPoint]"
+  -
   
 * - EmOptimizer
   - "em_optimizer"
-  - "P[MW]", "Q[MVAr]", "PMin[MW]", "PRef[MW]", "PMax[MW]", "idToPMin[MW]", "idToPRef[MW]", "idToPMax[MW]"
-  - 
+  - "P[MW]",
+    "Q[MVAr]",
+    "EM[setPoint]"
+  - "PMin[MW]", PRef[MW], PMax[MW],
+   "idToPMin[MW]", "idToPRef[MW]", "idToPMax[MW]",
+   "Flex[options]", "Flex[diaggregated]"
+  -
 ```
