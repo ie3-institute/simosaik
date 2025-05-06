@@ -17,12 +17,13 @@ import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.initialization.InitialisationData;
+import edu.ie3.simosaik.initialization.InitializationQueue;
 import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
 import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /** The mosaik simulator that exchanges information with mosaik. */
@@ -38,7 +39,7 @@ public class MosaikSimulator extends Simulator {
   private long time;
   public final int stepSize;
 
-  public final LinkedBlockingQueue<ExtEntityMapping> controlledQueue = new LinkedBlockingQueue<>();
+  public final InitializationQueue initDataQueue = new InitializationQueue();
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
@@ -79,6 +80,14 @@ public class MosaikSimulator extends Simulator {
     } else {
       logger.warning(
           "No models provided! Valid models are: " + Arrays.toString(SimonaEntity.values()));
+    }
+
+    try {
+      initDataQueue.put(
+          new InitialisationData.FlexInitData(
+              extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
 
     return createMeta(getType(extEntityEntries.keySet()), models);
@@ -146,7 +155,7 @@ public class MosaikSimulator extends Simulator {
 
         this.mapping = new ExtEntityMapping(entries);
 
-        this.controlledQueue.put(mapping);
+        this.initDataQueue.put(new InitialisationData.MappingData(mapping));
 
       } catch (InterruptedException e) {
         throw new RuntimeException(e);

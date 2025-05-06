@@ -49,8 +49,7 @@ public final class InputUtils {
 
     // em data
     Map<String, UUID> emIdToUuid =
-        mapping.getExtId2UuidMapping(
-            DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION, DataType.EXT_EM_OPTIMIZER);
+        mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION);
     parseFlexRequests(receiverToMessages, emIdToUuid).forEach(container::addRequest);
     parseFlexOptions(receiverToMessages, emIdToUuid).forEach(container::addFlexOptions);
     parseSetPoints(receiverToMessages, emIdToUuid).forEach(container::addSetPoint);

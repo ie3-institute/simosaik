@@ -18,7 +18,6 @@ import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
@@ -64,27 +63,39 @@ public final class SimosaikUtils {
     return assetsToValueClasses;
   }
 
-  public static Optional<Map.Entry<EmMode, List<UUID>>> findEmMode(ExtEntityMapping entityMapping) {
+  public static Optional<EmMode> findEmMode(Set<DataType> dataTypes) {
+    boolean base = dataTypes.contains(DataType.EXT_EM_INPUT);
+    boolean communication = dataTypes.contains(DataType.EXT_EM_COMMUNICATION);
+
+    if (base && communication) {
+      log.warn("Multiple em modes present! This is not supported!");
+      return Optional.empty();
+    } else if (base) {
+      return Optional.of(EmMode.BASE);
+    } else if (communication) {
+      return Optional.of(EmMode.EM_COMMUNICATION);
+    } else {
+      log.debug("No em mode present.");
+      return Optional.empty();
+    }
+  }
+
+  public static List<UUID> buildEmData(ExtEntityMapping entityMapping) {
     Set<DataType> dataTypes = entityMapping.getDataTypes();
 
-    Function<DataType, Map.Entry<EmMode, List<UUID>>> fcn =
-        dataType ->
-            Map.entry(
-                EmMode.fromDataType(dataType),
-                entityMapping.getEntries(dataType).stream().map(ExtEntityEntry::uuid).toList());
-
     if (dataTypes.contains(DataType.EXT_EM_INPUT)) {
-      return Optional.of(fcn.apply(DataType.EXT_EM_INPUT));
+      return entityMapping.getEntries(DataType.EXT_EM_INPUT).stream()
+          .map(ExtEntityEntry::uuid)
+          .toList();
 
     } else if (dataTypes.contains(DataType.EXT_EM_COMMUNICATION)) {
-      return Optional.of(fcn.apply(DataType.EXT_EM_COMMUNICATION));
-
-    } else if (dataTypes.contains(DataType.EXT_EM_OPTIMIZER)) {
-      return Optional.of(fcn.apply(DataType.EXT_EM_OPTIMIZER));
+      return entityMapping.getEntries(DataType.EXT_EM_COMMUNICATION).stream()
+          .map(ExtEntityEntry::uuid)
+          .toList();
 
     } else {
-      log.warn("No em mode found!");
-      return Optional.empty();
+      log.warn("No em data found!");
+      return Collections.emptyList();
     }
   }
 

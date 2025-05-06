@@ -14,7 +14,7 @@ These attribute can be used for input and output models.
 
 * - Type
   - Attributes
-  - Possible value
+  - Value
   - Additional information
 
 * - Active power
@@ -44,7 +44,7 @@ These attribute can be only be used for output models.
 
 * - Type
   - Attributes
-  - Possible value
+  - Value
   - Additional information
 
 * - Voltage magnitude

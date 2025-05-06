@@ -8,7 +8,6 @@ package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
-import edu.ie3.simosaik.config.ArgsParser;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;

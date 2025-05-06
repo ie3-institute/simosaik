@@ -4,9 +4,17 @@ Simosaik can provide mosaik with SIMONA models. Due to the limitations of the in
 translation from mosaik to SIMONA and vise versa, most of the models provided by simosaik are either input or result models.
 Which can either provide SIMONA with input data or mosaik with result data.
 
-Some specific models, like the energy management communication model, can do both.
-
 An overview of all available attributes with their values can be found [here](/attributes).
+
+
+## Limitations
+
+There are currently two limitations:
+
+1. For now only the energy management models support bidirectional data exchange.
+2. Currently, only the energy management communication model support the [tiered times](https://mosaik.readthedocs.io/en/latest/explanations/tiered-time.html)
+concept of mosaik.
+
 
 ## Input models
 
@@ -83,7 +91,7 @@ Currently, we support these result models:
 ## Energy management models
 
 The energy management models can support both input and output attributes at the same time. Currently, we support these
-result models:
+energy management models:
 
 ```{list-table}
 :widths: auto
@@ -96,10 +104,10 @@ result models:
   - Output attributes
   - Additional information
 
-* - EmSetpoint
-  - "em_setpoint"
-  - EM[setPoint]
-  - Flex[options], Flex[diaggregated]
+* - EM
+  - "em"
+  - P[MW], Q[MVAr], EM[setPoint]
+  - PMin[MW], PRef[MW], PMax[MW], Flex[options]
   -
 
 * - EmCommunication
@@ -111,6 +119,6 @@ result models:
 * - EmOptimizer
   - "em_optimizer"
   - P[MW], Q[MVAr], EM[setPoint]
-  - PMin[MW], PRef[MW], PMax[MW], idToPMin[MW], idToPRef[MW], idToPMax[MW], Flex[options], Flex[diaggregated]
+  - idToPMin[MW], idToPRef[MW], idToPMax[MW], Flex[diaggregated]
   -
 ```

@@ -15,8 +15,7 @@ public enum SimonaEntity {
   PRIMARY_PH("ActivePowerAndHeat"),
   PRIMARY_PQ("ComplexPower"),
   PRIMARY_PQH("ComplexPowerAndHeat"),
-
-  EM_SETPOINT("EmSetpoint"),
+  EM("EM"),
   EM_COMMUNICATION("EmCommunication"),
   EM_OPTIMIZER("EmOptimizer"),
 
@@ -35,9 +34,8 @@ public enum SimonaEntity {
   public static DataType toType(SimonaEntity simonaEntity) {
     return switch (simonaEntity) {
       case PRIMARY_P, PRIMARY_PH, PRIMARY_PQ, PRIMARY_PQH -> DataType.EXT_PRIMARY_INPUT;
-      case EM_SETPOINT -> DataType.EXT_EM_INPUT;
+      case EM, EM_OPTIMIZER -> DataType.EXT_EM_INPUT;
       case EM_COMMUNICATION -> DataType.EXT_EM_COMMUNICATION;
-      case EM_OPTIMIZER -> DataType.EXT_EM_OPTIMIZER;
       case GRID_RESULTS, NODE_RESULTS, LINE_RESULTS -> DataType.EXT_GRID_RESULT;
       case PARTICIPANT_RESULTS -> DataType.EXT_PARTICIPANT_RESULT;
     };
@@ -51,7 +49,7 @@ public enum SimonaEntity {
               case "ph", "PH", "Ph" -> PRIMARY_PH;
               case "pq", "PQ", "Pq" -> PRIMARY_PQ;
               case "pqh", "PQH", "Pqh" -> PRIMARY_PQH;
-              case "em_setpoint" -> EM_SETPOINT;
+              case "em" -> EM;
               case "Communication", "communication" -> EM_COMMUNICATION;
               case "em_optimizer" -> EM_OPTIMIZER;
               case "Grid", "grid" -> GRID_RESULTS;

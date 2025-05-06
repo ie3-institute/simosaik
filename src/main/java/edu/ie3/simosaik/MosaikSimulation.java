@@ -16,6 +16,7 @@ import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
+import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
 
   protected final int stepSize;
+  protected final boolean disaggregateFlex;
 
   protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
 
@@ -55,7 +57,11 @@ public class MosaikSimulation extends ExtCoSimulation {
     this.stepSize = simulator.stepSize;
 
     try {
-      ExtEntityMapping entityMapping = simulator.controlledQueue.take();
+      this.disaggregateFlex =
+          simulator.initDataQueue.take(InitialisationData.FlexInitData.class).disaggregate();
+
+      ExtEntityMapping entityMapping =
+          simulator.initDataQueue.take(InitialisationData.MappingData.class).mapping();
 
       // primary data connection
       Map<UUID, Class<? extends Value>> primaryInput =
@@ -65,11 +71,12 @@ public class MosaikSimulation extends ExtCoSimulation {
           !primaryInput.isEmpty() ? buildPrimaryConnection(primaryInput, log) : null;
 
       // em data connection
-      Optional<Map.Entry<EmMode, List<UUID>>> mode = SimosaikUtils.findEmMode(entityMapping);
+      Optional<EmMode> mode = SimosaikUtils.findEmMode(entityMapping.getDataTypes());
 
       if (mode.isPresent()) {
-        Map.Entry<EmMode, List<UUID>> entry = mode.get();
-        this.extEmDataConnection = buildEmConnection(entry.getValue(), entry.getKey(), log);
+        List<UUID> controlledEms = SimosaikUtils.buildEmData(entityMapping);
+
+        this.extEmDataConnection = buildEmConnection(controlledEms, mode.get(), log);
       } else {
         this.extEmDataConnection = null;
       }
@@ -126,12 +133,9 @@ public class MosaikSimulation extends ExtCoSimulation {
     if (extEmDataConnection != null) {
       // using em connection
       switch (extEmDataConnection.mode) {
-        case SET_POINT -> sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
-        case EM_COMMUNICATION ->
-            useFlexCommunication(extEmDataConnection, tick, maybeNextTick, log);
-        case EM_OPTIMIZATION -> {
-          // first we send disaggregated flex options to the external optimizer
-          sendFlexOptionsToExt(extEmDataConnection, tick, true, log);
+        case BASE -> {
+          // first we send flex options to mosaik
+          sendFlexOptionsToExt(extEmDataConnection, tick, disaggregateFlex, log);
 
           // we will send the received set points to SIMONA
           sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
@@ -139,6 +143,8 @@ public class MosaikSimulation extends ExtCoSimulation {
           // we will receive an em completion message
           extEmDataConnection.receiveWithType(EmCompletion.class);
         }
+        case EM_COMMUNICATION ->
+            useFlexCommunication(extEmDataConnection, tick, maybeNextTick, log);
 
         default ->
             throw new IllegalStateException(

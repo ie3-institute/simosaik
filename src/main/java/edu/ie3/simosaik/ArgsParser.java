@@ -4,7 +4,7 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.config;
+package edu.ie3.simosaik;
 
 import com.typesafe.config.ConfigException;
 import com.typesafe.config.ConfigFactory;
