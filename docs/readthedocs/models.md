@@ -119,6 +119,6 @@ energy management models:
 * - EmOptimizer
   - "em_optimizer"
   - P[MW], Q[MVAr], EM[setPoint]
-  - idToPMin[MW], idToPRef[MW], idToPMax[MW], Flex[diaggregated]
+  - idToPMin[MW], idToPRef[MW], idToPMax[MW], Flex[disaggregated]
   -
 ```

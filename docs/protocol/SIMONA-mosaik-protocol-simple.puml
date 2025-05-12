@@ -15,12 +15,14 @@ MosaikSimulation -> MosaikSimulation: SimProcess.startSimulation(...)
 
 
 mosaik -> MosaikSimulator: init(...)
+MosaikSimulator -> MosaikSimulation: use disaggregated flexibility options?
+
 MosaikSimulator --> mosaik: meta
 
 mosaik -> MosaikSimulator: create(...)
-MosaikSimulator --> mosaik: entities
-
 MosaikSimulator -> MosaikSimulation: extEntityMapping
+
+MosaikSimulator --> mosaik: entities
 MosaikSimulation -> MosaikSimulation: building data connection(s)
 
 SIMONA -> simosaik: getExtSimulation()

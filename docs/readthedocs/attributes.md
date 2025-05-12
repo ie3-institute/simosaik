@@ -31,6 +31,11 @@ These attribute can be used for input and output models.
   - P_th[MW]
   - float
   - Thermal power in MW
+
+* - Delay
+  - delay[ms]
+  - float
+  - Delay in milliseconds.
 ```
 
 ## Result attributes
@@ -142,7 +147,8 @@ of these can be found [here](#energy-management-flex-dictionaries).
 ### Energy management flex dictionaries
 
 Below are the structures of all types of dictionaries used for the energy management attributes. For each dictionary the
-keys with their corresponding value type is given. 
+keys with their corresponding value type is given. The dictionaries used for the communication model support adding a delay
+information.
 
 **idToPMin dict:** <br>
 ```python
@@ -171,7 +177,7 @@ There are multiple options for the values of the set point dictionary.
 Option 1: { P[MW]: float, Q[MVAr]: float }
 Option 2: { P[MW]: float }
 Option 3: { Q[MVAr]: float }
-Option 4: { }
+Option 4: { P[MW]: float, Q[MVAr]: float, delay[ms]: float }
 ```
 
 **Flex option dict:** <br>
@@ -184,7 +190,13 @@ Option 1: {
     PMax[MW]: float
 }
 
-Option 2: { sender: str }
+Option 2: {
+    sender: str,
+    PMin[MW]: float,
+    PRef[MW]: float,
+    PMax[MW]: float, 
+    delay[ms]: float
+}
 ```
 
 **Disaggregated flex option dict:** <br>
@@ -197,5 +209,11 @@ Option 1: {
     idToPMax[MW]: idToPMax dict
 }
 
-Option 2: { sender: str }
+Option 2: {
+    sender: str,
+    idToPMin[MW]: idToPMin dict,
+    idToPRef[MW]: idToPRef dict,
+    idToPMax[MW]: idToPMax dict,
+    delay[ms]: float
+}
 ```
