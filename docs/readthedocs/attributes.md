@@ -95,8 +95,8 @@ of these can be found [here](#energy-management-flex-dictionaries).
 
 * - Flexibility requests
   - Flex[request]
-  - str
-  - The sender of the flexibility request.
+  - flex request dict
+  - The sender is needed, the other keys can be dropped.
 
 * - Flexibility options
   - Flex[options]
@@ -178,6 +178,13 @@ Option 1: { P[MW]: float, Q[MVAr]: float }
 Option 2: { P[MW]: float }
 Option 3: { Q[MVAr]: float }
 Option 4: { P[MW]: float, Q[MVAr]: float, delay[ms]: float }
+```
+
+**Flex request dict:** <br>
+There are multiple options for the values of the flex request dictionary.
+```python
+Option 1: { sender: str }
+Option 2: { sender: str, delay[ms]: float }
 ```
 
 **Flex option dict:** <br>

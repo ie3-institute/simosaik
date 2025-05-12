@@ -13,6 +13,8 @@ import static edu.ie3.simosaik.utils.SimosaikUtils.*;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.em.model.EmSetPoint;
+import edu.ie3.simona.api.data.em.model.FlexOptionRequest;
 import edu.ie3.simona.api.data.em.model.FlexOptions;
 import edu.ie3.simona.api.data.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
@@ -55,7 +57,6 @@ public final class InputUtils {
     parseSetPoints(receiverToMessages, emIdToUuid).forEach(container::addSetPoint);
 
     log.warn("Primary: {}", container.primaryDataString());
-    log.warn("Set points: {}", container.setPointsString());
 
     return container;
   }
@@ -63,7 +64,7 @@ public final class InputUtils {
   public static Map<UUID, Value> parsePrimary(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
-      log.warn("No external entity mapping found!");
+      log.warn("No primary external entity mapping found!");
       return Collections.emptyMap();
     }
 
@@ -112,14 +113,14 @@ public final class InputUtils {
     return result;
   }
 
-  public static Map<UUID, Optional<UUID>> parseFlexRequests(
+  public static Map<UUID, FlexOptionRequest> parseFlexRequests(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
-      log.warn("No external entity mapping found!");
+      log.warn("No em external entity mapping found!");
       return Collections.emptyMap();
     }
 
-    Map<UUID, Optional<UUID>> flexRequests = new HashMap<>();
+    Map<UUID, FlexOptionRequest> flexRequests = new HashMap<>();
 
     receiverToMessages.forEach(
         (receiver, messages) -> {
@@ -139,7 +140,14 @@ public final class InputUtils {
             }
 
             if (!requests.isEmpty()) {
-              flexRequests.put(receiverUuid, requests.get(0).sender().map(idToUuid::get));
+              FlexRequestMessage requestMessage = requests.get(0);
+              FlexOptionRequest request =
+                  new FlexOptionRequest(
+                      receiverUuid,
+                      requestMessage.sender().map(idToUuid::get),
+                      requestMessage.delay());
+
+              flexRequests.put(receiverUuid, request);
             }
           }
         });
@@ -150,7 +158,7 @@ public final class InputUtils {
   public static Map<UUID, List<FlexOptions>> parseFlexOptions(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
-      log.warn("No external entity mapping found!");
+      log.warn("No em external entity mapping found!");
       return Collections.emptyMap();
     }
 
@@ -174,7 +182,8 @@ public final class InputUtils {
                                 idToUuid.get(optionMessage.sender()),
                                 optionMessage.pMin(),
                                 optionMessage.pRef(),
-                                optionMessage.pMax()))
+                                optionMessage.pMax(),
+                                optionMessage.delay()))
                     .toList();
 
             if (!options.isEmpty()) {
@@ -186,14 +195,14 @@ public final class InputUtils {
     return flexOptions;
   }
 
-  public static Map<UUID, PValue> parseSetPoints(
+  public static List<EmSetPoint> parseSetPoints(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
-      log.warn("No external entity mapping found!");
-      return Collections.emptyMap();
+      log.warn("No em external entity mapping found!");
+      return Collections.emptyList();
     }
 
-    Map<UUID, PValue> setPoints = new HashMap<>();
+    List<EmSetPoint> setPoints = new ArrayList<>();
 
     receiverToMessages.forEach(
         (receiver, messages) -> {
@@ -213,12 +222,15 @@ public final class InputUtils {
                 log.warn("Received multiple set points for asset '{}'!", receiver);
               }
 
-              Optional<PValue> setPoint = toPValue(setPointValues.get(0).p(), null);
+              FlexSetPointMessage setPointMessage = setPointValues.get(0);
 
-              if (setPoint.isEmpty()) {
+              Optional<PValue> powerValue = toPValue(setPointMessage.p(), null);
+
+              if (powerValue.isEmpty()) {
                 log.warn("No set point value found for asset {}.", receiver);
               } else {
-                setPoints.put(receiverUuid, setPoint.get());
+                setPoints.add(
+                    EmSetPoint.from(receiverUuid, powerValue.get(), setPointMessage.delay()));
               }
             } else {
               // if set point is given as double values
@@ -240,12 +252,13 @@ public final class InputUtils {
                 if (setPoint.isEmpty()) {
                   log.warn("No set point value found for asset {}.", receiver);
                 } else {
-                  setPoints.put(receiverUuid, setPoint.get());
+                  setPoints.add(EmSetPoint.from(receiverUuid, setPoint.get()));
                 }
               }
             }
           }
         });
+
     return setPoints;
   }
 }

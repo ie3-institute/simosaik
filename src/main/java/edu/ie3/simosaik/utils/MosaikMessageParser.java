@@ -6,19 +6,23 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.SimosaikUnits.*;
-
 import edu.ie3.simosaik.exceptions.ConversionException;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
+import tech.units.indriya.unit.Units;
+
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
-import tech.units.indriya.ComparableQuantity;
-import tech.units.indriya.quantity.Quantities;
+import javax.measure.quantity.Time;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static edu.ie3.simosaik.SimosaikUnits.*;
 
 public final class MosaikMessageParser {
+
   public record ParsedMessage(String receiver, String mosaikSender, Content content) {}
 
   public static List<ParsedMessage> filter(
@@ -63,9 +67,18 @@ public final class MosaikMessageParser {
   private static Content parseValue(String receiver, String attr, Object value) {
 
     if (attr.equals(FLEX_REQUEST)) {
-      Optional<String> sender =
-          Optional.ofNullable(value).map(Object::toString).map(MosaikMessageParser::trim);
-      return new FlexRequestMessage(receiver, sender);
+      Optional<String> sender = Optional.empty();
+      Optional<ComparableQuantity<Time>> delay = Optional.empty();
+
+      if (value instanceof Map<?, ?> request) {
+        sender =
+            Optional.ofNullable(request.get("sender"))
+                .map(Object::toString)
+                .map(MosaikMessageParser::trim);
+        delay = extractDelay((Map<String, Object>) request);
+      }
+
+      return new FlexRequestMessage(receiver, sender, delay);
 
     } else if (attr.equals(FLEX_OPTIONS) && value instanceof Map<?, ?> map) {
       Collection<Map<String, Object>> options =
@@ -80,7 +93,8 @@ public final class MosaikMessageParser {
                           (String) option.get("sender"),
                           extractQuantity(option, FLEX_OPTION_P_MIN),
                           extractQuantity(option, FLEX_OPTION_P_REF),
-                          extractQuantity(option, FLEX_OPTION_P_MAX)))
+                          extractQuantity(option, FLEX_OPTION_P_MAX),
+                          extractDelay(option)))
               .toList();
 
       return new FlexOptionsMessage(information);
@@ -91,7 +105,8 @@ public final class MosaikMessageParser {
       return new FlexSetPointMessage(
           receiver,
           extractQuantity(setPoint, ACTIVE_POWER),
-          extractQuantity(setPoint, REACTIVE_POWER));
+          extractQuantity(setPoint, REACTIVE_POWER),
+          extractDelay(setPoint));
 
     } else if (value instanceof Double d) {
       return new DoubleValue(attr, d);
@@ -111,19 +126,22 @@ public final class MosaikMessageParser {
 
   public record NullValue(String attr) implements Content {}
 
-  public record DoubleValue(String attr, Double value) implements Content {}
+  public record DoubleValue(String attr, double value) implements Content {}
 
   public sealed interface FlexMessage extends Content
       permits FlexRequestMessage, FlexOptionsMessage, FlexSetPointMessage {}
 
-  public record FlexRequestMessage(String receiver, Optional<String> sender)
-      implements FlexMessage {}
+  public record FlexRequestMessage(
+      String receiver, Optional<String> sender, Optional<ComparableQuantity<Time>> delay) implements FlexMessage {}
 
   public record FlexOptionsMessage(List<FlexOptionInformation> information)
       implements FlexMessage {}
 
   public record FlexSetPointMessage(
-      String receiver, ComparableQuantity<Power> p, ComparableQuantity<Power> q)
+      String receiver,
+      ComparableQuantity<Power> p,
+      ComparableQuantity<Power> q,
+      Optional<ComparableQuantity<Time>> delay)
       implements FlexMessage {}
 
   public record FlexOptionInformation(
@@ -131,7 +149,22 @@ public final class MosaikMessageParser {
       String sender,
       ComparableQuantity<Power> pMin,
       ComparableQuantity<Power> pRef,
-      ComparableQuantity<Power> pMax) {}
+      ComparableQuantity<Power> pMax,
+      Optional<ComparableQuantity<Time>> delay) {}
+
+  private static Optional<ComparableQuantity<Time>> extractDelay(Map<String, Object> map) {
+    if (map.containsKey(DELAY)) {
+      Object delay = map.get(DELAY);
+            
+      if (delay instanceof Number n) {
+        
+        return Optional.of(Quantities.getQuantity(n.doubleValue() / 1000, Units.SECOND));
+      }
+
+    }
+
+    return Optional.empty();
+  }
 
   private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
       Map<String, Object> map, String field) {
