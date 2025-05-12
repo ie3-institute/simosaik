@@ -6,20 +6,19 @@
 
 package edu.ie3.simosaik.utils;
 
-import edu.ie3.simosaik.exceptions.ConversionException;
-import tech.units.indriya.ComparableQuantity;
-import tech.units.indriya.quantity.Quantities;
-import tech.units.indriya.unit.Units;
+import static edu.ie3.simosaik.SimosaikUnits.*;
 
+import edu.ie3.simosaik.exceptions.ConversionException;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
 import javax.measure.quantity.Time;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static edu.ie3.simosaik.SimosaikUnits.*;
+import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
+import tech.units.indriya.unit.Units;
 
 public final class MosaikMessageParser {
 
@@ -132,7 +131,8 @@ public final class MosaikMessageParser {
       permits FlexRequestMessage, FlexOptionsMessage, FlexSetPointMessage {}
 
   public record FlexRequestMessage(
-      String receiver, Optional<String> sender, Optional<ComparableQuantity<Time>> delay) implements FlexMessage {}
+      String receiver, Optional<String> sender, Optional<ComparableQuantity<Time>> delay)
+      implements FlexMessage {}
 
   public record FlexOptionsMessage(List<FlexOptionInformation> information)
       implements FlexMessage {}
@@ -155,12 +155,11 @@ public final class MosaikMessageParser {
   private static Optional<ComparableQuantity<Time>> extractDelay(Map<String, Object> map) {
     if (map.containsKey(DELAY)) {
       Object delay = map.get(DELAY);
-            
+
       if (delay instanceof Number n) {
-        
+
         return Optional.of(Quantities.getQuantity(n.doubleValue() / 1000, Units.SECOND));
       }
-
     }
 
     return Optional.empty();

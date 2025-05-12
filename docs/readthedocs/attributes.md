@@ -1,7 +1,7 @@
 # Attributes
 
 This page will give you an overview of all the attributes, that are currently available. Each attribute specifies a unit,
-e.g. `[MW]`.
+e.g. `[MW]`, that is considered during translation.
 
 ## Universal attributes
 
@@ -80,8 +80,8 @@ These attribute can be only be used for output models.
 
 ## Energy management attributes
 
-These attributes can be only be used for energy management models. Some of the attributes use dictionaries. The structure
-of these can be found [here](#energy-management-flex-dictionaries).
+These attributes can be only be used for energy management models. Some of the attributes use dictionaries as values.
+The structure of these can be found [here](#energy-management-flex-dictionaries).
 
 ```{list-table}
 :widths: auto
