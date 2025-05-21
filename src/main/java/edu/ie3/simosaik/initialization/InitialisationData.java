@@ -10,7 +10,7 @@ import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 
 public interface InitialisationData {
 
-  record FlexInitData(boolean disaggregate) implements InitialisationData {}
+  record FlexInitData(long stepSize, boolean disaggregate) implements InitialisationData {}
 
   record MappingData(ExtEntityMapping mapping) implements InitialisationData {}
 }

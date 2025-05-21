@@ -37,20 +37,19 @@ public class MosaikSimulator extends Simulator {
   private final List<ParsedMessage> cache = new ArrayList<>();
 
   private long time;
-  public final int stepSize;
+  private long stepSize;
 
   public final InitializationQueue initDataQueue = new InitializationQueue();
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
 
-  public MosaikSimulator(int stepSize) {
-    this("MosaikSimulator", stepSize);
+  public MosaikSimulator() {
+    this("MosaikSimulator");
   }
 
-  public MosaikSimulator(String name, int stepSize) {
+  public MosaikSimulator(String name) {
     super(name);
-    this.stepSize = stepSize;
   }
 
   public void setConnectionToSimonaApi(
@@ -66,6 +65,12 @@ public class MosaikSimulator extends Simulator {
   public Map<String, Object> init(
       String sid, Double timeResolution, Map<String, Object> simParams) {
     List<Model> models = new ArrayList<>();
+
+    if (simParams.containsKey("step_size")) {
+      this.stepSize = (Long) simParams.get("step_size");
+    } else {
+      throw new IllegalArgumentException("Step size must be set!");
+    }
 
     if (simParams.containsKey("models")) {
       List<String> modelTypes = (List<String>) simParams.get("models");
@@ -85,7 +90,7 @@ public class MosaikSimulator extends Simulator {
     try {
       initDataQueue.put(
           new InitialisationData.FlexInitData(
-              extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
+              stepSize, extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

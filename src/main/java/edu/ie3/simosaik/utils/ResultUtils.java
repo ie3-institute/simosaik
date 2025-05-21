@@ -238,7 +238,6 @@ public final class ResultUtils {
       data.put(FLEX_OPTION_P_REF, pRef);
       data.put(FLEX_OPTION_P_MAX, pMax);
 
-      log.warn("Options: {}", data);
       return Map.of(FLEX_OPTIONS, data);
 
     } else if (result instanceof ExtendedFlexOptionsResult extended

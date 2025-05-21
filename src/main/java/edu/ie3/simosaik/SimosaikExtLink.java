@@ -22,9 +22,8 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     ArgsParser.Arguments arguments = ArgsParser.parse(data.getMainArgs());
 
     String mosaikIP = arguments.mosaikIP();
-    int stepSize = arguments.stepSize();
 
-    MosaikSimulator simulator = new MosaikSimulator(stepSize);
+    MosaikSimulator simulator = new MosaikSimulator();
     extSim = new MosaikSimulation(mosaikIP, simulator);
     extSim.setAdapterData(data);
   }

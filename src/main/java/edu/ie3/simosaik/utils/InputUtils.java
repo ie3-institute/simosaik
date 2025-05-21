@@ -56,8 +56,6 @@ public final class InputUtils {
     parseFlexOptions(receiverToMessages, emIdToUuid).forEach(container::addFlexOptions);
     parseSetPoints(receiverToMessages, emIdToUuid).forEach(container::addSetPoint);
 
-    log.warn("Primary: {}", container.primaryDataString());
-
     return container;
   }
 
@@ -97,7 +95,7 @@ public final class InputUtils {
           List<Value> values = convert(attrToDouble);
 
           if (values.isEmpty()) {
-            log.warn("No primary value found for asset {}.", receiver);
+            log.debug("No primary value found for asset {}.", receiver);
 
           } else {
             if (values.size() > 1) {
@@ -219,7 +217,7 @@ public final class InputUtils {
             if (!setPointValues.isEmpty()) {
 
               if (setPointValues.size() > 1) {
-                log.warn("Received multiple set points for asset '{}'!", receiver);
+                log.debug("Received multiple set points for asset '{}'!", receiver);
               }
 
               FlexSetPointMessage setPointMessage = setPointValues.get(0);
@@ -227,10 +225,9 @@ public final class InputUtils {
               Optional<PValue> powerValue = toPValue(setPointMessage.p(), null);
 
               if (powerValue.isEmpty()) {
-                log.warn("No set point value found for asset {}.", receiver);
+                log.debug("No set point value found for asset {}.", receiver);
               } else {
-                setPoints.add(
-                    EmSetPoint.from(receiverUuid, powerValue.get(), setPointMessage.delay()));
+                setPoints.add(new EmSetPoint(receiverUuid, powerValue, setPointMessage.delay()));
               }
             } else {
               // if set point is given as double values
@@ -242,7 +239,7 @@ public final class InputUtils {
                       .collect(Collectors.toMap(DoubleValue::attr, DoubleValue::value));
 
               if (attrToValue.size() > 2) {
-                log.warn("Received multiple set point values for asset '{}'!", receiver);
+                log.debug("Received multiple set point values for asset '{}'!", receiver);
               } else {
 
                 Optional<PValue> setPoint =
@@ -250,9 +247,9 @@ public final class InputUtils {
                         extract(attrToValue, ACTIVE_POWER), extract(attrToValue, REACTIVE_POWER));
 
                 if (setPoint.isEmpty()) {
-                  log.warn("No set point value found for asset {}.", receiver);
+                  log.debug("No set point value found for asset {}.", receiver);
                 } else {
-                  setPoints.add(EmSetPoint.from(receiverUuid, setPoint.get()));
+                  setPoints.add(new EmSetPoint(receiverUuid, setPoint.get()));
                 }
               }
             }

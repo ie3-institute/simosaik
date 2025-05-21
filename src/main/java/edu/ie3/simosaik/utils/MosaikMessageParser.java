@@ -16,11 +16,15 @@ import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
 import javax.measure.quantity.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 import tech.units.indriya.unit.Units;
 
 public final class MosaikMessageParser {
+
+  private static final Logger log = LoggerFactory.getLogger(MosaikMessageParser.class);
 
   public record ParsedMessage(String receiver, String mosaikSender, Content content) {}
 
@@ -108,6 +112,10 @@ public final class MosaikMessageParser {
           extractDelay(setPoint));
 
     } else if (value instanceof Double d) {
+      if (Double.isNaN(d)) {
+        log.warn("Value for attribute '{}' for receiver '{}' is NaN.", attr, receiver);
+      }
+
       return new DoubleValue(attr, d);
 
     } else {

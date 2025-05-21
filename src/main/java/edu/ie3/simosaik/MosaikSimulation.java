@@ -32,7 +32,7 @@ public class MosaikSimulation extends ExtCoSimulation {
 
   protected static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
 
-  protected final int stepSize;
+  protected final long stepSize;
   protected final boolean disaggregateFlex;
 
   protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
@@ -54,11 +54,11 @@ public class MosaikSimulation extends ExtCoSimulation {
     mosaikSimulator.setConnectionToSimonaApi(queueToSimona, queueToExt);
     SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
 
-    this.stepSize = simulator.stepSize;
-
     try {
-      this.disaggregateFlex =
-          simulator.initDataQueue.take(InitialisationData.FlexInitData.class).disaggregate();
+      var initData = simulator.initDataQueue.take(InitialisationData.FlexInitData.class);
+
+      this.stepSize = initData.stepSize();
+      this.disaggregateFlex = initData.disaggregate();
 
       ExtEntityMapping entityMapping =
           simulator.initDataQueue.take(InitialisationData.MappingData.class).mapping();
