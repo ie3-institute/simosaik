@@ -34,6 +34,8 @@ public class MosaikSimulator extends Simulator {
       new HashMap<>();
 
   protected ExtEntityMapping mapping;
+  private final List<InputUtils.MessageProcessor> messageProcessors = new ArrayList<>();
+
   private final List<ParsedMessage> cache = new ArrayList<>();
 
   private long time;
@@ -162,6 +164,19 @@ public class MosaikSimulator extends Simulator {
 
         this.initDataQueue.put(new InitialisationData.MappingData(mapping));
 
+        // create input message processors
+        Map<String, UUID> primaryIdToUuid =
+            mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT);
+
+        if (!primaryIdToUuid.isEmpty())
+          this.messageProcessors.add(new InputUtils.PrimaryMessageProcessor(primaryIdToUuid));
+
+        Map<String, UUID> emIdToUuid =
+            mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION);
+
+        if (!emIdToUuid.isEmpty())
+          this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid));
+
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
@@ -186,7 +201,7 @@ public class MosaikSimulator extends Simulator {
     cache.addAll(filtered);
 
     ExtInputDataContainer extDataForSimona =
-        InputUtils.createInputDataContainer(time, nextTick, filtered, mapping);
+        InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
 
     try {
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");

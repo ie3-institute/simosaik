@@ -41,7 +41,7 @@ public final class ResultUtils {
       ExtResultContainer container,
       Map<String, List<String>> requestedAttributes,
       ExtEntityMapping mapping) {
-    log.info("Requested attributes: {}", requestedAttributes);
+    log.debug("Requested attributes: {}", requestedAttributes);
 
     Map<String, UUID> idToUuid = mapping.getFullMapping();
     Map<UUID, String> uuidToId = mapping.getFullMappingReverse();
@@ -64,7 +64,7 @@ public final class ResultUtils {
         }
 
       } else {
-        log.info("No results found for asset {}.", externalEntity);
+        log.debug("No results found for asset {}.", externalEntity);
       }
     }
 
@@ -107,7 +107,7 @@ public final class ResultUtils {
 
     } else {
       if (result != null) {
-        log.info("Result of type '{}' is currently not supported.", result.getClass());
+        log.warn("Result of type '{}' is currently not supported.", result.getClass());
       }
 
       return Collections.emptyMap();

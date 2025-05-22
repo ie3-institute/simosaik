@@ -16,8 +16,6 @@ import edu.ie3.simona.api.data.container.ExtInputDataContainer;
 import edu.ie3.simona.api.data.em.model.EmSetPoint;
 import edu.ie3.simona.api.data.em.model.FlexOptionRequest;
 import edu.ie3.simona.api.data.em.model.FlexOptions;
-import edu.ie3.simona.api.data.mapping.DataType;
-import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,8 +26,11 @@ public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
   public static ExtInputDataContainer createInputDataContainer(
-      long tick, long nextTick, List<ParsedMessage> mosaikMessages, ExtEntityMapping mapping) {
-    log.info("Parsed messages: {}", mosaikMessages);
+      long tick,
+      long nextTick,
+      List<ParsedMessage> mosaikMessages,
+      List<MessageProcessor> messageProcessors) {
+    log.debug("Parsed messages: {}", mosaikMessages);
 
     Map<String, List<Content>> receiverToMessages = new HashMap<>();
 
@@ -40,26 +41,42 @@ public final class InputUtils {
                 receiverToMessages.put(
                     receiver, messages.stream().map(ParsedMessage::content).toList()));
 
-    log.info("Receivers to messages: {}.", receiverToMessages);
+    log.debug("Receivers to messages: {}.", receiverToMessages);
 
     // building input container
     ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
 
-    // primary data
-    parsePrimary(receiverToMessages, mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT))
-        .forEach(container::addPrimaryValue);
-
-    // em data
-    Map<String, UUID> emIdToUuid =
-        mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION);
-    parseFlexRequests(receiverToMessages, emIdToUuid).forEach(container::addRequest);
-    parseFlexOptions(receiverToMessages, emIdToUuid).forEach(container::addFlexOptions);
-    parseSetPoints(receiverToMessages, emIdToUuid).forEach(container::addSetPoint);
+    // process all input data
+    messageProcessors.forEach(processor -> processor.process(container, receiverToMessages));
 
     return container;
   }
 
-  public static Map<UUID, Value> parsePrimary(
+  // message processors
+
+  public sealed interface MessageProcessor permits PrimaryMessageProcessor, EmMessageProcessor {
+    void process(ExtInputDataContainer container, Map<String, List<Content>> receiverToMessages);
+  }
+
+  public record PrimaryMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
+    public void process(
+        ExtInputDataContainer container, Map<String, List<Content>> receiverToMessages) {
+      parsePrimary(receiverToMessages, idToUuid).forEach(container::addPrimaryValue);
+    }
+  }
+
+  public record EmMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
+    public void process(
+        ExtInputDataContainer container, Map<String, List<Content>> receiverToMessages) {
+      parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
+      parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
+      parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);
+    }
+  }
+
+  // private method for message parsing
+
+  private static Map<UUID, Value> parsePrimary(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
       log.warn("No primary external entity mapping found!");
@@ -111,7 +128,7 @@ public final class InputUtils {
     return result;
   }
 
-  public static Map<UUID, FlexOptionRequest> parseFlexRequests(
+  private static Map<UUID, FlexOptionRequest> parseFlexRequests(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
       log.warn("No em external entity mapping found!");
@@ -153,7 +170,7 @@ public final class InputUtils {
     return flexRequests;
   }
 
-  public static Map<UUID, List<FlexOptions>> parseFlexOptions(
+  private static Map<UUID, List<FlexOptions>> parseFlexOptions(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
       log.warn("No em external entity mapping found!");
@@ -193,7 +210,7 @@ public final class InputUtils {
     return flexOptions;
   }
 
-  public static List<EmSetPoint> parseSetPoints(
+  private static List<EmSetPoint> parseSetPoints(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
       log.warn("No em external entity mapping found!");
