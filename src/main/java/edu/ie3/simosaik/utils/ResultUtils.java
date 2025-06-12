@@ -57,7 +57,11 @@ public final class ResultUtils {
 
         ResultEntity result = container.getResult(asset);
 
-        Map<String, Object> data = handleResult(result, attrs, uuidToId);
+        Map<String, Object> data = new HashMap<>(handleResult(result, attrs, uuidToId));
+
+        if (attrs.contains(FLEX_NEXT_TICK)) {
+          container.getNextTick().ifPresent(nextTick -> data.put(FLEX_NEXT_TICK, nextTick));
+        }
 
         if (!data.isEmpty()) {
           output.put(externalEntity, data);

@@ -6,8 +6,11 @@
 
 package edu.ie3.simosaik;
 
+import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.ExtDataConnection;
+import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.em.EmMode;
 import edu.ie3.simona.api.data.em.ExtEmDataConnection;
 import edu.ie3.simona.api.data.em.ontology.*;
@@ -114,6 +117,7 @@ public class MosaikSimulation extends ExtCoSimulation {
         tick);
     try {
       Thread.sleep(500);
+      mosaikSimulator.simulationTick = tick;
 
       long nextTick = tick + stepSize;
       return activity(tick, nextTick);
@@ -143,9 +147,15 @@ public class MosaikSimulation extends ExtCoSimulation {
           // we will receive an em completion message
           extEmDataConnection.receiveWithType(EmCompletion.class);
         }
-        case EM_COMMUNICATION ->
-            useFlexCommunication(extEmDataConnection, tick, maybeNextTick, log);
+        case EM_COMMUNICATION -> {
+          Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
 
+          if (nextEmChangeTick.isPresent()) {
+            if (nextEmChangeTick.get() < nextTick) {
+              maybeNextTick = nextEmChangeTick;
+            }
+          }
+        }
         default ->
             throw new IllegalStateException(
                 "The mode '" + extEmDataConnection.mode + "' is currently not supported!");
@@ -155,6 +165,90 @@ public class MosaikSimulation extends ExtCoSimulation {
     if (extResultDataConnection != null) {
       // sending results to mosaik
       sendResultToExt(extResultDataConnection, tick, maybeNextTick, log);
+    }
+
+    return maybeNextTick;
+  }
+
+  protected Optional<Long> useFlexCommunication(
+      ExtEmDataConnection extEmDataConnection, long tick) throws InterruptedException {
+    // handle flex requests
+    boolean notFinished = true;
+    Optional<Long> maybeNextTick = Optional.empty();
+
+    while (notFinished) {
+
+      long extTick = queueToSimona.takeData(ExtInputDataContainer::getTick);
+
+      log.info("Current simulator tick: {}, SIMONA tick: {}", extTick, tick);
+
+      if (tick == extTick) {
+        ExtInputDataContainer container = queueToSimona.takeAll();
+
+        log.info("Flex requests: {}", container.flexRequestsString());
+        log.info("Flex options: {}", container.flexOptionsString());
+        log.info("Set points: {}", container.setPointsString());
+
+        // send received data to SIMONA
+        var requests = container.extractFlexRequests();
+        var options = container.extractFlexOptions();
+        var setPoints = container.extractSetPoints();
+
+        if (!requests.isEmpty())
+          extEmDataConnection.sendFlexRequests(tick, requests, maybeNextTick, log);
+
+        if (!options.isEmpty())
+          extEmDataConnection.sendFlexOptions(tick, options, maybeNextTick, log);
+
+        if (!setPoints.isEmpty())
+          extEmDataConnection.sendSetPoints(tick, setPoints, maybeNextTick, log);
+
+        log.debug("Unhandled flex requests: {}", container.flexRequestsString());
+        log.debug("Unhandled flex options: {}", container.flexOptionsString());
+        log.debug("Unhandled set points: {}", container.setPointsString());
+
+        if (requests.isEmpty() && options.isEmpty() && setPoints.isEmpty()) {
+          log.info("Requesting a service completion for tick: {}.", tick);
+          extEmDataConnection.requestCompletion(tick);
+        }
+
+      } else {
+        notFinished = false;
+
+        log.info("External simulator finished tick {}. Request completion.", tick);
+        extEmDataConnection.requestCompletion(tick);
+      }
+
+      EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
+
+      Map<UUID, ResultEntity> results = new HashMap<>();
+
+      if (received instanceof EmCompletion completion) {
+        notFinished = false;
+        maybeNextTick = completion.maybeNextTick();
+
+        log.info("Finished for tick: {}. Next tick option: {}", tick, maybeNextTick);
+
+      } else if (received instanceof FlexRequestResponse flexRequestResponse) {
+        results.putAll(flexRequestResponse.flexRequests());
+
+      } else if (received instanceof FlexOptionsResponse flexOptionsResponse) {
+        results.putAll(flexOptionsResponse.receiverToFlexOptions());
+
+      } else if (received instanceof EmSetPointDataResponse setPointDataResponse) {
+        results.putAll(setPointDataResponse.emData());
+
+      } else {
+        log.warn("Received unsupported data response: {}", received);
+      }
+
+      mosaikSimulator.nextTickQueue.put(maybeNextTick);
+
+      log.warn("Results to ext: {}", results);
+
+      ExtResultContainer resultContainer = new ExtResultContainer(tick, results, maybeNextTick);
+
+      queueToExt.queueData(resultContainer);
     }
 
     return maybeNextTick;

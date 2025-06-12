@@ -31,6 +31,8 @@ public final class SimosaikUnits {
   public static final String SOC = "SOC[%]";
 
   // em units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+  public static final String FLEX_NEXT_TICK = "Flex[nextTick]";
+
   public static final String FLEX_REQUEST = "Flex[request]";
   public static final String FLEX_OPTIONS = "Flex[options]";
   public static final String FLEX_SET_POINT = "EM[setPoint]";

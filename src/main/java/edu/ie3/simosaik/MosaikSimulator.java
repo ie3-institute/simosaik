@@ -24,6 +24,7 @@ import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
 import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /** The mosaik simulator that exchanges information with mosaik. */
@@ -42,6 +43,11 @@ public class MosaikSimulator extends Simulator {
   private long stepSize;
 
   public final InitializationQueue initDataQueue = new InitializationQueue();
+  public final LinkedBlockingQueue<Optional<Long>> nextTickQueue = new LinkedBlockingQueue<>(1);
+  
+  long simulationTick = 0L;
+  private long nextRegularTick = 0L;
+  private boolean sync = false;
 
   public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
@@ -193,13 +199,38 @@ public class MosaikSimulator extends Simulator {
       this.time = time;
     }
 
-    long nextTick = time + this.stepSize;
+    long nextTick;
+
+    if (time == nextRegularTick) {
+      // the received time is the next regular tick, that we expected
+      nextTick = time + this.stepSize;
+      nextRegularTick = nextTick;
+    } else if (time < nextRegularTick) {
+      // the received time is between the last and the next regular tick
+      nextTick = nextRegularTick;
+    } else {
+      // we received data for a time after the expected tick
+      // this should be an error
+      throw new IllegalStateException(
+          "We received no data for the expected tick. Expected data for tick '"
+              + nextRegularTick
+              + "', but got data for tick '"
+              + time
+              + "'.");
+    }
+
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
     List<ParsedMessage> parsedMessages = MosaikMessageParser.parse(inputs);
     List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
     cache.addAll(filtered);
 
+    if (time < simulationTick) {
+      // we need to sync with the simulation
+      logger.info("Synchronisation needed. SIMONA tick '"+simulationTick+"', mosaik time '"+time+"'.");
+      return nextTick;
+    }
+    
     ExtInputDataContainer extDataForSimona =
         InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
 
@@ -207,6 +238,15 @@ public class MosaikSimulator extends Simulator {
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
       queueToSimona.queueData(extDataForSimona);
       logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
+
+      long nextTickFromSIMONA = nextTickQueue.take().orElse(nextRegularTick);
+
+      // if SIMONA needs an activation before the default next tick
+      if (nextTickFromSIMONA < nextRegularTick) {
+        nextTick = nextTickFromSIMONA;
+        logger.warning("Mosaik next irregular tick: " + nextTickFromSIMONA);
+      }
+
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -215,6 +255,11 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
+    if (sync) {
+      sync = false;
+      return Collections.emptyMap();
+    }
+    
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
     ExtResultContainer results = queueToExt.takeAll();
     logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
