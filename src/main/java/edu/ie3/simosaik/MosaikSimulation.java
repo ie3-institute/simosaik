@@ -20,6 +20,7 @@ import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
 import edu.ie3.simona.api.data.results.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitialisationData;
+import edu.ie3.simosaik.synchronisation.SIMONAPart;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final boolean disaggregateFlex;
 
   protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
+  private final SIMONAPart synchronizer;
 
   // connections
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
@@ -46,25 +48,27 @@ public class MosaikSimulation extends ExtCoSimulation {
   private final ExtResultDataConnection
       extResultDataConnection; // TODO: Check if we can switch to ResultListener
 
-  public MosaikSimulation(String mosaikIP, MosaikSimulator simulator) {
-    this("MosaikSimulation", mosaikIP, simulator);
+  public MosaikSimulation(String mosaikIP, MosaikSimulator simulator, SIMONAPart synchronizer) {
+    this("MosaikSimulation", mosaikIP, simulator, synchronizer);
   }
 
-  public MosaikSimulation(String name, String mosaikIP, MosaikSimulator simulator) {
+  public MosaikSimulation(
+      String name, String mosaikIP, MosaikSimulator simulator, SIMONAPart synchronizer) {
     super(name, simulator.getSimName());
 
+    this.synchronizer = synchronizer;
     this.mosaikSimulator = simulator;
     mosaikSimulator.setConnectionToSimonaApi(queueToSimona, queueToExt);
     SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
 
     try {
-      var initData = simulator.initDataQueue.take(InitialisationData.FlexInitData.class);
+      var initData = synchronizer.getInitialisationData(InitialisationData.FlexInitData.class);
 
       this.stepSize = initData.stepSize();
       this.disaggregateFlex = initData.disaggregate();
 
       ExtEntityMapping entityMapping =
-          simulator.initDataQueue.take(InitialisationData.MappingData.class).mapping();
+          synchronizer.getInitialisationData(InitialisationData.MappingData.class).mapping();
 
       // primary data connection
       Map<UUID, Class<? extends Value>> primaryInput =
@@ -117,9 +121,11 @@ public class MosaikSimulation extends ExtCoSimulation {
         tick);
     try {
       Thread.sleep(500);
-      mosaikSimulator.simulationTick = tick;
 
       long nextTick = tick + stepSize;
+      synchronizer.updateTickSIMONA(tick);
+      synchronizer.updateNextTickSIMONA(nextTick);
+
       return activity(tick, nextTick);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -170,8 +176,8 @@ public class MosaikSimulation extends ExtCoSimulation {
     return maybeNextTick;
   }
 
-  protected Optional<Long> useFlexCommunication(
-      ExtEmDataConnection extEmDataConnection, long tick) throws InterruptedException {
+  protected Optional<Long> useFlexCommunication(ExtEmDataConnection extEmDataConnection, long tick)
+      throws InterruptedException {
     // handle flex requests
     boolean notFinished = true;
     Optional<Long> maybeNextTick = Optional.empty();
@@ -242,7 +248,7 @@ public class MosaikSimulation extends ExtCoSimulation {
         log.warn("Received unsupported data response: {}", received);
       }
 
-      mosaikSimulator.nextTickQueue.put(maybeNextTick);
+      synchronizer.updateNextTickSIMONA(maybeNextTick);
 
       log.warn("Results to ext: {}", results);
 
