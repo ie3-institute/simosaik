@@ -122,7 +122,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     try {
       long nextTick = tick + stepSize;
       synchronizer.updateTickSIMONA(tick);
-      synchronizer.updateNextTickSIMONA(nextTick);
+      synchronizer.updateNextTickSIMONA(Optional.empty());
 
       return activity(tick, nextTick);
     } catch (InterruptedException e) {

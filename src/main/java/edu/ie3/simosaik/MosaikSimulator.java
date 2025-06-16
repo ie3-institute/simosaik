@@ -197,16 +197,11 @@ public class MosaikSimulator extends Simulator {
       this.time = time;
     }
 
+    // updating the mosaik time
     synchronizer.updateMosaikTime(time);
     
     // the next tick we will expect data
     long nextTick = synchronizer.getNextTick();
-      
-    /*
-    if (synchronizer.sendEmptyData()) {
-      return nextTick;
-    } 
-     */
     
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
          
@@ -223,22 +218,25 @@ public class MosaikSimulator extends Simulator {
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
       queueToSimona.queueData(extDataForSimona);
       logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
-
-      return nextTick;
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
+
+    // synchronizing with SIMONA
+    synchronizer.syncWithSIMONA();
+
+    // getting the next tick, could have changed since last request
+    return synchronizer.getNextTick();
   }
 
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
+    boolean finished = synchronizer.isFinished();
     
-    /*
-    boolean emptyData = synchronizer.sendEmptyData();
-    logger.info("[" + time + "] Sending empty data = " + emptyData);
-      
-    if (emptyData) return Collections.emptyMap();
-     */
+    if (finished) {
+      logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
+      return Collections.emptyMap();
+    }
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
     ExtResultContainer results = queueToExt.takeAll();

@@ -23,5 +23,8 @@ public interface MosaikPart {
 
   long getNextTick();
 
-  boolean sendEmptyData();
+  void syncWithSIMONA();
+  
+  boolean isFinished();
+  
 }

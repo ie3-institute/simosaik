@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
@@ -23,19 +22,18 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   private final Logger log = LoggerFactory.getLogger(Synchronizer.class);
   
   // mosaik fields
-  private final AtomicBoolean mosaikBlocked = new AtomicBoolean(false);
-  private final AtomicLong mosaikTick = new AtomicLong(0);
+  private final AtomicLong mosaikTick = new AtomicLong(-1);
   private long mosaikStepSize = 0L;
   private long nextRegularMosaikTick = 0L;
   private long nextMosaikTick = 0L;
 
   // SIMONA fields
-  private final AtomicBoolean simonaBlocked = new AtomicBoolean(false);
-  private final AtomicLong simonaTick = new AtomicLong(0);
+  private final AtomicLong simonaTick = new AtomicLong(-1);
   private final AtomicReference<Optional<Long>> simonaNextTick = new AtomicReference<>(Optional.empty());
 
   // general fields
   private final InitializationQueue initDataQueue = new InitializationQueue();
+  private boolean goToNextTick;
 
   public Synchronizer() {}
 
@@ -61,9 +59,7 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
         
         // wait for mosaik
         log.info("Mosaik is behind SIMONA. We need to wait.");
-        simonaBlocked.set(true);
         waitForMosaik.await();
-        simonaBlocked.set(false);
       } finally {
         simonaLock.unlock();
       }
@@ -102,8 +98,11 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
 
     if (time < simonaTick.get()) {
       log.info("Mosaik is behind SIMONA.");
+
+      goToNextTick = true;
     } else {
-      
+      goToNextTick = false;
+
       if (time == nextRegularMosaikTick) {
         // the received time is the next regular tick, that we expected
 
@@ -148,14 +147,33 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public long getNextTick() {
     Optional<Long> maybeNextTick = getNextSimonaTick();
-    return maybeNextTick.orElse(nextMosaikTick);
+    
+    if (maybeNextTick.isPresent()) {
+      long tick = maybeNextTick.get();
+      
+      if (tick == mosaikTick.get()) {
+        return nextMosaikTick;
+      } else {
+        return tick;
+      }
+    }
+    
+    return nextMosaikTick;
   }
 
   @Override
-  public boolean sendEmptyData() {
-    boolean sendEmptyData = simonaTick.get() != mosaikTick.get();
+  public void syncWithSIMONA() {
+    long mosaikTime = mosaikTick.get();
     
-    log.info("Sending empty data = {}.", sendEmptyData);
-    return sendEmptyData;
+    // updating, since SIMONA might still be locked
+    mosaikTick.set(mosaikTime);
+    
+    goToNextTick = mosaikTime < simonaTick.get();
+  }
+
+  @Override
+  public boolean isFinished() {
+    syncWithSIMONA();
+    return goToNextTick;
   }
 }
