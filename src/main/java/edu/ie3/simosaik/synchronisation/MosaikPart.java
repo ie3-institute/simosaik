@@ -19,9 +19,9 @@ public interface MosaikPart {
 
   long getCurrentSimonaTick();
 
-  Optional<Long> getNextSimonaTick() throws InterruptedException;
+  Optional<Long> getNextSimonaTick();
 
-  long getNextTick() throws InterruptedException;
+  long getNextTick();
 
   boolean sendEmptyData();
 }

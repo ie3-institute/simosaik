@@ -198,16 +198,23 @@ public class MosaikSimulator extends Simulator {
     }
 
     synchronizer.updateMosaikTime(time);
-
+    
+    // the next tick we will expect data
+    long nextTick = synchronizer.getNextTick();
+      
+    /*
+    if (synchronizer.sendEmptyData()) {
+      return nextTick;
+    } 
+     */
+    
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
-
+         
     List<ParsedMessage> parsedMessages = MosaikMessageParser.parse(inputs);
     List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
     cache.addAll(filtered);
 
     try {
-      // the next tick we will expect data
-      long nextTick = synchronizer.getNextTick();
       logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
       ExtInputDataContainer extDataForSimona =
@@ -225,9 +232,13 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
-    if (synchronizer.sendEmptyData()) {
-      return Collections.emptyMap();
-    }
+    
+    /*
+    boolean emptyData = synchronizer.sendEmptyData();
+    logger.info("[" + time + "] Sending empty data = " + emptyData);
+      
+    if (emptyData) return Collections.emptyMap();
+     */
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
     ExtResultContainer results = queueToExt.takeAll();

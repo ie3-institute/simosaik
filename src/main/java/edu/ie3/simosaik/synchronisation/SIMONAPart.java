@@ -14,11 +14,11 @@ public interface SIMONAPart {
   <R extends InitialisationData> R getInitialisationData(Class<R> clazz)
       throws InterruptedException;
 
-  void updateTickSIMONA(long tick);
+  void updateTickSIMONA(long tick) throws InterruptedException;
 
-  void updateNextTickSIMONA(long tick) throws InterruptedException;
+  void updateNextTickSIMONA(long tick);
 
-  void updateNextTickSIMONA(Optional<Long> tick) throws InterruptedException;
+  void updateNextTickSIMONA(Optional<Long> tick);
 
   long getCurrentMosaikTick();
 }

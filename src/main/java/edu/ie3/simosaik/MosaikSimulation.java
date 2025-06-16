@@ -120,8 +120,6 @@ public class MosaikSimulation extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
     try {
-      Thread.sleep(500);
-
       long nextTick = tick + stepSize;
       synchronizer.updateTickSIMONA(tick);
       synchronizer.updateNextTickSIMONA(nextTick);
