@@ -6,12 +6,16 @@
 
 package edu.ie3.simosaik.synchronisation;
 
+import edu.ie3.simona.api.data.ExtDataContainerQueue;
+import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
@@ -22,17 +26,25 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   private final Logger log = LoggerFactory.getLogger(Synchronizer.class);
   
   // mosaik fields
+  private final ReentrantLock mosaikLock = new ReentrantLock();
+  private final Condition waitForSIMONA = mosaikLock.newCondition();
   private final AtomicLong mosaikTick = new AtomicLong(-1);
   private long mosaikStepSize = 0L;
   private long nextRegularMosaikTick = 0L;
   private long nextMosaikTick = 0L;
 
   // SIMONA fields
+  private final ReentrantLock simonaLock = new ReentrantLock();
+  private final Condition waitForMosaik = simonaLock.newCondition();
+  
   private final AtomicLong simonaTick = new AtomicLong(-1);
   private final AtomicReference<Optional<Long>> simonaNextTick = new AtomicReference<>(Optional.empty());
 
   // general fields
   private final InitializationQueue initDataQueue = new InitializationQueue();
+  private ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
+  private ExtDataContainerQueue<ExtResultContainer> queueToExt;
+
   private boolean goToNextTick;
 
   public Synchronizer() {}
@@ -44,26 +56,30 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
+  public void setDataQueues(ExtDataContainerQueue<ExtInputDataContainer> queueToSimona, ExtDataContainerQueue<ExtResultContainer> queueToExt) {
+    this.queueToSimona = queueToSimona;
+    this.queueToExt = queueToExt;
+  }
+
+  @Override
   public void updateTickSIMONA(long tick) throws InterruptedException {
     long mosaikTime = mosaikTick.get();
     
+    // set new SIMONA tick
+    simonaTick.set(tick);
+    
     if (mosaikTime < tick) {
-      final ReentrantLock simonaLock = new  ReentrantLock();
-      simonaLock.lockInterruptibly();
+      // wait for mosaik
+      log.info("Mosaik is behind SIMONA. SIMONA will wait.");
       
-      Condition waitForMosaik = simonaLock.newCondition();
-      
-      try {
-        // set new SIMONA tick
-        simonaTick.set(tick);
-        
-        // wait for mosaik
-        log.info("Mosaik is behind SIMONA. We need to wait.");
-        waitForMosaik.await();
-      } finally {
-        simonaLock.unlock();
-      }
+      mosaikLock.lockInterruptibly();
+      waitForMosaik.await();
+    } else if (mosaikTime == tick) {
+      // signal, because mosaik might wait for SIMONA
+      waitForSIMONA.signal();
     }
+
+    mosaikLock.unlock();
   }
 
   @Override
@@ -87,49 +103,95 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
+  public boolean sendInputData(ExtInputDataContainer inputData) {
+    try {
+      queueToSimona.queueData(inputData);
+      
+      return true;
+    } catch (InterruptedException e) {
+      // could not queue the input data
+      return false;
+    }
+  }
+
+  @Override
+  public Optional<ExtResultContainer> requestResults() {
+    Optional<ExtResultContainer> container;
+    
+    try {
+      if (goToNextTick) {
+        container = Optional.empty();
+      } else {
+        container = queueToExt.poll(10, TimeUnit.SECONDS);
+      }
+      
+    } catch (InterruptedException e) {
+      container = Optional.empty();
+    }
+
+    return container;
+  }
+
+  @Override
   public void setMosaikStepSize(long stepSize) {
     log.info("Mosaik step size is: {}", stepSize);
     mosaikStepSize = stepSize;
   }
 
   @Override
-  public void updateMosaikTime(long time) {
+  public void updateMosaikTime(long time) throws InterruptedException {
     log.info("Mosaik provided time: {}", time);
 
-    if (time < simonaTick.get()) {
+    mosaikTick.set(time);
+    
+    long simonaTime = simonaTick.get();
+
+    if (time < simonaTime) {
+      // mosaik is behing
       log.info("Mosaik is behind SIMONA.");
 
+      // we don't need to update the time
       goToNextTick = true;
-    } else {
+      return;
+    } else if (time > simonaTime) {
+      log.info("SIMONA is behind MOSAIK. Mosaik will wait.");
+
+      // wait for SIMONA
+      simonaLock.lockInterruptibly();
+      waitForSIMONA.await();
+
       goToNextTick = false;
-
-      if (time == nextRegularMosaikTick) {
-        // the received time is the next regular tick, that we expected
-
-        // calculate the next regular tick
-        nextMosaikTick = time + mosaikStepSize;
-
-        // set the next regular tick
-        nextRegularMosaikTick = nextMosaikTick;
-
-      } else if (time < nextRegularMosaikTick) {
-        // the received time is between the last and the next regular tick
-        nextMosaikTick = nextRegularMosaikTick;
-      } else {
-        // we received data for a time after the expected tick
-        // this should be an error
-        throw new IllegalStateException(
-                "We received no data for the expected tick. Expected data for tick '"
-                        + nextRegularMosaikTick
-                        + "', but got data for tick '"
-                        + time
-                        + "'.");
-      }
-
-      mosaikTick.set(time);
-
-      log.info("Mosaik next time is '{}', next regular time is '{}'.", nextMosaikTick, nextRegularMosaikTick);
+    } else {
+      // signal, because SIMONA might wait for mosaik
+      waitForMosaik.signal();
     }
+
+    simonaLock.unlock();
+
+    if (time == nextRegularMosaikTick) {
+      // the received time is the next regular tick, that we expected
+
+      // calculate the next regular tick
+      nextMosaikTick = time + mosaikStepSize;
+
+      // set the next regular tick
+      nextRegularMosaikTick = nextMosaikTick;
+
+    } else if (time < nextRegularMosaikTick) {
+      // the received time is between the last and the next regular tick
+      nextMosaikTick = nextRegularMosaikTick;
+    } else {
+      // we received data for a time after the expected tick
+      // this should be an error
+      throw new IllegalStateException(
+              "We received no data for the expected tick. Expected data for tick '"
+                      + nextRegularMosaikTick
+                      + "', but got data for tick '"
+                      + time
+                      + "'.");
+    }
+
+    log.info("Mosaik next time is '{}', next regular time is '{}'.", nextMosaikTick, nextRegularMosaikTick);
   }
 
   @Override

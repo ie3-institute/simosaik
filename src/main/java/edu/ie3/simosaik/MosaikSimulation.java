@@ -22,11 +22,12 @@ import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.synchronisation.SIMONAPart;
 import edu.ie3.simosaik.utils.SimosaikUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -39,7 +40,6 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final long stepSize;
   protected final boolean disaggregateFlex;
 
-  protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
   private final SIMONAPart synchronizer;
 
   // connections
@@ -48,18 +48,14 @@ public class MosaikSimulation extends ExtCoSimulation {
   private final ExtResultDataConnection
       extResultDataConnection; // TODO: Check if we can switch to ResultListener
 
-  public MosaikSimulation(String mosaikIP, MosaikSimulator simulator, SIMONAPart synchronizer) {
-    this("MosaikSimulation", mosaikIP, simulator, synchronizer);
+  public MosaikSimulation(SIMONAPart synchronizer) {
+    this("MosaikSimulation", synchronizer);
   }
 
-  public MosaikSimulation(
-      String name, String mosaikIP, MosaikSimulator simulator, SIMONAPart synchronizer) {
-    super(name, simulator.getSimName());
+  public MosaikSimulation(String name, SIMONAPart synchronizer) {
+    super(name, "MosaikSimulator");
 
     this.synchronizer = synchronizer;
-    this.mosaikSimulator = simulator;
-    mosaikSimulator.setConnectionToSimonaApi(queueToSimona, queueToExt);
-    SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
 
     try {
       var initData = synchronizer.getInitialisationData(InitialisationData.FlexInitData.class);
@@ -109,6 +105,10 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final Long initialize() {
     log.info(
         "+++++++++++++++++++++++++++ Initialization of the external simulation +++++++++++++++++++++++++++");
+
+    synchronizer.setDataQueues(queueToSimona, queueToExt);
+    
+    
     log.info(
         "+++++++++++++++++++++++++++ Initialization of the external simulation completed +++++++++++++++++++++++++++");
     return 0L;

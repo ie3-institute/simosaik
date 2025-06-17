@@ -6,12 +6,9 @@
 
 package edu.ie3.simosaik;
 
-import static edu.ie3.simosaik.utils.MetaUtils.*;
-
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
-import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.container.ExtInputDataContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.mapping.DataType;
@@ -23,8 +20,11 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
+
 import java.util.*;
 import java.util.logging.Logger;
+
+import static edu.ie3.simosaik.utils.MetaUtils.*;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
@@ -43,9 +43,6 @@ public class MosaikSimulator extends Simulator {
 
   private final MosaikPart synchronizer;
 
-  public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
-  public ExtDataContainerQueue<ExtResultContainer> queueToExt;
-
   public MosaikSimulator(MosaikPart synchronizer) {
     this("MosaikSimulator", synchronizer);
   }
@@ -53,14 +50,6 @@ public class MosaikSimulator extends Simulator {
   public MosaikSimulator(String name, MosaikPart synchronizer) {
     super(name);
     this.synchronizer = synchronizer;
-  }
-
-  public void setConnectionToSimonaApi(
-      ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
-      ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
-    logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
-    this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
-    this.queueToSimona = dataQueueExtCoSimulatorToSimonaApi;
   }
 
   @Override
@@ -190,7 +179,7 @@ public class MosaikSimulator extends Simulator {
   }
 
   @Override
-  public long step(long time, Map<String, Object> inputs, long maxAdvance) {
+  public long step(long time, Map<String, Object> inputs, long maxAdvance) throws Exception {
     if (time != this.time) {
       // clearing cache at the start of the new tick
       cache.clear();
@@ -204,22 +193,25 @@ public class MosaikSimulator extends Simulator {
     long nextTick = synchronizer.getNextTick();
     
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
-         
+    
+    // processing mosaik inputs
     List<ParsedMessage> parsedMessages = MosaikMessageParser.parse(inputs);
     List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
     cache.addAll(filtered);
 
-    try {
-      logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
+    // log the expected next tick
+    logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
-      ExtInputDataContainer extDataForSimona =
-          InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
+    ExtInputDataContainer extDataForSimona = InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
 
-      logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
-      queueToSimona.queueData(extDataForSimona);
+    logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
+      
+    // try sending data to SIMONA
+    boolean isSent = synchronizer.sendInputData(extDataForSimona);
+      
+    if (isSent) {
+      // only log, if data is actually send
       logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
     }
 
     // synchronizing with SIMONA
@@ -230,7 +222,7 @@ public class MosaikSimulator extends Simulator {
   }
 
   @Override
-  public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
+  public Map<String, Object> getData(Map<String, List<String>> map) {
     boolean finished = synchronizer.isFinished();
     
     if (finished) {
@@ -239,18 +231,30 @@ public class MosaikSimulator extends Simulator {
     }
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
-    ExtResultContainer results = queueToExt.takeAll();
-    logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
+    
+    Optional<ExtResultContainer> resultOption = synchronizer.requestResults();
 
-    Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
+   
+    if (resultOption.isPresent()) {
+      ExtResultContainer results = resultOption.get();
+      
+      logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
-    logger.info(
-        "["
-            + time
-            + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
-            + data);
-
-    return data;
+      Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
+      
+          logger.info(
+              "["
+                  + time
+                  + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
+                  + data);
+      
+      return data;
+          
+    } else {
+      logger.info("[" + time + "] Got no results from SIMONA!");
+      
+      return Collections.emptyMap();
+    }
   }
 
   protected void checkModelParams(int expected, int received) {

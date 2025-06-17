@@ -9,6 +9,7 @@ package edu.ie3.simosaik;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.simulation.ExtSimAdapterData;
 import edu.ie3.simosaik.synchronisation.Synchronizer;
+import edu.ie3.simosaik.utils.SimosaikUtils;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;
@@ -27,9 +28,12 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // for synchronising both simulations
     Synchronizer synchronizer = new Synchronizer();
 
-    // creating the simulator and the external simulation
+    // creating and starting the simulator
     MosaikSimulator simulator = new MosaikSimulator(synchronizer);
-    extSim = new MosaikSimulation(mosaikIP, simulator, synchronizer);
+    SimosaikUtils.startMosaikSimulation(simulator, mosaikIP);
+    
+    // creating the external simulation
+    extSim = new MosaikSimulation(synchronizer);
     extSim.setAdapterData(data);
   }
 }
