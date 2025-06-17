@@ -17,13 +17,17 @@ public interface SIMONAPart {
   <R extends InitialisationData> R getInitialisationData(Class<R> clazz)
       throws InterruptedException;
 
-  void setDataQueues(ExtDataContainerQueue<ExtInputDataContainer> queueToSimona, ExtDataContainerQueue<ExtResultContainer> queueToExt);
-  
+  void setDataQueues(
+      ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
+      ExtDataContainerQueue<ExtResultContainer> queueToExt);
+
   void updateTickSIMONA(long tick) throws InterruptedException;
 
   void updateNextTickSIMONA(long tick);
 
   void updateNextTickSIMONA(Optional<Long> tick);
+
+  void setFinishedFlag();
 
   long getCurrentMosaikTick();
 }

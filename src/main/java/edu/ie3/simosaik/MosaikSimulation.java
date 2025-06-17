@@ -22,12 +22,11 @@ import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.synchronisation.SIMONAPart;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -107,8 +106,7 @@ public class MosaikSimulation extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ Initialization of the external simulation +++++++++++++++++++++++++++");
 
     synchronizer.setDataQueues(queueToSimona, queueToExt);
-    
-    
+
     log.info(
         "+++++++++++++++++++++++++++ Initialization of the external simulation completed +++++++++++++++++++++++++++");
     return 0L;
@@ -121,10 +119,15 @@ public class MosaikSimulation extends ExtCoSimulation {
         tick);
     try {
       long nextTick = tick + stepSize;
-      synchronizer.updateTickSIMONA(tick);
       synchronizer.updateNextTickSIMONA(Optional.empty());
+      synchronizer.updateTickSIMONA(tick);
 
-      return activity(tick, nextTick);
+      Optional<Long> maybeNextTick = activity(tick, nextTick);
+
+      // setting the finished flag in the synchronizer for SIMONA
+      synchronizer.setFinishedFlag();
+
+      return maybeNextTick;
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

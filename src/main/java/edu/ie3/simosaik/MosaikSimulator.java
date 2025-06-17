@@ -6,6 +6,8 @@
 
 package edu.ie3.simosaik;
 
+import static edu.ie3.simosaik.utils.MetaUtils.*;
+
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
@@ -20,11 +22,8 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
-
 import java.util.*;
 import java.util.logging.Logger;
-
-import static edu.ie3.simosaik.utils.MetaUtils.*;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
@@ -39,7 +38,6 @@ public class MosaikSimulator extends Simulator {
   private final List<ParsedMessage> cache = new ArrayList<>();
 
   private long time;
-  private long stepSize;
 
   private final MosaikPart synchronizer;
 
@@ -58,8 +56,10 @@ public class MosaikSimulator extends Simulator {
       String sid, Double timeResolution, Map<String, Object> simParams) {
     List<Model> models = new ArrayList<>();
 
+    long stepSize;
+
     if (simParams.containsKey("step_size")) {
-      this.stepSize = (Long) simParams.get("step_size");
+      stepSize = (Long) simParams.get("step_size");
 
       // update the mosaik step size
       synchronizer.setMosaikStepSize(stepSize);
@@ -188,12 +188,12 @@ public class MosaikSimulator extends Simulator {
 
     // updating the mosaik time
     synchronizer.updateMosaikTime(time);
-    
+
     // the next tick we will expect data
     long nextTick = synchronizer.getNextTick();
-    
+
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
-    
+
     // processing mosaik inputs
     List<ParsedMessage> parsedMessages = MosaikMessageParser.parse(inputs);
     List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
@@ -202,20 +202,23 @@ public class MosaikSimulator extends Simulator {
     // log the expected next tick
     logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
-    ExtInputDataContainer extDataForSimona = InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
+    if (!filtered.isEmpty()) {
+      ExtInputDataContainer extDataForSimona =
+          InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
 
-    logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
-      
-    // try sending data to SIMONA
-    boolean isSent = synchronizer.sendInputData(extDataForSimona);
-      
-    if (isSent) {
-      // only log, if data is actually send
-      logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
+      logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
+
+      // try sending data to SIMONA
+      boolean isSent = synchronizer.sendInputData(extDataForSimona);
+
+      if (isSent) {
+        // only log, if data is actually send
+        logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
+      }
+    } else {
+      // setting the no input flag in the synchronizer for mosaik
+      synchronizer.setNoInputFlag();
     }
-
-    // synchronizing with SIMONA
-    synchronizer.syncWithSIMONA();
 
     // getting the next tick, could have changed since last request
     return synchronizer.getNextTick();
@@ -224,35 +227,38 @@ public class MosaikSimulator extends Simulator {
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) {
     boolean finished = synchronizer.isFinished();
-    
+
     if (finished) {
       logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
       return Collections.emptyMap();
     }
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
-    
+
     Optional<ExtResultContainer> resultOption = synchronizer.requestResults();
 
-   
     if (resultOption.isPresent()) {
       ExtResultContainer results = resultOption.get();
-      
+
       logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
-      Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
-      
-          logger.info(
-              "["
-                  + time
-                  + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
-                  + data);
-      
+      Map<String, Object> data = new HashMap<>(ResultUtils.createOutput(results, map, mapping));
+
+      if (synchronizer.outputNextTick()) {
+        data.put(SimosaikUnits.SIMONA_NEXT_TICK, results.getNextTick());
+      }
+
+      logger.info(
+          "["
+              + time
+              + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
+              + data);
+
       return data;
-          
+
     } else {
       logger.info("[" + time + "] Got no results from SIMONA!");
-      
+
       return Collections.emptyMap();
     }
   }

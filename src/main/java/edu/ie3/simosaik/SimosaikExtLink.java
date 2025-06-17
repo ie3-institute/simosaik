@@ -31,7 +31,7 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // creating and starting the simulator
     MosaikSimulator simulator = new MosaikSimulator(synchronizer);
     SimosaikUtils.startMosaikSimulation(simulator, mosaikIP);
-    
+
     // creating the external simulation
     extSim = new MosaikSimulation(synchronizer);
     extSim.setAdapterData(data);

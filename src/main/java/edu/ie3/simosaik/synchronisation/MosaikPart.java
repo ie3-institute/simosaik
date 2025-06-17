@@ -15,10 +15,12 @@ public interface MosaikPart {
 
   void sendInitData(InitialisationData initialisationData) throws InterruptedException;
 
+  void setNoInputFlag();
+
   boolean sendInputData(ExtInputDataContainer inputData);
-  
+
   Optional<ExtResultContainer> requestResults();
-  
+
   void setMosaikStepSize(long stepSize);
 
   void updateMosaikTime(long time) throws InterruptedException;
@@ -29,8 +31,7 @@ public interface MosaikPart {
 
   long getNextTick();
 
-  void syncWithSIMONA();
-  
+  boolean outputNextTick();
+
   boolean isFinished();
-  
 }

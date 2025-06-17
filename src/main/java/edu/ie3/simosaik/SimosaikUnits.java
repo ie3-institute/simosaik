@@ -16,6 +16,9 @@ import javax.measure.Unit;
 
 public final class SimosaikUnits {
 
+  // scheduling units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+  public static final String SIMONA_NEXT_TICK = "Simona[nextTick]";
+
   // grid units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   public static final String VOLTAGE_MAG = "u[pu]";
   public static final String VOLTAGE_ANG = "u[RAD]";
@@ -31,8 +34,6 @@ public final class SimosaikUnits {
   public static final String SOC = "SOC[%]";
 
   // em units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-  public static final String FLEX_NEXT_TICK = "Flex[nextTick]";
-
   public static final String FLEX_REQUEST = "Flex[request]";
   public static final String FLEX_OPTIONS = "Flex[options]";
   public static final String FLEX_SET_POINT = "EM[setPoint]";
