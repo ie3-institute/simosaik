@@ -61,6 +61,9 @@ public sealed interface SIMONAPart permits Synchronizer {
    */
   void setFinishedFlag();
 
+  /** Returns {@code true}, if SIMONA is finished for the current tick. */
+  boolean isFinished();
+
   /** Returns {@code true}, if there are inputs from mosaik available. */
   boolean expectInput();
 }

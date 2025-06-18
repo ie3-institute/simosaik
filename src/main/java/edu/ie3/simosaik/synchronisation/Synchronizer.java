@@ -82,18 +82,26 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       log.warn("SIMONA: Waiting for simosaik lock.");
     }
 
-    if (mosaikTime < tick) {
+    if (tick < mosaikTime) {
+      // SIMONA is behind
+      log.warn(
+          "SIMONA cannot receive data for tick '{}', because mosaik is already at time '{}'.",
+          tick,
+          mosaikTime);
+
+      isFinished = true;
+    } else if (tick > mosaikTime) {
+      // mosaik is behind
+
       // signal, because mosaik might wait for SIMONA
       continueMosaik.signal();
 
       if (mosaikIsWaiting) {
         // mosaik is waiting for the next SIMONA tick
-        throw new RuntimeException(
-            "Mosaik with time '"
-                + mosaikTime
-                + "' is waiting for SIMONA, but SIMONA provided data for tick '"
-                + tick
-                + "'!");
+        log.warn(
+            "Mosaik with time '{}' is waiting for SIMONA, but SIMONA provided data for tick '{}'!",
+            mosaikTime,
+            tick);
 
       } else {
         // wait for mosaik
@@ -106,18 +114,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
         continueSIMONA.await();
         simonaIsWaiting = false;
       }
+    } else {
+      // both simulators are synced
 
-    } else if (mosaikTime == tick) {
       // signal, because mosaik might wait for SIMONA
       continueMosaik.signal();
-    } else {
-      if (mosaikIsWaiting) {
-        // mosaik is waiting for the next SIMONA tick
-        log.warn(
-            "Mosaik with time '{}' is waiting for SIMONA, but SIMONA provided data for tick '{}'!",
-            mosaikTime,
-            tick);
-      }
     }
 
     // release the mosaik lock
@@ -220,42 +221,6 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       log.warn("Mosaik: Waiting for simosaik lock.");
     }
 
-    if (time < simonaTime) {
-      // mosaik is behind
-      // we don't need to update the time
-      goToNextTick = true;
-    } else if (time > simonaTime) {
-      goToNextTick = false;
-
-      // signal, because SIMONA might wait for mosaik
-      continueSIMONA.signal();
-
-      if (simonaIsWaiting) {
-        // SIMONA is waiting for the next mosaik time
-        log.warn(
-            "SIMONA with tick '{}' is waiting for mosaik, but mosaik provided data for time '{}'!",
-            simonaTime,
-            time);
-
-      } else {
-        log.info("SIMONA is behind MOSAIK. Mosaik will wait.");
-
-        // wait for SIMONA
-        mosaikIsWaiting = true;
-        continueMosaik.await();
-        mosaikIsWaiting = false;
-      }
-
-    } else {
-      goToNextTick = false;
-
-      // signal, because SIMONA might wait for mosaik
-      continueSIMONA.signal();
-    }
-
-    // release the lock
-    simosaikLock.unlock();
-
     if (time == nextRegularMosaikTick) {
       // the received time is the next regular tick, that we expected
 
@@ -283,6 +248,51 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
         "Mosaik next time is '{}', next regular time is '{}'.",
         nextMosaikTick,
         nextRegularMosaikTick);
+
+    // check if synced with SIMONA
+    if (time < simonaTime) {
+      // mosaik is behind
+      // we don't need to update the time
+      goToNextTick = true;
+    } else if (time > simonaTime) {
+      goToNextTick = false;
+
+      // signal, because SIMONA might wait for mosaik
+      continueSIMONA.signal();
+
+      if (simonaIsWaiting) {
+        // SIMONA is waiting for mosaik to provide data for the next SIMONA tick
+        long nextSimonaTick = getNextTick();
+
+        if (time > nextSimonaTick) {
+          // mosaik is providing for a tick, that lies in the future for SIMONA => error
+          throw new IllegalStateException(
+              "SIMONA is waiting for tick '"
+                  + nextSimonaTick
+                  + "', but mosaik provided data for tick '"
+                  + time
+                  + "'!");
+        }
+
+      } else {
+        log.info("SIMONA is behind MOSAIK. Mosaik will wait.");
+
+        // wait for SIMONA
+        mosaikIsWaiting = true;
+        continueMosaik.await();
+        mosaikIsWaiting = false;
+      }
+
+    } else {
+      // both simulators are synced
+      goToNextTick = false;
+
+      // signal, because SIMONA might wait for mosaik
+      continueSIMONA.signal();
+    }
+
+    // release the lock
+    simosaikLock.unlock();
   }
 
   @Override

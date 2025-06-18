@@ -122,12 +122,17 @@ public class MosaikSimulation extends ExtCoSimulation {
       synchronizer.updateNextTickSIMONA(Optional.empty());
       synchronizer.updateTickSIMONA(tick);
 
-      Optional<Long> maybeNextTick = activity(tick, nextTick);
+      if (!synchronizer.isFinished()) {
+        Optional<Long> maybeNextTick = activity(tick, nextTick);
 
-      // setting the finished flag in the synchronizer for SIMONA
-      synchronizer.setFinishedFlag();
+        // setting the finished flag in the synchronizer for SIMONA
+        synchronizer.setFinishedFlag();
 
-      return maybeNextTick;
+        return maybeNextTick;
+      } else {
+        // SIMONA will not receive data for the current tick
+        return Optional.of(nextTick);
+      }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -157,13 +162,11 @@ public class MosaikSimulation extends ExtCoSimulation {
           extEmDataConnection.receiveWithType(EmCompletion.class);
         }
         case EM_COMMUNICATION -> {
-          if (expectInputs) {
-            Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
+          Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
 
-            if (nextEmChangeTick.isPresent()) {
-              if (nextEmChangeTick.get() < nextTick) {
-                maybeNextTick = nextEmChangeTick;
-              }
+          if (nextEmChangeTick.isPresent()) {
+            if (nextEmChangeTick.get() < nextTick) {
+              maybeNextTick = nextEmChangeTick;
             }
           } else {
             log.warn("There are no em inputs for tick '{}'. Skipping em communication.", tick);

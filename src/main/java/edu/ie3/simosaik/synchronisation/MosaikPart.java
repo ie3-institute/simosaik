@@ -39,5 +39,6 @@ public sealed interface MosaikPart permits Synchronizer {
 
   boolean outputNextTick();
 
+  /** Returns {@code true}, if SIMONA is finished for the current tick. */
   boolean isFinished();
 }
