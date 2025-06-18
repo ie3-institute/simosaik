@@ -12,22 +12,55 @@ import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import java.util.Optional;
 
-public interface SIMONAPart {
+/**
+ * SIMONA part of the {@link Synchronizer}. This interface contains all method, that are available
+ * to SIMONA for synchronizing with mosaik.
+ */
+public sealed interface SIMONAPart permits Synchronizer {
 
+  /**
+   * Retrieves {@link InitialisationData}, that was provided by mosaik.
+   *
+   * @param clazz class of data, that is requested
+   * @return the initialisation data
+   * @param <R> type of initialisation data
+   * @throws InterruptedException if the request is interrupted
+   */
   <R extends InitialisationData> R getInitialisationData(Class<R> clazz)
       throws InterruptedException;
 
+  /**
+   * Sets the data queues, that are provided by the {@link
+   * edu.ie3.simona.api.simulation.ExtCoSimulation}.
+   *
+   * @param queueToSimona queue for input data
+   * @param queueToExt queue for output data
+   */
   void setDataQueues(
       ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
       ExtDataContainerQueue<ExtResultContainer> queueToExt);
 
+  /**
+   * Method for updating the SIMONA tick, that is used by the {@link Synchronizer}.
+   *
+   * @param tick new tick
+   * @throws InterruptedException if there is an interruption
+   */
   void updateTickSIMONA(long tick) throws InterruptedException;
 
-  void updateNextTickSIMONA(long tick);
+  /**
+   * Method for updating the next tick, SIMONA expects data.
+   *
+   * @param maybeNextTick an option for the next SIMONA tick
+   */
+  void updateNextTickSIMONA(Optional<Long> maybeNextTick);
 
-  void updateNextTickSIMONA(Optional<Long> tick);
-
+  /**
+   * Method for setting the finish flag in the {@link Synchronizer} to {@code true}. This flag
+   * signals, that SIMONA is finished for the current tick.
+   */
   void setFinishedFlag();
 
-  long getCurrentMosaikTick();
+  /** Returns {@code true}, if there are inputs from mosaik available. */
+  boolean expectInput();
 }

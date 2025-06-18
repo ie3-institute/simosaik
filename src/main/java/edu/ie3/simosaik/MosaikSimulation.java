@@ -136,7 +136,9 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
 
-    if (extPrimaryDataConnection != null) {
+    boolean expectInputs = synchronizer.expectInput();
+
+    if (extPrimaryDataConnection != null && expectInputs) {
       // sending primary data to SIMONA
       sendPrimaryDataToSimona(extPrimaryDataConnection, tick, maybeNextTick, log);
     }
@@ -155,12 +157,16 @@ public class MosaikSimulation extends ExtCoSimulation {
           extEmDataConnection.receiveWithType(EmCompletion.class);
         }
         case EM_COMMUNICATION -> {
-          Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
+          if (expectInputs) {
+            Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
 
-          if (nextEmChangeTick.isPresent()) {
-            if (nextEmChangeTick.get() < nextTick) {
-              maybeNextTick = nextEmChangeTick;
+            if (nextEmChangeTick.isPresent()) {
+              if (nextEmChangeTick.get() < nextTick) {
+                maybeNextTick = nextEmChangeTick;
+              }
             }
+          } else {
+            log.warn("There are no em inputs for tick '{}'. Skipping em communication.", tick);
           }
         }
         default ->

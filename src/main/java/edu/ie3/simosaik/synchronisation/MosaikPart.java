@@ -11,10 +11,18 @@ import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import java.util.Optional;
 
-public interface MosaikPart {
+/**
+ * Mosaik part of the {@link Synchronizer}. This interface contains all method, that are available
+ * to mosaik for synchronizing with SIMONA.
+ */
+public sealed interface MosaikPart permits Synchronizer {
 
   void sendInitData(InitialisationData initialisationData) throws InterruptedException;
 
+  /**
+   * Method for setting the no input flag in the {@link Synchronizer} to {@code true}. This flag
+   * signals, that mosaik has until now not provided any input for the current tick.
+   */
   void setNoInputFlag();
 
   boolean sendInputData(ExtInputDataContainer inputData);
@@ -24,8 +32,6 @@ public interface MosaikPart {
   void setMosaikStepSize(long stepSize);
 
   void updateMosaikTime(long time) throws InterruptedException;
-
-  long getCurrentSimonaTick();
 
   Optional<Long> getNextSimonaTick();
 

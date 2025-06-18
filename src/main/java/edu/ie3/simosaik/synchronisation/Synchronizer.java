@@ -20,7 +20,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Synchronizer implements SIMONAPart, MosaikPart {
+public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   private final Logger log = LoggerFactory.getLogger(Synchronizer.class);
 
@@ -125,18 +125,13 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public void updateNextTickSIMONA(long tick) {
-    updateNextTickSIMONA(Optional.of(tick));
-  }
-
-  @Override
-  public void updateNextTickSIMONA(Optional<Long> tick) {
+  public void updateNextTickSIMONA(Optional<Long> maybeNextTick) {
     Optional<Long> oldValue = simonaNextTick.get();
 
-    if (oldValue == tick) {
+    if (oldValue == maybeNextTick) {
       hasNextTickChanged = false;
     } else {
-      simonaNextTick.set(tick);
+      simonaNextTick.set(maybeNextTick);
       hasNextTickChanged = true;
     }
   }
@@ -147,8 +142,8 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public long getCurrentMosaikTick() {
-    return mosaikTick.get();
+  public boolean expectInput() {
+    return noInputs;
   }
 
   @Override
@@ -288,13 +283,6 @@ public class Synchronizer implements SIMONAPart, MosaikPart {
         "Mosaik next time is '{}', next regular time is '{}'.",
         nextMosaikTick,
         nextRegularMosaikTick);
-  }
-
-  @Override
-  public long getCurrentSimonaTick() {
-    long tick = simonaTick.get();
-    log.info("Current simonaTick is: {}", tick);
-    return tick;
   }
 
   @Override
