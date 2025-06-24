@@ -6,24 +6,25 @@
 
 package edu.ie3.simosaik;
 
-import static edu.ie3.simosaik.utils.MetaUtils.*;
-
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simona.api.data.mapping.DataType;
-import edu.ie3.simona.api.data.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.mapping.DataType;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.synchronisation.MosaikPart;
 import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
+
 import java.util.*;
 import java.util.logging.Logger;
+
+import static edu.ie3.simosaik.utils.MetaUtils.*;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
@@ -203,7 +204,7 @@ public class MosaikSimulator extends Simulator {
     logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
     if (!filtered.isEmpty()) {
-      ExtInputDataContainer extDataForSimona =
+      ExtInputContainer extDataForSimona =
           InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
 
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
@@ -245,7 +246,7 @@ public class MosaikSimulator extends Simulator {
       Map<String, Object> data = new HashMap<>(ResultUtils.createOutput(results, map, mapping));
 
       if (synchronizer.outputNextTick()) {
-        data.put(SimosaikUnits.SIMONA_NEXT_TICK, results.getNextTick());
+        data.put(SimosaikUnits.SIMONA_NEXT_TICK, results.getMaybeNextTick());
       }
 
       logger.info(

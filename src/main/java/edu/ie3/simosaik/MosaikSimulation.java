@@ -8,16 +8,16 @@ package edu.ie3.simosaik;
 
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.value.Value;
-import edu.ie3.simona.api.data.ExtDataConnection;
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.connection.ExtDataConnection;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simona.api.data.em.EmMode;
-import edu.ie3.simona.api.data.em.ExtEmDataConnection;
+import edu.ie3.simona.api.data.connection.ExtEmDataConnection.EmMode;
+import edu.ie3.simona.api.data.connection.ExtEmDataConnection;
 import edu.ie3.simona.api.data.em.ontology.*;
-import edu.ie3.simona.api.data.mapping.DataType;
+import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
-import edu.ie3.simona.api.data.primarydata.ExtPrimaryDataConnection;
-import edu.ie3.simona.api.data.results.ExtResultDataConnection;
+import edu.ie3.simona.api.data.connection.ExtPrimaryDataConnection;
+import edu.ie3.simona.api.data.connection.ExtResultDataConnection;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.synchronisation.SIMONAPart;
@@ -194,12 +194,12 @@ public class MosaikSimulation extends ExtCoSimulation {
 
     while (notFinished) {
 
-      long extTick = queueToSimona.takeData(ExtInputDataContainer::getTick);
+      long extTick = queueToSimona.takeData(ExtInputContainer::getTick);
 
       log.info("Current simulator tick: {}, SIMONA tick: {}", extTick, tick);
 
       if (tick == extTick) {
-        ExtInputDataContainer container = queueToSimona.takeAll();
+        ExtInputContainer container = queueToSimona.takeContainer();
 
         log.info("Flex requests: {}", container.flexRequestsString());
         log.info("Flex options: {}", container.flexOptionsString());

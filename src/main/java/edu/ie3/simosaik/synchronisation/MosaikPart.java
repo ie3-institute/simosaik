@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik.synchronisation;
 
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import java.util.Optional;
@@ -25,7 +25,7 @@ public sealed interface MosaikPart permits Synchronizer {
    */
   void setNoInputFlag();
 
-  boolean sendInputData(ExtInputDataContainer inputData);
+  boolean sendInputData(ExtInputContainer inputData);
 
   Optional<ExtResultContainer> requestResults();
 

@@ -7,7 +7,7 @@
 package edu.ie3.simosaik.synchronisation;
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
@@ -47,7 +47,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private boolean mosaikIsWaiting = false;
 
   private final InitializationQueue initDataQueue = new InitializationQueue();
-  private ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
+  private ExtDataContainerQueue<ExtInputContainer> queueToSimona;
   private ExtDataContainerQueue<ExtResultContainer> queueToExt;
 
   private boolean goToNextTick;
@@ -62,7 +62,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   @Override
   public void setDataQueues(
-      ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
+      ExtDataContainerQueue<ExtInputContainer> queueToSimona,
       ExtDataContainerQueue<ExtResultContainer> queueToExt) {
     this.queueToSimona = queueToSimona;
     this.queueToExt = queueToExt;
@@ -158,7 +158,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public boolean sendInputData(ExtInputDataContainer inputData) {
+  public boolean sendInputData(ExtInputContainer inputData) {
     try {
       queueToSimona.queueData(inputData);
 
@@ -179,14 +179,14 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
         container = Optional.empty();
       } else {
 
-        container = queueToExt.poll(100, TimeUnit.MILLISECONDS);
+        container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
 
         while (container.isEmpty()) {
           // no data found
 
           if (!isFinished()) {
             // SIMONA is not finished for the current tick
-            container = queueToExt.poll(100, TimeUnit.MILLISECONDS);
+            container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
           } else {
             // SIMONA went to the next tick, there will be no more data for the current tick
             container = Optional.empty();

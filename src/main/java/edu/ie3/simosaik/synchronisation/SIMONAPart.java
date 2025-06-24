@@ -7,7 +7,7 @@
 package edu.ie3.simosaik.synchronisation;
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import java.util.Optional;
@@ -37,7 +37,7 @@ public sealed interface SIMONAPart permits Synchronizer {
    * @param queueToExt queue for output data
    */
   void setDataQueues(
-      ExtDataContainerQueue<ExtInputDataContainer> queueToSimona,
+      ExtDataContainerQueue<ExtInputContainer> queueToSimona,
       ExtDataContainerQueue<ExtResultContainer> queueToExt);
 
   /**
