@@ -10,10 +10,10 @@ import static edu.ie3.simosaik.SimosaikUnits.*;
 
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.datamodel.models.value.*;
-import edu.ie3.simona.api.data.em.EmMode;
-import edu.ie3.simona.api.data.mapping.DataType;
-import edu.ie3.simona.api.data.mapping.ExtEntityEntry;
-import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.data.connection.ExtEmDataConnection.EmMode;
+import edu.ie3.simona.api.mapping.DataType;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
 import java.util.*;

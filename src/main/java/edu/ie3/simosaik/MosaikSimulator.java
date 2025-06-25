@@ -12,11 +12,11 @@ import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simona.api.data.mapping.DataType;
-import edu.ie3.simona.api.data.mapping.ExtEntityEntry;
-import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.mapping.DataType;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
 import edu.ie3.simosaik.initialization.InitialisationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
 import edu.ie3.simosaik.utils.InputUtils;
@@ -43,7 +43,7 @@ public class MosaikSimulator extends Simulator {
 
   public final InitializationQueue initDataQueue = new InitializationQueue();
 
-  public ExtDataContainerQueue<ExtInputDataContainer> queueToSimona;
+  public ExtDataContainerQueue<ExtInputContainer> queueToSimona;
   public ExtDataContainerQueue<ExtResultContainer> queueToExt;
 
   public MosaikSimulator() {
@@ -55,7 +55,7 @@ public class MosaikSimulator extends Simulator {
   }
 
   public void setConnectionToSimonaApi(
-      ExtDataContainerQueue<ExtInputDataContainer> dataQueueExtCoSimulatorToSimonaApi,
+      ExtDataContainerQueue<ExtInputContainer> dataQueueExtCoSimulatorToSimonaApi,
       ExtDataContainerQueue<ExtResultContainer> dataQueueSimonaApiToExtCoSimulator) {
     logger.info("Set the mapping and the data queues between SIMONA and MOSAIK!");
     this.queueToExt = dataQueueSimonaApiToExtCoSimulator;
@@ -200,7 +200,7 @@ public class MosaikSimulator extends Simulator {
     List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
     cache.addAll(filtered);
 
-    ExtInputDataContainer extDataForSimona =
+    ExtInputContainer extDataForSimona =
         InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
 
     try {
@@ -216,7 +216,7 @@ public class MosaikSimulator extends Simulator {
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) throws Exception {
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
-    ExtResultContainer results = queueToExt.takeAll();
+    ExtResultContainer results = queueToExt.takeContainer();
     logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
     Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);

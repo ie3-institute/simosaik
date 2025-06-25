@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik;
 
-import edu.ie3.simona.api.data.mapping.DataType;
+import edu.ie3.simona.api.mapping.DataType;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 

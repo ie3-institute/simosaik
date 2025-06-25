@@ -12,10 +12,10 @@ import static edu.ie3.simosaik.utils.SimosaikUtils.*;
 
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
-import edu.ie3.simona.api.data.container.ExtInputDataContainer;
-import edu.ie3.simona.api.data.em.model.EmSetPoint;
-import edu.ie3.simona.api.data.em.model.FlexOptionRequest;
-import edu.ie3.simona.api.data.em.model.FlexOptions;
+import edu.ie3.simona.api.data.container.ExtInputContainer;
+import edu.ie3.simona.api.data.model.em.EmSetPoint;
+import edu.ie3.simona.api.data.model.em.FlexOptionRequest;
+import edu.ie3.simona.api.data.model.em.FlexOptions;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
-  public static ExtInputDataContainer createInputDataContainer(
+  public static ExtInputContainer createInputDataContainer(
       long tick,
       long nextTick,
       List<ParsedMessage> mosaikMessages,
@@ -44,7 +44,7 @@ public final class InputUtils {
     log.debug("Receivers to messages: {}.", receiverToMessages);
 
     // building input container
-    ExtInputDataContainer container = new ExtInputDataContainer(tick, nextTick);
+    ExtInputContainer container = new ExtInputContainer(tick, nextTick);
 
     // process all input data
     messageProcessors.forEach(processor -> processor.process(container, receiverToMessages));
@@ -55,19 +55,19 @@ public final class InputUtils {
   // message processors
 
   public sealed interface MessageProcessor permits PrimaryMessageProcessor, EmMessageProcessor {
-    void process(ExtInputDataContainer container, Map<String, List<Content>> receiverToMessages);
+    void process(ExtInputContainer container, Map<String, List<Content>> receiverToMessages);
   }
 
   public record PrimaryMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
     public void process(
-        ExtInputDataContainer container, Map<String, List<Content>> receiverToMessages) {
+        ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
       parsePrimary(receiverToMessages, idToUuid).forEach(container::addPrimaryValue);
     }
   }
 
   public record EmMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
     public void process(
-        ExtInputDataContainer container, Map<String, List<Content>> receiverToMessages) {
+        ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
       parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
       parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
       parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);
@@ -195,8 +195,8 @@ public final class InputUtils {
                             new FlexOptions(
                                 receiverUuid,
                                 idToUuid.get(optionMessage.sender()),
-                                optionMessage.pMin(),
                                 optionMessage.pRef(),
+                                optionMessage.pMin(),
                                 optionMessage.pMax(),
                                 optionMessage.delay()))
                     .toList();
