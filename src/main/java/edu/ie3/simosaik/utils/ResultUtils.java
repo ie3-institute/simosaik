@@ -24,7 +24,7 @@ import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.model.em.EmSetPointResult;
 import edu.ie3.simona.api.data.model.em.ExtendedFlexOptionsResult;
 import edu.ie3.simona.api.data.model.em.FlexRequestResult;
-import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import java.util.*;
 import javax.measure.quantity.Angle;
 import javax.measure.quantity.Dimensionless;

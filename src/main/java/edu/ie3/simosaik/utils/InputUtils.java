@@ -60,14 +60,14 @@ public final class InputUtils {
 
   public record PrimaryMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
     public void process(
-            ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
+        ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
       parsePrimary(receiverToMessages, idToUuid).forEach(container::addPrimaryValue);
     }
   }
 
   public record EmMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
     public void process(
-            ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
+        ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
       parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
       parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
       parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);

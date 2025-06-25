@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik.initialization;
 
-import edu.ie3.simona.api.data.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
 
 public interface InitialisationData {
 
