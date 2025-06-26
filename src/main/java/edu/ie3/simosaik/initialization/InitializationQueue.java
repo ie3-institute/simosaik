@@ -13,6 +13,10 @@ public class InitializationQueue {
   private final LinkedBlockingQueue<InitialisationData> initializationQueue =
       new LinkedBlockingQueue<>();
 
+  public int size() {
+    return initializationQueue.size();
+  }
+
   public void put(InitialisationData initialisationData) throws InterruptedException {
     initializationQueue.put(initialisationData);
   }

@@ -17,23 +17,17 @@ import java.util.Optional;
  */
 public sealed interface MosaikPart permits Synchronizer {
 
-  void sendInitData(InitialisationData initialisationData) throws InterruptedException;
-
-  /**
-   * Method for setting the no input flag in the {@link Synchronizer} to {@code true}. This flag
-   * signals, that mosaik has until now not provided any input for the current tick.
-   */
-  void setNoInputFlag();
-
-  boolean sendInputData(ExtInputContainer inputData);
-
-  Optional<ExtResultContainer> requestResults();
-
-  void setMosaikStepSize(long stepSize);
+  // update methods
 
   void updateMosaikTime(long time) throws InterruptedException;
 
-  Optional<Long> getNextSimonaTick();
+  void sendInitData(InitialisationData initialisationData) throws InterruptedException;
+
+  boolean sendInputData(ExtInputContainer inputData);
+
+  // getter methods
+
+  Optional<ExtResultContainer> requestResults();
 
   long getNextTick();
 
@@ -41,4 +35,14 @@ public sealed interface MosaikPart permits Synchronizer {
 
   /** Returns {@code true}, if SIMONA is finished for the current tick. */
   boolean isFinished();
+
+  // setter methods
+
+  /**
+   * Method for setting the no input flag in the {@link Synchronizer} to {@code true}. This flag
+   * signals, that mosaik has until now not provided any input for the current tick.
+   */
+  void setNoInputFlag();
+
+  void setMosaikStepSize(long stepSize);
 }
