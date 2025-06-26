@@ -23,7 +23,7 @@ import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.data.model.em.EmSetPointResult;
 import edu.ie3.simona.api.data.model.em.ExtendedFlexOptionsResult;
-import edu.ie3.simona.api.data.model.em.FlexRequestResult;
+import edu.ie3.simona.api.data.model.em.FlexOptionRequestResult;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import java.util.*;
 import javax.measure.quantity.Angle;
@@ -43,8 +43,8 @@ public final class ResultUtils {
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
 
-    Map<String, UUID> idToUuid = mapping.getFullMapping();
-    Map<UUID, String> uuidToId = mapping.getFullMappingReverse();
+    Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping();
+    Map<UUID, String> uuidToId = mapping.getExtUuid2IdMapping();
 
     Map<String, Object> output = new HashMap<>();
 
@@ -74,7 +74,7 @@ public final class ResultUtils {
   private static Map<String, Object> handleResult(
       ResultEntity result, List<String> attrs, Map<UUID, String> uuidToId) {
 
-    if (result instanceof FlexRequestResult r && attrs.contains(FLEX_REQUEST)) {
+    if (result instanceof FlexOptionRequestResult r && attrs.contains(FLEX_REQUEST)) {
       Map<String, Object> data = new HashMap<>();
       data.put(FLEX_REQUEST, r.getReceivers().stream().map(uuidToId::get).toList());
       return data;
