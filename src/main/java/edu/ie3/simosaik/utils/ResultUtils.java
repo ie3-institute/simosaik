@@ -25,6 +25,7 @@ import edu.ie3.simona.api.data.model.em.EmSetPointResult;
 import edu.ie3.simona.api.data.model.em.ExtendedFlexOptionsResult;
 import edu.ie3.simona.api.data.model.em.FlexOptionRequestResult;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import edu.ie3.simosaik.SimosaikUnits;
 import java.util.*;
 import javax.measure.quantity.Angle;
 import javax.measure.quantity.Dimensionless;
@@ -36,6 +37,22 @@ import tech.units.indriya.ComparableQuantity;
 
 public final class ResultUtils {
   private static final Logger log = LoggerFactory.getLogger(ResultUtils.class);
+
+  public static Map<String, Object> onlyTickInformation(
+      Map<String, List<String>> requestedAttributes, long nextTick) {
+    Map<String, Object> output = new HashMap<>();
+
+    for (Map.Entry<String, List<String>> entry : requestedAttributes.entrySet()) {
+      String externalEntity = entry.getKey();
+      List<String> attrs = entry.getValue();
+
+      if (attrs.contains(SimosaikUnits.SIMONA_NEXT_TICK)) {
+        output.put(externalEntity, Map.of(SimosaikUnits.SIMONA_NEXT_TICK, nextTick));
+      }
+    }
+
+    return output;
+  }
 
   public static Map<String, Object> createOutput(
       ExtResultContainer container,

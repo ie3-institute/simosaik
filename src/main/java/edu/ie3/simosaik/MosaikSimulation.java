@@ -25,11 +25,10 @@ import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.measure.quantity.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
-
-import javax.measure.quantity.Time;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -65,11 +64,11 @@ public class MosaikSimulation extends ExtCoSimulation {
       this.stepSize = initData.stepSize();
       this.disaggregateFlex = initData.disaggregate();
 
-      InitialisationData.ModelData modelData = synchronizer.getInitialisationData(InitialisationData.ModelData.class);
+      InitialisationData.ModelData modelData =
+          synchronizer.getInitialisationData(InitialisationData.ModelData.class);
 
       ExtEntityMapping entityMapping = modelData.mapping();
       Optional<ComparableQuantity<Time>> maxDelay = modelData.maxDelay();
-
 
       // primary data connection
       Map<UUID, Class<? extends Value>> primaryInput =

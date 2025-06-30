@@ -107,8 +107,7 @@ public class MosaikSimulator extends Simulator {
         Map<String, String> mapping = (Map<String, String>) modelParams.get("mapping");
 
         // check model params
-        checkModelParams(num, mapping.size());
-
+        checkModelParams(mapping.size(), num);
         SimonaEntity modelType = SimonaEntity.parseType(model);
         List<ExtEntityEntry> entries = new ArrayList<>();
 
@@ -244,8 +243,8 @@ public class MosaikSimulator extends Simulator {
     boolean finished = synchronizer.isFinished();
 
     if (finished) {
-      logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
-      return Collections.emptyMap();
+      logger.info("[" + time + "] Tick finished, sending only next tick information to mosaik.");
+      return ResultUtils.onlyTickInformation(map, synchronizer.getNextTick());
     }
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
@@ -257,11 +256,7 @@ public class MosaikSimulator extends Simulator {
 
       logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
-      Map<String, Object> data = new HashMap<>(ResultUtils.createOutput(results, map, mapping));
-
-      if (synchronizer.outputNextTick()) {
-        data.put(SimosaikUnits.SIMONA_NEXT_TICK, results.getMaybeNextTick());
-      }
+      Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
 
       logger.info(
           "["
