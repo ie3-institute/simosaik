@@ -22,8 +22,12 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
+import edu.ie3.util.quantities.PowerSystemUnits;
 import java.util.*;
 import java.util.logging.Logger;
+import javax.measure.quantity.Time;
+import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
@@ -84,7 +88,7 @@ public class MosaikSimulator extends Simulator {
 
     try {
       synchronizer.sendInitData(
-          new InitialisationData.FlexInitData(
+          new InitialisationData.SimulatorData(
               stepSize, extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -142,6 +146,17 @@ public class MosaikSimulator extends Simulator {
       logger.warning("No models are build, because no mapping was provided!");
     }
 
+    Optional<ComparableQuantity<Time>> maxDelay = Optional.empty();
+
+    if (modelParams.containsKey("max_delay")) {
+      try {
+        long delay = (long) modelParams.get("max_delay");
+
+        maxDelay = Optional.of(Quantities.getQuantity(delay, PowerSystemUnits.MILLISECOND));
+      } catch (NumberFormatException ignored) {
+      }
+    }
+
     boolean allInitialized = extEntityEntries.values().stream().allMatch(Optional::isPresent);
 
     if (allInitialized) {
@@ -155,7 +170,7 @@ public class MosaikSimulator extends Simulator {
 
         this.mapping = new ExtEntityMapping(entries);
 
-        synchronizer.sendInitData(new InitialisationData.MappingData(mapping));
+        synchronizer.sendInitData(new InitialisationData.ModelData(mapping, maxDelay));
 
         // create input message processors
         Map<String, UUID> primaryIdToUuid =

@@ -7,10 +7,14 @@
 package edu.ie3.simosaik.initialization;
 
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import java.util.Optional;
+import javax.measure.quantity.Time;
+import tech.units.indriya.ComparableQuantity;
 
 public interface InitialisationData {
 
-  record FlexInitData(long stepSize, boolean disaggregate) implements InitialisationData {}
+  record SimulatorData(long stepSize, boolean disaggregate) implements InitialisationData {}
 
-  record MappingData(ExtEntityMapping mapping) implements InitialisationData {}
+  record ModelData(ExtEntityMapping mapping, Optional<ComparableQuantity<Time>> maxDelay)
+      implements InitialisationData {}
 }

@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.units.indriya.ComparableQuantity;
+
+import javax.measure.quantity.Time;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -57,13 +60,16 @@ public class MosaikSimulation extends ExtCoSimulation {
     this.synchronizer = synchronizer;
 
     try {
-      var initData = synchronizer.getInitialisationData(InitialisationData.FlexInitData.class);
+      var initData = synchronizer.getInitialisationData(InitialisationData.SimulatorData.class);
 
       this.stepSize = initData.stepSize();
       this.disaggregateFlex = initData.disaggregate();
 
-      ExtEntityMapping entityMapping =
-          synchronizer.getInitialisationData(InitialisationData.MappingData.class).mapping();
+      InitialisationData.ModelData modelData = synchronizer.getInitialisationData(InitialisationData.ModelData.class);
+
+      ExtEntityMapping entityMapping = modelData.mapping();
+      Optional<ComparableQuantity<Time>> maxDelay = modelData.maxDelay();
+
 
       // primary data connection
       Map<UUID, Class<? extends Value>> primaryInput =
@@ -78,7 +84,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       if (mode.isPresent()) {
         List<UUID> controlledEms = SimosaikUtils.buildEmData(entityMapping);
 
-        this.extEmDataConnection = buildEmConnection(controlledEms, mode.get(), log);
+        this.extEmDataConnection = buildEmConnection(controlledEms, mode.get(), maxDelay, log);
       } else {
         this.extEmDataConnection = null;
       }

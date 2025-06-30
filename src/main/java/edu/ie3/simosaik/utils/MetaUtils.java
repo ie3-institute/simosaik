@@ -79,7 +79,7 @@ public final class MetaUtils {
     Model model = Model.of(entity.name).params("mapping").attrs(attributes);
 
     if (entity.equals(EM_COMMUNICATION)) {
-      return model.triggers(attributes);
+      return model.params("mapping", "max_delay").triggers(attributes);
     }
 
     if (entity.equals(EM_OPTIMIZER)) {
@@ -87,10 +87,6 @@ public final class MetaUtils {
     }
 
     return model;
-  }
-
-  public static Map<String, Object> createMeta(String type, Model... models) {
-    return createMeta(type, List.of(models));
   }
 
   @SuppressWarnings("unchecked")

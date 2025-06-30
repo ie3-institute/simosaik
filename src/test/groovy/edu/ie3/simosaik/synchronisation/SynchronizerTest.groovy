@@ -91,10 +91,10 @@ class SynchronizerTest extends Specification {
         Synchronizer synchronizer = new Synchronizer()
         SIMONAPart simonaPart = synchronizer as SIMONAPart
 
-        synchronizer.initDataQueue.put(new InitialisationData.FlexInitData(3600L, false))
+        synchronizer.initDataQueue.put(new InitialisationData.SimulatorData(3600L, false))
 
         when:
-        def data = simonaPart.getInitialisationData(InitialisationData.FlexInitData)
+        def data = simonaPart.getInitialisationData(InitialisationData.SimulatorData)
 
         then:
         data.stepSize() == 3600L
@@ -224,11 +224,11 @@ class SynchronizerTest extends Specification {
         MosaikPart mosaikPart = synchronizer as MosaikPart
 
         when:
-        mosaikPart.sendInitData(new InitialisationData.FlexInitData(900L, true))
+        mosaikPart.sendInitData(new InitialisationData.SimulatorData(900L, true))
 
         then:
         synchronizer.initDataQueue.size() == 1
-        def data = synchronizer.initDataQueue.take(InitialisationData.FlexInitData)
+        def data = synchronizer.initDataQueue.take(InitialisationData.SimulatorData)
         data.stepSize() == 900L
         data.disaggregate()
     }
