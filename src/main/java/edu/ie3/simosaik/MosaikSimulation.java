@@ -20,6 +20,7 @@ import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.ontology.em.*;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitialisationData;
+import edu.ie3.simosaik.synchronisation.SIMONAPart;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,7 +39,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final long stepSize;
   protected final boolean disaggregateFlex;
 
-  protected final MosaikSimulator mosaikSimulator; // extends Simulator in Mosaik
+  private final SIMONAPart synchronizer;
 
   // connections
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
@@ -46,25 +47,23 @@ public class MosaikSimulation extends ExtCoSimulation {
   private final ExtResultDataConnection
       extResultDataConnection; // TODO: Check if we can switch to ResultListener
 
-  public MosaikSimulation(String mosaikIP, MosaikSimulator simulator) {
-    this("MosaikSimulation", mosaikIP, simulator);
+  public MosaikSimulation(SIMONAPart synchronizer) {
+    this("MosaikSimulation", synchronizer);
   }
 
-  public MosaikSimulation(String name, String mosaikIP, MosaikSimulator simulator) {
-    super(name, simulator.getSimName());
+  public MosaikSimulation(String name, SIMONAPart synchronizer) {
+    super(name, "MosaikSimulator");
 
-    this.mosaikSimulator = simulator;
-    mosaikSimulator.setConnectionToSimonaApi(queueToSimona, queueToExt);
-    SimosaikUtils.startMosaikSimulation(mosaikSimulator, mosaikIP);
+    this.synchronizer = synchronizer;
 
     try {
-      var initData = simulator.initDataQueue.take(InitialisationData.FlexInitData.class);
+      var initData = synchronizer.getInitialisationData(InitialisationData.FlexInitData.class);
 
       this.stepSize = initData.stepSize();
       this.disaggregateFlex = initData.disaggregate();
 
       ExtEntityMapping entityMapping =
-          simulator.initDataQueue.take(InitialisationData.MappingData.class).mapping();
+          synchronizer.getInitialisationData(InitialisationData.MappingData.class).mapping();
 
       // primary data connection
       Map<UUID, Class<? extends Value>> primaryInput =
@@ -105,6 +104,9 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final Long initialize() {
     log.info(
         "+++++++++++++++++++++++++++ Initialization of the external simulation +++++++++++++++++++++++++++");
+
+    synchronizer.setDataQueues(queueToSimona, queueToExt);
+
     log.info(
         "+++++++++++++++++++++++++++ Initialization of the external simulation completed +++++++++++++++++++++++++++");
     return 0L;
@@ -116,10 +118,21 @@ public class MosaikSimulation extends ExtCoSimulation {
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
     try {
-      Thread.sleep(500);
-
       long nextTick = tick + stepSize;
-      return activity(tick, nextTick);
+      synchronizer.updateNextTickSIMONA(Optional.empty());
+      synchronizer.updateTickSIMONA(tick);
+
+      if (!synchronizer.isFinished()) {
+        Optional<Long> maybeNextTick = activity(tick, nextTick);
+
+        // setting the finished flag in the synchronizer for SIMONA
+        synchronizer.setFinishedFlag();
+
+        return maybeNextTick;
+      } else {
+        // SIMONA will not receive data for the current tick
+        return Optional.of(nextTick);
+      }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -128,7 +141,9 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
 
-    if (extPrimaryDataConnection != null) {
+    boolean expectInputs = synchronizer.expectInput();
+
+    if (extPrimaryDataConnection != null && expectInputs) {
       // sending primary data to SIMONA
       sendPrimaryDataToSimona(extPrimaryDataConnection, tick, maybeNextTick, log);
     }
@@ -146,8 +161,17 @@ public class MosaikSimulation extends ExtCoSimulation {
           // we will receive an em completion message
           extEmDataConnection.receiveWithType(EmCompletion.class);
         }
-        case EM_COMMUNICATION -> useFlexCommunication(extEmDataConnection, tick);
+        case EM_COMMUNICATION -> {
+          Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
 
+          if (nextEmChangeTick.isPresent()) {
+            if (nextEmChangeTick.get() < nextTick) {
+              maybeNextTick = nextEmChangeTick;
+            }
+          } else {
+            log.warn("There are no em inputs for tick '{}'. Skipping em communication.", tick);
+          }
+        }
         default ->
             throw new IllegalStateException(
                 "The mode '" + extEmDataConnection.mode + "' is currently not supported!");
@@ -233,6 +257,8 @@ public class MosaikSimulation extends ExtCoSimulation {
       } else {
         log.warn("Received unsupported data response: {}", received);
       }
+
+      synchronizer.updateNextTickSIMONA(maybeNextTick);
 
       log.warn("Results to ext: {}", results);
 

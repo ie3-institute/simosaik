@@ -43,7 +43,8 @@ public final class MetaUtils {
               FLEX_OPTION_P_REF,
               FLEX_OPTION_P_MAX,
               FLEX_OPTIONS);
-      case EM_COMMUNICATION -> List.of(FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT);
+      case EM_COMMUNICATION ->
+          List.of(SIMONA_NEXT_TICK, FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT);
       case EM_OPTIMIZER ->
           List.of(
               ACTIVE_POWER,

@@ -16,6 +16,9 @@ import javax.measure.Unit;
 
 public final class SimosaikUnits {
 
+  // scheduling units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+  public static final String SIMONA_NEXT_TICK = "Simona[nextTick]";
+
   // grid units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   public static final String VOLTAGE_MAG = "u[pu]";
   public static final String VOLTAGE_ANG = "u[RAD]";
