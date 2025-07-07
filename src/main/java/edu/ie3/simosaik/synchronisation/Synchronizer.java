@@ -30,6 +30,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private long nextRegularMosaikTick = 0L;
   private long nextMosaikTick = 0L;
   private boolean noInputs = false;
+  private boolean noOutputs = false;
 
   // SIMONA fields
   private final AtomicLong simonaTick = new AtomicLong(-1);
@@ -175,6 +176,8 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
     if (time == nextRegularMosaikTick) {
       // the received time is the next regular tick, that we expected
 
+      noOutputs = false;
+
       // calculate the next regular tick
       nextMosaikTick = time + mosaikStepSize;
 
@@ -314,12 +317,19 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   @Override
   public boolean outputNextTick() {
-    return hasNextTickChanged && getNextTick() != nextRegularMosaikTick;
+    // we only output the next tick, if we can send outputs to mosaik, the next tick has changed and
+    // the next tick is not equal to the next regular mosaik tick
+    return !noOutputs && hasNextTickChanged && getNextTick() != nextRegularMosaikTick;
   }
 
   @Override
   public void setNoInputFlag() {
     noInputs = true;
+  }
+
+  @Override
+  public void setNoOutputFlag() {
+    noOutputs = true;
   }
 
   @Override

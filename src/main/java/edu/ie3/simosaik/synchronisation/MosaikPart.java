@@ -69,6 +69,12 @@ public sealed interface MosaikPart permits Synchronizer {
   void setNoInputFlag();
 
   /**
+   * Method for setting the no output fleg in the {@link Synchronizer} to {@code true}. This flag
+   * signals, that no further output is sent to mosaik.
+   */
+  void setNoOutputFlag();
+
+  /**
    * Method for setting the mosaik step size.
    *
    * @param stepSize that should be used

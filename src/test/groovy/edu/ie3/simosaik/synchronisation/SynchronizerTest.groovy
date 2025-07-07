@@ -333,6 +333,22 @@ class SynchronizerTest extends Specification {
         synchronizer.noInputs
     }
 
+    def "The mosaik part of the synchronizer should set the no ouput flag correctly"() {
+        given:
+        Synchronizer synchronizer = new Synchronizer()
+        MosaikPart mosaikPart = synchronizer as MosaikPart
+
+        synchronizer.updateNextTickSIMONA(Optional.of(100L))
+
+        expect:
+        !synchronizer.noOutputs
+        synchronizer.outputNextTick()
+
+        mosaikPart.setNoOutputFlag()
+        synchronizer.noOutputs
+        !synchronizer.outputNextTick()
+    }
+
     def "The mosaik part of the synchronizer should set the mosaik step size correctly"() {
         given:
         Synchronizer synchronizer = new Synchronizer()
