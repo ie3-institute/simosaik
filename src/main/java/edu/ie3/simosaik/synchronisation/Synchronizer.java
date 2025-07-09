@@ -47,6 +47,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private final Condition continueMosaik = simosaikLock.newCondition();
   private boolean mosaikIsWaiting = false;
 
+  // data queues
   private final InitializationQueue initDataQueue = new InitializationQueue();
   private ExtDataContainerQueue<ExtInputContainer> queueToSimona;
   private ExtDataContainerQueue<ExtResultContainer> queueToExt;
@@ -198,16 +199,17 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
               + "'.");
     }
 
-    log.info(
-        "Mosaik next time is '{}', next regular time is '{}'.",
-        nextMosaikTick,
-        nextRegularMosaikTick);
-
     // check if synced with SIMONA
     if (time < simonaTime) {
       // mosaik is behind
       // we don't need to update the time
       goToNextTick = true;
+
+      if (simonaTime < nextRegularMosaikTick) {
+        log.info("SIOMANA requires an intermediate tick for: {}", simonaTime);
+        nextMosaikTick = simonaTime;
+      }
+
     } else if (time > simonaTime) {
       goToNextTick = false;
 
@@ -244,6 +246,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       // signal, because SIMONA might wait for mosaik
       continueSIMONA.signal();
     }
+
+    log.info(
+        "Mosaik next time is '{}', next regular time is '{}'.",
+        nextMosaikTick,
+        nextRegularMosaikTick);
 
     // release the lock
     simosaikLock.unlock();
