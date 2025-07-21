@@ -146,13 +146,26 @@ public class MosaikSimulator extends Simulator {
     }
 
     Optional<ComparableQuantity<Time>> maxDelay = Optional.empty();
+    Map<String, ComparableQuantity<Time>> delayParams = new HashMap<>();
 
     if (modelParams.containsKey("max_delay")) {
-      try {
-        long delay = (long) modelParams.get("max_delay");
+      Object delayOption = modelParams.get("max_delay");
 
-        maxDelay = Optional.of(Quantities.getQuantity(delay, PowerSystemUnits.MILLISECOND));
-      } catch (NumberFormatException ignored) {
+      if (delayOption instanceof Map<?, ?> delayMap) {
+
+        delayMap.forEach(
+            (id, delay) -> {
+              try {
+                delayParams.put(
+                    (String) id,
+                    Quantities.getQuantity((long) delay, PowerSystemUnits.MILLISECOND));
+
+              } catch (NumberFormatException ignored) {
+              }
+            });
+      } else if (delayOption instanceof Long defaultDelay) {
+
+        maxDelay = Optional.of(Quantities.getQuantity(defaultDelay, PowerSystemUnits.MILLISECOND));
       }
     }
 
@@ -169,7 +182,7 @@ public class MosaikSimulator extends Simulator {
 
         this.mapping = new ExtEntityMapping(entries);
 
-        synchronizer.sendInitData(new InitialisationData.ModelData(mapping, maxDelay));
+        synchronizer.sendInitData(new InitialisationData.ModelData(mapping));
 
         // create input message processors
         Map<String, UUID> primaryIdToUuid =
@@ -181,8 +194,21 @@ public class MosaikSimulator extends Simulator {
         Map<String, UUID> emIdToUuid =
             mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION);
 
-        if (!emIdToUuid.isEmpty())
-          this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid));
+        if (!emIdToUuid.isEmpty()) {
+
+          maxDelay.ifPresent(
+              delay ->
+                  emIdToUuid
+                      .keySet()
+                      .forEach(
+                          key -> {
+                            if (!delayParams.containsKey(key)) {
+                              delayParams.put(key, delay);
+                            }
+                          }));
+
+          this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid, delayParams));
+        }
 
       } catch (InterruptedException e) {
         throw new RuntimeException(e);

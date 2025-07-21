@@ -12,6 +12,7 @@ import static edu.ie3.simosaik.utils.SimosaikUtils.*;
 
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.datamodel.utils.TriFunction;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.EmSetPoint;
 import edu.ie3.simona.api.data.model.em.FlexOptionRequest;
@@ -19,8 +20,10 @@ import edu.ie3.simona.api.data.model.em.FlexOptions;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import javax.measure.quantity.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.units.indriya.ComparableQuantity;
 
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
@@ -65,14 +68,18 @@ public final class InputUtils {
     }
   }
 
-  public record EmMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
+  public record EmMessageProcessor(
+      Map<String, UUID> idToUuid, Map<String, ComparableQuantity<Time>> maxDelay)
+      implements MessageProcessor {
     public void process(
         ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
       parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
-      parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
-      parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);
+      parseFlexOptions(receiverToMessages, idToUuid, maxDelay).forEach(container::addFlexOptions);
+      parseSetPoints(receiverToMessages, idToUuid, maxDelay).forEach(container::addSetPoint);
     }
   }
+
+  // handling of em delays
 
   // private method for message parsing
 
@@ -157,10 +164,7 @@ public final class InputUtils {
             if (!requests.isEmpty()) {
               FlexRequestMessage requestMessage = requests.get(0);
               FlexOptionRequest request =
-                  new FlexOptionRequest(
-                      receiverUuid,
-                      requestMessage.sender().map(idToUuid::get),
-                      requestMessage.delay());
+                  new FlexOptionRequest(receiverUuid, requestMessage.sender().map(idToUuid::get));
 
               flexRequests.put(receiverUuid, request);
             }
@@ -171,7 +175,9 @@ public final class InputUtils {
   }
 
   private static Map<UUID, List<FlexOptions>> parseFlexOptions(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
+      Map<String, List<Content>> receiverToMessages,
+      Map<String, UUID> idToUuid,
+      Map<String, ComparableQuantity<Time>> maxDelay) {
     if (idToUuid.isEmpty()) {
       log.warn("No em external entity mapping found!");
       return Collections.emptyMap();
@@ -190,6 +196,7 @@ public final class InputUtils {
                     .filter(m -> m.getClass() == FlexOptionsMessage.class)
                     .map(FlexOptionsMessage.class::cast)
                     .flatMap(m -> m.information().stream())
+                    .filter(m -> shouldBeProcessed.apply(receiver, maxDelay, m.delay()))
                     .map(
                         optionMessage ->
                             new FlexOptions(
@@ -197,8 +204,7 @@ public final class InputUtils {
                                 idToUuid.get(optionMessage.sender()),
                                 optionMessage.pRef(),
                                 optionMessage.pMin(),
-                                optionMessage.pMax(),
-                                optionMessage.delay()))
+                                optionMessage.pMax()))
                     .toList();
 
             if (!options.isEmpty()) {
@@ -211,7 +217,9 @@ public final class InputUtils {
   }
 
   private static List<EmSetPoint> parseSetPoints(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
+      Map<String, List<Content>> receiverToMessages,
+      Map<String, UUID> idToUuid,
+      Map<String, ComparableQuantity<Time>> maxDelay) {
     if (idToUuid.isEmpty()) {
       log.warn("No em external entity mapping found!");
       return Collections.emptyList();
@@ -244,7 +252,13 @@ public final class InputUtils {
               if (powerValue.isEmpty()) {
                 log.debug("No set point value found for asset {}.", receiver);
               } else {
-                setPoints.add(new EmSetPoint(receiverUuid, powerValue, setPointMessage.delay()));
+
+                boolean canReceive =
+                    shouldBeProcessed.apply(receiver, maxDelay, setPointMessage.delay());
+
+                if (canReceive) {
+                  setPoints.add(new EmSetPoint(receiverUuid, powerValue));
+                }
               }
             } else {
               // if set point is given as double values
@@ -275,4 +289,21 @@ public final class InputUtils {
 
     return setPoints;
   }
+
+  private static final TriFunction<
+          String,
+          Map<String, ComparableQuantity<Time>>,
+          Optional<ComparableQuantity<Time>>,
+          Boolean>
+      shouldBeProcessed =
+          (id, maxDelay, delayOption) -> {
+            Optional<ComparableQuantity<Time>> maxDelayOption =
+                Optional.ofNullable(maxDelay.get(id));
+
+            if (maxDelayOption.isPresent() && delayOption.isPresent()) {
+              return delayOption.get().isLessThanOrEqualTo(maxDelayOption.get());
+            }
+
+            return true;
+          };
 }
