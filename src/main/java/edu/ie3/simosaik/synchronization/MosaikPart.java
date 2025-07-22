@@ -4,11 +4,11 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.synchronisation;
+package edu.ie3.simosaik.synchronization;
 
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simosaik.initialization.InitialisationData;
+import edu.ie3.simosaik.initialization.InitializationData;
 import java.util.Optional;
 
 /**
@@ -28,12 +28,12 @@ public sealed interface MosaikPart permits Synchronizer {
   void updateMosaikTime(long time) throws InterruptedException;
 
   /**
-   * Method for sending {@link InitialisationData} to SIMONA.
+   * Method for sending {@link InitializationData} to SIMONA.
    *
    * @param initialisationData that should be sent
    * @throws InterruptedException if there is an interruption while sending the data
    */
-  void sendInitData(InitialisationData initialisationData) throws InterruptedException;
+  void sendInitData(InitializationData initialisationData) throws InterruptedException;
 
   /**
    * Method for sending input data to SIMONA.

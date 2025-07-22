@@ -8,9 +8,9 @@ package edu.ie3.simosaik.initialization;
 
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 
-public interface InitialisationData {
+public interface InitializationData {
 
-  record SimulatorData(long stepSize, boolean disaggregate) implements InitialisationData {}
+  record SimulatorData(long stepSize, boolean disaggregate) implements InitializationData {}
 
-  record ModelData(ExtEntityMapping mapping) implements InitialisationData {}
+  record ModelData(ExtEntityMapping mapping) implements InitializationData {}
 }

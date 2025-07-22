@@ -4,12 +4,12 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.synchronisation;
+package edu.ie3.simosaik.synchronization;
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simosaik.initialization.InitialisationData;
+import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -135,7 +135,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public <R extends InitialisationData> R getInitialisationData(Class<R> clazz)
+  public <R extends InitializationData> R getInitializationData(Class<R> clazz)
       throws InterruptedException {
     return initDataQueue.take(clazz);
   }
@@ -257,7 +257,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public void sendInitData(InitialisationData initialisationData) throws InterruptedException {
+  public void sendInitData(InitializationData initialisationData) throws InterruptedException {
     initDataQueue.put(initialisationData);
   }
 

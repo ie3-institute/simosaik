@@ -19,8 +19,8 @@ import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.ontology.em.*;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
-import edu.ie3.simosaik.initialization.InitialisationData;
-import edu.ie3.simosaik.synchronisation.SIMONAPart;
+import edu.ie3.simosaik.initialization.InitializationData;
+import edu.ie3.simosaik.synchronization.SIMONAPart;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,13 +57,13 @@ public class MosaikSimulation extends ExtCoSimulation {
     this.synchronizer = synchronizer;
 
     try {
-      var initData = synchronizer.getInitialisationData(InitialisationData.SimulatorData.class);
+      var initData = synchronizer.getInitializationData(InitializationData.SimulatorData.class);
 
       this.stepSize = initData.stepSize();
       this.disaggregateFlex = initData.disaggregate();
 
-      InitialisationData.ModelData modelData =
-          synchronizer.getInitialisationData(InitialisationData.ModelData.class);
+      InitializationData.ModelData modelData =
+          synchronizer.getInitializationData(InitializationData.ModelData.class);
 
       ExtEntityMapping entityMapping = modelData.mapping();
 

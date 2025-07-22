@@ -16,8 +16,8 @@ import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
-import edu.ie3.simosaik.initialization.InitialisationData;
-import edu.ie3.simosaik.synchronisation.MosaikPart;
+import edu.ie3.simosaik.initialization.InitializationData;
+import edu.ie3.simosaik.synchronization.MosaikPart;
 import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
@@ -88,7 +88,7 @@ public class MosaikSimulator extends Simulator {
 
     try {
       synchronizer.sendInitData(
-          new InitialisationData.SimulatorData(
+          new InitializationData.SimulatorData(
               stepSize, extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -182,7 +182,7 @@ public class MosaikSimulator extends Simulator {
 
         this.mapping = new ExtEntityMapping(entries);
 
-        synchronizer.sendInitData(new InitialisationData.ModelData(mapping));
+        synchronizer.sendInitData(new InitializationData.ModelData(mapping));
 
         // create input message processors
         Map<String, UUID> primaryIdToUuid =

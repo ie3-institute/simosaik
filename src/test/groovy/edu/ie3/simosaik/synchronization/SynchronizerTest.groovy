@@ -1,9 +1,9 @@
-package edu.ie3.simosaik.synchronisation
+package edu.ie3.simosaik.synchronization
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue
 import edu.ie3.simona.api.data.container.ExtInputContainer
 import edu.ie3.simona.api.data.container.ExtResultContainer
-import edu.ie3.simosaik.initialization.InitialisationData
+import edu.ie3.simosaik.initialization.InitializationData
 import spock.lang.Specification
 
 import java.util.concurrent.CompletableFuture
@@ -86,15 +86,15 @@ class SynchronizerTest extends Specification {
         !synchronizer.isFinished
     }
 
-    def "The SIMONA part of the synchronizer should retrieve initialisation data correctly"() {
+    def "The SIMONA part of the synchronizer should retrieve initialization data correctly"() {
         given:
         Synchronizer synchronizer = new Synchronizer()
         SIMONAPart simonaPart = synchronizer as SIMONAPart
 
-        synchronizer.initDataQueue.put(new InitialisationData.SimulatorData(3600L, false))
+        synchronizer.initDataQueue.put(new InitializationData.SimulatorData(3600L, false))
 
         when:
-        def data = simonaPart.getInitialisationData(InitialisationData.SimulatorData)
+        def data = simonaPart.getInitializationData(InitializationData.SimulatorData)
 
         then:
         data.stepSize() == 3600L
@@ -218,17 +218,17 @@ class SynchronizerTest extends Specification {
         !synchronizer.noInputs
     }
 
-    def "The mosaik part of the synchronizer should send initialisation data correctly"() {
+    def "The mosaik part of the synchronizer should send initialization data correctly"() {
         given:
         Synchronizer synchronizer = new Synchronizer()
         MosaikPart mosaikPart = synchronizer as MosaikPart
 
         when:
-        mosaikPart.sendInitData(new InitialisationData.SimulatorData(900L, true))
+        mosaikPart.sendInitData(new InitializationData.SimulatorData(900L, true))
 
         then:
         synchronizer.initDataQueue.size() == 1
-        def data = synchronizer.initDataQueue.take(InitialisationData.SimulatorData)
+        def data = synchronizer.initDataQueue.take(InitializationData.SimulatorData)
         data.stepSize() == 900L
         data.disaggregate()
     }

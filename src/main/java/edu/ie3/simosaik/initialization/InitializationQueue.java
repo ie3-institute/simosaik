@@ -10,19 +10,19 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class InitializationQueue {
 
-  private final LinkedBlockingQueue<InitialisationData> initializationQueue =
+  private final LinkedBlockingQueue<InitializationData> initializationQueue =
       new LinkedBlockingQueue<>();
 
   public int size() {
     return initializationQueue.size();
   }
 
-  public void put(InitialisationData initialisationData) throws InterruptedException {
+  public void put(InitializationData initialisationData) throws InterruptedException {
     initializationQueue.put(initialisationData);
   }
 
   public <R> R take(Class<R> clazz) throws InterruptedException {
-    InitialisationData initialisationData = initializationQueue.take();
+    InitializationData initialisationData = initializationQueue.take();
 
     if (clazz.isAssignableFrom(initialisationData.getClass())) {
       return clazz.cast(initialisationData);

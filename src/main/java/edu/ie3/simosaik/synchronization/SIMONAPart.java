@@ -4,12 +4,12 @@
  * Research group Distribution grid planning and operation
  */
 
-package edu.ie3.simosaik.synchronisation;
+package edu.ie3.simosaik.synchronization;
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simosaik.initialization.InitialisationData;
+import edu.ie3.simosaik.initialization.InitializationData;
 import java.util.Optional;
 
 /**
@@ -37,14 +37,14 @@ public sealed interface SIMONAPart permits Synchronizer {
   // getter methods
 
   /**
-   * Retrieves {@link InitialisationData}, that was provided by mosaik.
+   * Retrieves {@link InitializationData}, that was provided by mosaik.
    *
    * @param clazz class of data, that is requested
-   * @return the initialisation data
-   * @param <R> type of initialisation data
+   * @return the initialization data
+   * @param <R> type of initialization data
    * @throws InterruptedException if there is an interrupted while retrieving the data
    */
-  <R extends InitialisationData> R getInitialisationData(Class<R> clazz)
+  <R extends InitializationData> R getInitializationData(Class<R> clazz)
       throws InterruptedException;
 
   /** Returns {@code true}, if SIMONA is finished for the current tick. */
