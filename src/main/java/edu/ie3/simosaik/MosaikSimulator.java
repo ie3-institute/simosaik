@@ -15,7 +15,7 @@ import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simona.api.simulation.mapping.ExtEntityEntry;
+import edu.ie3.simona.api.mapping.ExtEntityEntry;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.MosaikPart;
 import edu.ie3.simosaik.utils.InputUtils;
