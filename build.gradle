@@ -10,7 +10,10 @@ plugins {
 
 ext {
   //version (changing these should be considered thoroughly!)
-  javaVersion = JavaVersion.VERSION_17
+  javaVersion = JavaVersion.VERSION_21
+  groovyVersion = "4.0"
+  groovyBinaryVersion = "4.0.28"
+
   scriptsLocation = 'gradle' + File.separator + 'scripts' + File.separator // location of script plugins
 }
 
@@ -49,7 +52,7 @@ dependencies {
     /* Exclude our own nested dependencies */
     exclude group: 'com.github.ie3-institute'
   }
-  implementation('com.github.ie3-institute:PowerSystemDataModel:7.0.0') {
+  implementation('com.github.ie3-institute:PowerSystemDataModel:8.1.0') {
     exclude group: 'org.apache.logging.log4j'
     exclude group: 'org.slf4j'
     /* Exclude our own nested dependencies */
@@ -73,7 +76,8 @@ dependencies {
 
 
   /* testing */
-  testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+  testImplementation "org.apache.groovy:groovy:$groovyBinaryVersion"
+  testImplementation "org.spockframework:spock-core:2.3-groovy-$groovyVersion"
 }
 
 tasks.withType(JavaCompile).configureEach {

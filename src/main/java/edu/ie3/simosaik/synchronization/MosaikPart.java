@@ -23,9 +23,10 @@ public sealed interface MosaikPart permits Synchronizer {
    * Method for updating the mosaik time, that is used by the {@link Synchronizer}.
    *
    * @param time new time
+   * @return the scaled mosaik time
    * @throws InterruptedException if there is an interruption
    */
-  void updateMosaikTime(long time) throws InterruptedException;
+  long updateMosaikTime(long time) throws InterruptedException;
 
   /**
    * Method for sending {@link InitializationData} to SIMONA.
@@ -80,4 +81,11 @@ public sealed interface MosaikPart permits Synchronizer {
    * @param stepSize that should be used
    */
   void setMosaikStepSize(long stepSize);
+
+  /**
+   * Method for setting the mosaik time scaling.
+   *
+   * @param timeScaling that is used
+   */
+  void setMosaikTimeScaling(double timeScaling);
 }

@@ -167,10 +167,35 @@ class SynchronizerTest extends Specification {
         synchronizer.simonaTick.set(900L)
 
         when:
-        mosaikPart.updateMosaikTime(900L)
+        def scaled = mosaikPart.updateMosaikTime(900L)
 
         then:
+        scaled == 900L
         synchronizer.mosaikTick.get() == 900L
+        synchronizer.scaledMosaikTick.get() == 900L
+        synchronizer.nextRegularMosaikTick == 1800L
+        synchronizer.nextMosaikTick == 1800L
+        !synchronizer.noInputs
+    }
+
+    def "The mosaik part of the synchronizer should update the tick of mosaik correctly, if SIMONA has the same tick and mosaik has a time scaling"() {
+        given:
+        Synchronizer synchronizer = new Synchronizer()
+        MosaikPart mosaikPart = synchronizer as MosaikPart
+
+        synchronizer.mosaikTimeScaling = 0.001
+        synchronizer.mosaikStepSize = 900000L
+        synchronizer.nextRegularMosaikTick = 900000L
+
+        synchronizer.simonaTick.set(900L)
+
+        when:
+        def scaled = mosaikPart.updateMosaikTime(900000L)
+
+        then:
+        scaled == 900L
+        synchronizer.mosaikTick.get() == 900000L
+        synchronizer.scaledMosaikTick.get() == 900L
         synchronizer.nextRegularMosaikTick == 1800L
         synchronizer.nextMosaikTick == 1800L
         !synchronizer.noInputs
@@ -187,10 +212,12 @@ class SynchronizerTest extends Specification {
         synchronizer.simonaTick.set(1800L)
 
         when:
-        mosaikPart.updateMosaikTime(1000L)
+        def scaled = mosaikPart.updateMosaikTime(1000L)
 
         then:
+        scaled == 1000L
         synchronizer.mosaikTick.get() == 1000L
+        synchronizer.scaledMosaikTick.get() == 1000L
         synchronizer.nextRegularMosaikTick == 1800L
         synchronizer.nextMosaikTick == 1800L
         !synchronizer.noInputs
@@ -208,11 +235,13 @@ class SynchronizerTest extends Specification {
 
         when:
         def task = CompletableFuture.supplyAsync { mosaikPart.updateMosaikTime(900L) }
-        synchronizer.updateTickSIMONA(900L)
+        def scaled = synchronizer.updateTickSIMONA(900L)
         task.get()
 
         then:
+        scaled == 900L
         synchronizer.mosaikTick.get() == 900L
+        synchronizer.scaledMosaikTick.get() == 900L
         synchronizer.nextRegularMosaikTick == 1000L
         synchronizer.nextMosaikTick == 1000L
         !synchronizer.noInputs
@@ -362,5 +391,20 @@ class SynchronizerTest extends Specification {
 
         mosaikPart.setMosaikStepSize(953L)
         synchronizer.mosaikStepSize == 953L
+    }
+
+    def "The mosaik part of the synchronizer should set the mosaik time scaling correctly"() {
+        given:
+        Synchronizer synchronizer = new Synchronizer()
+        MosaikPart mosaikPart = synchronizer as MosaikPart
+
+        expect:
+        synchronizer.mosaikTimeScaling == 0.001d
+
+        mosaikPart.setMosaikTimeScaling(100d)
+        synchronizer.mosaikTimeScaling == 100d
+
+        mosaikPart.setMosaikTimeScaling(953d)
+        synchronizer.mosaikTimeScaling == 953d
     }
 }

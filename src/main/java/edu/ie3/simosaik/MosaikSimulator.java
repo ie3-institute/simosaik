@@ -14,8 +14,8 @@ import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtResultContainer;
 import edu.ie3.simona.api.mapping.DataType;
-import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.mapping.ExtEntityEntry;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.MosaikPart;
 import edu.ie3.simosaik.utils.InputUtils;
@@ -58,6 +58,8 @@ public class MosaikSimulator extends Simulator {
   @SuppressWarnings("unchecked")
   public Map<String, Object> init(
       String sid, Double timeResolution, Map<String, Object> simParams) {
+    // scaling must be set first
+    synchronizer.setMosaikTimeScaling(timeResolution);
     List<Model> models = new ArrayList<>();
 
     long stepSize;
@@ -89,7 +91,8 @@ public class MosaikSimulator extends Simulator {
     try {
       synchronizer.sendInitData(
           new InitializationData.SimulatorData(
-              stepSize, extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
+              (long) (stepSize * timeResolution),
+              extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -227,7 +230,7 @@ public class MosaikSimulator extends Simulator {
     }
 
     // updating the mosaik time
-    synchronizer.updateMosaikTime(time);
+    long scaledTime = synchronizer.updateMosaikTime(time);
 
     // the next tick we will expect data
     long nextTick = synchronizer.getNextTick();
@@ -244,7 +247,7 @@ public class MosaikSimulator extends Simulator {
 
     if (!filtered.isEmpty()) {
       ExtInputContainer extDataForSimona =
-          InputUtils.createInputDataContainer(time, nextTick, filtered, messageProcessors);
+          InputUtils.createInputDataContainer(scaledTime, nextTick, filtered, messageProcessors);
 
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
 

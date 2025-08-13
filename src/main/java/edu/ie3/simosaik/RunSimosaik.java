@@ -29,5 +29,7 @@ public class RunSimosaik implements Runnable {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+
+    System.out.println("Simulation ended!");
   }
 }
