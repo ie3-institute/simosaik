@@ -276,25 +276,6 @@ public class MosaikSimulator extends Simulator {
 
     boolean finished = synchronizer.isFinished();
 
-    if (finished) {
-      // we are finished for the current tick
-
-      if (synchronizer.outputNextTick()) {
-        // we should output the next tick information for those entities, that are requesting this
-        // information
-        logger.info("[" + time + "] Tick finished, sending only next tick information to mosaik.");
-
-        // we set the no output flag to true, since we need to return an empty map for mosaik to
-        // continue with the next tick
-        synchronizer.setNoOutputFlag();
-        return ResultUtils.onlyTickInformation(map, synchronizer.getNextTick());
-      } else {
-        // we will send an empty map, to signal mosaik, that this tick is finished
-        logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
-        return Collections.emptyMap();
-      }
-    }
-
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
 
     if (resultOption.isPresent()) {
@@ -312,11 +293,30 @@ public class MosaikSimulator extends Simulator {
 
       return data;
 
-    } else {
-      logger.info("[" + time + "] Got no results from SIMONA!");
-
-      return Collections.emptyMap();
     }
+
+    if (finished) {
+      // we are finished for the current tick
+
+      if (synchronizer.outputNextTick()) {
+        // we should output the next tick information for those entities, that are requesting this
+        // information
+        logger.info("[" + time + "] Tick finished, sending only next tick information to mosaik.");
+
+        // we set the no output flag to true, since we need to return an empty map for mosaik to
+        // continue with the next tick
+        synchronizer.setNoOutputFlag();
+        return ResultUtils.onlyTickInformation(map, synchronizer.getNextTick());
+      } else {
+        // we will send an empty map, to signal mosaik, that this tick is finished
+        logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
+        return Collections.emptyMap();
+      }
+    } else {
+           logger.info("[" + time + "] Got no results from SIMONA!");
+
+           return Collections.emptyMap();
+         }
   }
 
   protected void checkModelParams(int expected, int received) {

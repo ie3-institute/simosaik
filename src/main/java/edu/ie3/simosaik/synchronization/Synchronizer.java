@@ -285,25 +285,20 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
     Optional<ExtResultContainer> container;
 
     try {
-      if (isFinished()) {
-        container = Optional.empty();
-      } else {
+      container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
 
-        container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
+      while (container.isEmpty()) {
+        // no data found
 
-        while (container.isEmpty()) {
-          // no data found
-
-          if (!isFinished()) {
-            // SIMONA is not finished for the current tick
-            container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
-          } else {
-            // SIMONA went to the next tick, there will be no more data for the current tick
-            container = Optional.empty();
-          }
+        if (!isFinished()) {
+          // SIMONA is not finished for the current tick
+          container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
+        } else {
+          log.info("Finished while waiting for results!");
+          // SIMONA went to the next tick, there will be no more data for the current tick
+          container = Optional.empty();
         }
       }
-
     } catch (InterruptedException e) {
       container = Optional.empty();
     }

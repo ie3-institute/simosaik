@@ -60,6 +60,8 @@ public final class ResultUtils {
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
 
+    log.warn("Result container: {}", container.getResults());
+
     Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping();
     Map<UUID, String> uuidToId = mapping.getExtUuid2IdMapping();
 
@@ -73,6 +75,8 @@ public final class ResultUtils {
         UUID asset = idToUuid.get(externalEntity);
 
         ResultEntity result = container.getResult(asset);
+
+        log.info("{} ({}): {}", externalEntity, asset, result);
 
         Map<String, Object> data = handleResult(result, attrs, uuidToId);
 
@@ -90,45 +94,39 @@ public final class ResultUtils {
 
   private static Map<String, Object> handleResult(
       ResultEntity result, List<String> attrs, Map<UUID, String> uuidToId) {
-
-    if (result instanceof FlexOptionRequestResult r && attrs.contains(FLEX_REQUEST)) {
-      Map<String, Object> data = new HashMap<>();
-      data.put(FLEX_REQUEST, r.getReceivers().stream().map(uuidToId::get).toList());
-      return data;
-
-    } else if (result instanceof EmSetPointResult setPointResult
-        && attrs.contains(FLEX_SET_POINT)) {
-      return handleEmSetPointResult(setPointResult, uuidToId);
-
-    } else if (result instanceof FlexOptionsResult options) {
-      return handleFlexOptionResults(options, attrs, uuidToId);
-
-    } else if (result instanceof SystemParticipantResult participant) {
-      return handleParticipantResult(participant, attrs);
-
-    } else if (result instanceof NodeResult n) {
-      Map<String, Object> data = new HashMap<>();
-
-      if (attrs.contains(VOLTAGE_MAG)) {
-        data.put(VOLTAGE_MAG, toPu(n.getvMag()));
+    return switch (result) {
+      case FlexOptionRequestResult r when attrs.contains(FLEX_REQUEST) -> {
+        Map<String, Object> data = new HashMap<>();
+        data.put(FLEX_REQUEST, r.getReceivers().stream().map(uuidToId::get).toList());
+        yield data;
       }
+      case EmSetPointResult setPointResult when attrs.contains(FLEX_SET_POINT) ->
+          handleEmSetPointResult(setPointResult, uuidToId);
+      case FlexOptionsResult options -> handleFlexOptionResults(options, attrs, uuidToId);
+      case SystemParticipantResult participant -> handleParticipantResult(participant, attrs);
+      case NodeResult n -> {
+        Map<String, Object> data = new HashMap<>();
 
-      if (attrs.contains(VOLTAGE_ANG)) {
-        data.put(VOLTAGE_ANG, toRadians(n.getvAng()));
+        if (attrs.contains(VOLTAGE_MAG)) {
+          data.put(VOLTAGE_MAG, toPu(n.getvMag()));
+        }
+
+        if (attrs.contains(VOLTAGE_ANG)) {
+          data.put(VOLTAGE_ANG, toRadians(n.getvAng()));
+        }
+
+        yield data;
       }
+      case ConnectorResult connector -> handleConnectorResult(connector, attrs);
 
-      return data;
+      case null, default -> {
+        if (result != null) {
+          log.warn("Result of type '{}' is currently not supported.", result.getClass());
+        }
 
-    } else if (result instanceof ConnectorResult connector) {
-      return handleConnectorResult(connector, attrs);
-
-    } else {
-      if (result != null) {
-        log.warn("Result of type '{}' is currently not supported.", result.getClass());
+        yield Collections.emptyMap();
       }
-
-      return Collections.emptyMap();
-    }
+    };
   }
 
   private static Map<String, Object> handleConnectorResult(
