@@ -241,30 +241,27 @@ public class MosaikSimulation extends ExtCoSimulation {
 
       Map<UUID, ResultEntity> results = new HashMap<>();
 
-      if (received instanceof EmCompletion completion) {
-        notFinished = false;
-        maybeNextTick = completion.maybeNextTick();
+        switch (received) {
+            case EmCompletion(Optional<Long> nextTick) -> {
+                notFinished = false;
+                maybeNextTick = nextTick;
 
-        log.info("Finished for tick: {}. Next tick option: {}", tick, maybeNextTick);
-
-      } else if (received instanceof FlexRequestResponse flexRequestResponse) {
-        results.putAll(flexRequestResponse.flexRequests());
-
-      } else if (received instanceof FlexOptionsResponse flexOptionsResponse) {
-        results.putAll(flexOptionsResponse.receiverToFlexOptions());
-
-      } else if (received instanceof EmSetPointDataResponse setPointDataResponse) {
-        results.putAll(setPointDataResponse.emData());
-
-      } else {
-        log.warn("Received unsupported data response: {}", received);
-      }
+                log.info("Finished for tick: {}. Next tick option: {}", tick, maybeNextTick);
+            }
+            case FlexRequestResponse flexRequestResponse -> results.putAll(flexRequestResponse.flexRequests());
+            case FlexOptionsResponse flexOptionsResponse -> results.putAll(flexOptionsResponse.receiverToFlexOptions());
+            case EmSetPointDataResponse setPointDataResponse -> results.putAll(setPointDataResponse.emData());
+            default -> log.warn("Received unsupported data response: {}", received);
+        }
 
       synchronizer.updateNextTickSIMONA(maybeNextTick);
 
       log.warn("Results to ext: {}", results);
 
-      ExtResultContainer resultContainer = new ExtResultContainer(tick, results, maybeNextTick);
+      Map<UUID, List<ResultEntity>> resultMap = new HashMap<>();
+      results.forEach((uuid, result) -> resultMap.put(uuid, List.of(result)));
+
+      ExtResultContainer resultContainer = new ExtResultContainer(tick, resultMap, maybeNextTick);
 
       queueToExt.queueData(resultContainer);
     }

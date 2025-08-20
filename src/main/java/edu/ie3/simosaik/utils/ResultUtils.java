@@ -74,11 +74,15 @@ public final class ResultUtils {
       if (idToUuid.containsKey(externalEntity)) {
         UUID asset = idToUuid.get(externalEntity);
 
-        ResultEntity result = container.getResult(asset);
+        List<ResultEntity> results = container.getResult(asset);
 
-        log.info("{} ({}): {}", externalEntity, asset, result);
+        log.info("{} ({}): {}", externalEntity, asset, results);
 
-        Map<String, Object> data = handleResult(result, attrs, uuidToId);
+        Map<String, Object> data = new HashMap<>();
+
+        for (ResultEntity result : results) {
+            data.putAll(handleResult(result, attrs, uuidToId));
+        }
 
         if (!data.isEmpty()) {
           output.put(externalEntity, data);
