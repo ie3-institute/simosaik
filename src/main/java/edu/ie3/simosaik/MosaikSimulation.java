@@ -23,6 +23,7 @@ import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.SIMONAPart;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -196,12 +197,14 @@ public class MosaikSimulation extends ExtCoSimulation {
 
     while (notFinished) {
 
-      long extTick = queueToSimona.takeData(ExtInputContainer::getTick);
+      long extTick = synchronizer.getMosaikTick();
 
       log.info("Current simulator tick: {}, SIMONA tick: {}", extTick, tick);
 
-      if (tick == extTick) {
-        ExtInputContainer container = queueToSimona.takeContainer();
+      Optional<ExtInputContainer> containerOption = getInputs(tick);
+
+      if (tick == extTick && containerOption.isPresent()) {
+        ExtInputContainer container = containerOption.get();
 
         log.info("Flex requests: {}", container.flexRequestsString());
         log.info("Flex options: {}", container.flexOptionsString());
@@ -230,42 +233,57 @@ public class MosaikSimulation extends ExtCoSimulation {
           extEmDataConnection.requestCompletion(tick);
         }
 
+        log.info("Waiting for em message from SIMONA.");
+        EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
+        log.info("Received em message from SIMONA.");
+
+        Map<UUID, List<ResultEntity>> results = new HashMap<>();
+
+        switch (received) {
+          case EmCompletion(Optional<Long> nextTick) -> {
+            notFinished = false;
+            maybeNextTick = nextTick;
+
+            log.info("Received completion for tick: {}. Next tick option: {}", tick, maybeNextTick);
+          }
+          case EmResults(Map<UUID, List<ResultEntity>> emResults) -> results.putAll(emResults);
+          default -> log.warn("Received unsupported data response: {}", received);
+        }
+
+        synchronizer.updateNextTickSIMONA(maybeNextTick);
+
+        log.warn("Results to ext: {}", results);
+
+        ExtResultContainer resultContainer = new ExtResultContainer(tick, results, maybeNextTick);
+
+        queueToExt.queueData(resultContainer);
+
       } else {
         notFinished = false;
 
         log.info("External simulator finished tick {}. Request completion.", tick);
         extEmDataConnection.requestCompletion(tick);
+
+        maybeNextTick = Optional.of(tick + 1);
+        log.info("Received completion for tick: {}. Next tick option: {}", tick, maybeNextTick);
       }
-
-      EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
-
-      Map<UUID, ResultEntity> results = new HashMap<>();
-
-        switch (received) {
-            case EmCompletion(Optional<Long> nextTick) -> {
-                notFinished = false;
-                maybeNextTick = nextTick;
-
-                log.info("Finished for tick: {}. Next tick option: {}", tick, maybeNextTick);
-            }
-            case FlexRequestResponse flexRequestResponse -> results.putAll(flexRequestResponse.flexRequests());
-            case FlexOptionsResponse flexOptionsResponse -> results.putAll(flexOptionsResponse.receiverToFlexOptions());
-            case EmSetPointDataResponse setPointDataResponse -> results.putAll(setPointDataResponse.emData());
-            default -> log.warn("Received unsupported data response: {}", received);
-        }
-
-      synchronizer.updateNextTickSIMONA(maybeNextTick);
-
-      log.warn("Results to ext: {}", results);
-
-      Map<UUID, List<ResultEntity>> resultMap = new HashMap<>();
-      results.forEach((uuid, result) -> resultMap.put(uuid, List.of(result)));
-
-      ExtResultContainer resultContainer = new ExtResultContainer(tick, resultMap, maybeNextTick);
-
-      queueToExt.queueData(resultContainer);
     }
 
     return maybeNextTick;
+  }
+
+  public Optional<ExtInputContainer> getInputs(long tick) {
+    Optional<ExtInputContainer> container;
+
+    try {
+      do {
+        container = queueToSimona.pollContainer(100, TimeUnit.MILLISECONDS);
+      } while (tick == synchronizer.getMosaikTick() && container.isEmpty());
+
+    } catch (InterruptedException e) {
+        container = Optional.empty();
+    }
+
+    return container;
   }
 }

@@ -53,6 +53,8 @@ public sealed interface SIMONAPart permits Synchronizer {
   /** Returns {@code true}, if there are inputs from mosaik available. */
   boolean expectInput();
 
+  long getMosaikTick();
+
   // setter methods
 
   /**

@@ -118,6 +118,11 @@ public class MosaikSimulator extends Simulator {
           UUID uuid = UUID.fromString(entry.getKey());
           String id = entry.getValue();
 
+          String mosaik_id = switch (modelType) {
+            case PARTICIPANT_RESULTS -> id + "_res";
+            default -> id;
+          };
+
           // add mosaik model
           Map<String, Object> entity = new HashMap<>();
           entity.put("eid", id);

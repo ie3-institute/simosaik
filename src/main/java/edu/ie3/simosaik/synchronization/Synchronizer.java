@@ -148,6 +148,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
+  public long getMosaikTick() {
+    return scaledMosaikTick.get();
+  }
+
+  @Override
   public void setDataQueues(
       ExtDataContainerQueue<ExtInputContainer> queueToSimona,
       ExtDataContainerQueue<ExtResultContainer> queueToExt) {
@@ -286,18 +291,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
     try {
       container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
+      boolean isFinished = isFinished();
 
-      while (container.isEmpty()) {
-        // no data found
-
-        if (!isFinished()) {
-          // SIMONA is not finished for the current tick
-          container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
-        } else {
-          log.info("Finished while waiting for results!");
-          // SIMONA went to the next tick, there will be no more data for the current tick
-          container = Optional.empty();
-        }
+      while (container.isEmpty() && !isFinished) {
+        container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
+        isFinished = isFinished();
       }
     } catch (InterruptedException e) {
       container = Optional.empty();
