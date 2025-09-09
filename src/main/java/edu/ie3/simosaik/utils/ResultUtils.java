@@ -19,11 +19,11 @@ import edu.ie3.datamodel.models.result.system.ElectricalEnergyStorageResult;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantWithHeatResult;
+import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
-import edu.ie3.simona.api.data.container.ExtResultContainer;
-import edu.ie3.simona.api.data.model.em.EmSetPointResult;
-import edu.ie3.simona.api.data.model.em.ExtendedFlexOptionsResult;
-import edu.ie3.simona.api.data.model.em.FlexOptionRequestResult;
+import edu.ie3.simona.api.data.container.ExtOutputContainer;
+import edu.ie3.simona.api.data.model.em.*;
+import edu.ie3.simona.api.data.model.em.EmData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.SimosaikUnits;
 import java.util.*;
@@ -55,7 +55,7 @@ public final class ResultUtils {
   }
 
   public static Map<String, Object> createOutput(
-      ExtResultContainer container,
+      ExtOutputContainer container,
       Map<String, List<String>> requestedAttributes,
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
@@ -75,14 +75,19 @@ public final class ResultUtils {
         UUID asset = idToUuid.get(externalEntity);
 
         List<ResultEntity> results = container.getResult(asset);
+        List<EmData> emData = container.getEmData(asset);
 
-        log.info("{} ({}): {}", externalEntity, asset, results);
+        log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
 
         Map<String, Object> data = new HashMap<>();
 
+        // handle results
         for (ResultEntity result : results) {
-            data.putAll(handleResult(result, attrs, uuidToId));
+          data.putAll(handleResult(result, attrs, uuidToId));
         }
+
+        // handle em data
+        data.putAll(handleEmData(emData, attrs, uuidToId));
 
         if (!data.isEmpty()) {
           output.put(externalEntity, data);
@@ -99,13 +104,6 @@ public final class ResultUtils {
   private static Map<String, Object> handleResult(
       ResultEntity result, List<String> attrs, Map<UUID, String> uuidToId) {
     return switch (result) {
-      case FlexOptionRequestResult r when attrs.contains(FLEX_REQUEST) -> {
-        Map<String, Object> data = new HashMap<>();
-        data.put(FLEX_REQUEST, r.getReceivers().stream().map(uuidToId::get).toList());
-        yield data;
-      }
-      case EmSetPointResult setPointResult when attrs.contains(FLEX_SET_POINT) ->
-          handleEmSetPointResult(setPointResult, uuidToId);
       case FlexOptionsResult options -> handleFlexOptionResults(options, attrs, uuidToId);
       case SystemParticipantResult participant -> handleParticipantResult(participant, attrs);
       case NodeResult n -> {
@@ -184,34 +182,81 @@ public final class ResultUtils {
     return data;
   }
 
-  private static Map<String, Object> handleEmSetPointResult(
-      EmSetPointResult setPointResult, Map<UUID, String> uuidToId) {
-    String sender = uuidToId.get(setPointResult.getSender());
-    Map<String, Object> dataMap = new HashMap<>();
+  private static Map<String, Object> handleEmData(
+      List<EmData> emData, List<String> attrs, Map<UUID, String> uuidToId) {
+    List<Object> flexRequestData = new ArrayList<>();
+    Map<String, Object> flexOptionsData = new HashMap<>();
+    List<Object> setPointData = new ArrayList<>();
 
-    setPointResult
-        .getReceiverToSetPoint()
-        .forEach(
-            (receiverUuid, setPoint) -> {
-              String receiver = uuidToId.get(receiverUuid);
+    for (EmData entry : emData) {
+      switch (entry) {
+        case FlexOptionRequest(UUID receiver, UUID sender, boolean disaggregated) -> {
+          Map<String, Object> data = new HashMap<>();
+          String senderId = uuidToId.get(sender);
+          String receiverId = uuidToId.get(receiver);
 
-              Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
-              Double reactive = null;
+          data.put("receiver", receiverId);
+          data.put("sender", senderId);
+          data.put("disaggregated", disaggregated);
 
-              if (setPoint instanceof SValue sValue) {
-                reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
-              }
+          flexRequestData.add(data);
+        }
 
-              Map<String, Object> data = new HashMap<>();
-              data.put("receiver", receiver);
-              data.put("sender", sender);
-              data.put(ACTIVE_POWER, active);
-              data.put(REACTIVE_POWER, reactive);
+        case FlexOptions flexOptions -> {
+          Map<String, Object> data =
+              handleFlexOptionResults(flexOptions.asResult(), attrs, uuidToId);
+          flexOptionsData.putAll(data);
+        }
 
-              dataMap.put(receiver, data);
-            });
+        case ExtendedFlexOptionsResult result -> {
+          Map<String, Object> data = handleFlexOptionResults(result, attrs, uuidToId);
+          flexOptionsData.putAll(data);
+        }
 
-    return Map.of(FLEX_SET_POINT, dataMap);
+        case EmSetPoint(UUID receiver, UUID sender, Optional<PValue> power) -> {
+          String senderId = uuidToId.get(sender);
+          String receiverId = uuidToId.get(receiver);
+
+          Map<String, Object> data = new HashMap<>();
+          data.put("receiver", receiverId);
+          data.put("sender", senderId);
+
+          if (power.isPresent()) {
+            PValue setPoint = power.get();
+
+            Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
+            Double reactive = null;
+
+            if (setPoint instanceof SValue sValue) {
+              reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
+            }
+
+            data.put(ACTIVE_POWER, active);
+            data.put(REACTIVE_POWER, reactive);
+          }
+
+          setPointData.add(data);
+        }
+
+        case null, default -> {
+          if (entry != null) {
+            log.warn("Result of type '{}' is currently not supported.", entry.getClass());
+          }
+        }
+      }
+    }
+
+    Map<String, Object> res = new HashMap<>();
+
+    if (!flexRequestData.isEmpty() && attrs.contains(FLEX_REQUEST))
+      res.put(FLEX_REQUEST, flexRequestData);
+
+    if (!flexOptionsData.isEmpty()) res.putAll(flexOptionsData);
+
+    if (!setPointData.isEmpty() && attrs.contains(FLEX_SET_POINT))
+      res.put(FLEX_SET_POINT, setPointData);
+
+    return res;
   }
 
   private static Map<String, Object> handleFlexOptionResults(

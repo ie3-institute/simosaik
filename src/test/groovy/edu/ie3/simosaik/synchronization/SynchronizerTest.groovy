@@ -2,7 +2,7 @@ package edu.ie3.simosaik.synchronization
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue
 import edu.ie3.simona.api.data.container.ExtInputContainer
-import edu.ie3.simona.api.data.container.ExtResultContainer
+import edu.ie3.simona.api.data.container.ExtOutputContainer
 import edu.ie3.simosaik.initialization.InitializationData
 import spock.lang.Specification
 
@@ -132,7 +132,7 @@ class SynchronizerTest extends Specification {
         SIMONAPart simonaPart = synchronizer as SIMONAPart
 
         ExtDataContainerQueue<ExtInputContainer> queueToSIMONA = new ExtDataContainerQueue<>()
-        ExtDataContainerQueue<ExtResultContainer> queueToExt = new ExtDataContainerQueue<>()
+        ExtDataContainerQueue<ExtOutputContainer> queueToExt = new ExtDataContainerQueue<>()
 
         when:
         simonaPart.setDataQueues(queueToSIMONA, queueToExt)
@@ -268,7 +268,7 @@ class SynchronizerTest extends Specification {
         MosaikPart mosaikPart = synchronizer as MosaikPart
 
         ExtDataContainerQueue<ExtInputContainer> queueToSIMONA = new ExtDataContainerQueue<>()
-        ExtDataContainerQueue<ExtResultContainer> queueToExt = new ExtDataContainerQueue<>()
+        ExtDataContainerQueue<ExtOutputContainer> queueToExt = new ExtDataContainerQueue<>()
         synchronizer.setDataQueues(queueToSIMONA, queueToExt)
 
         when:
@@ -286,17 +286,17 @@ class SynchronizerTest extends Specification {
         MosaikPart mosaikPart = synchronizer as MosaikPart
 
         ExtDataContainerQueue<ExtInputContainer> queueToSIMONA = new ExtDataContainerQueue<>()
-        ExtDataContainerQueue<ExtResultContainer> queueToExt = new ExtDataContainerQueue<>()
+        ExtDataContainerQueue<ExtOutputContainer> queueToExt = new ExtDataContainerQueue<>()
         synchronizer.setDataQueues(queueToSIMONA, queueToExt)
 
         when:
         def task = CompletableFuture.supplyAsync { mosaikPart.requestResults() }
-        synchronizer.queueToExt.queueData(new ExtResultContainer(900L, [:]))
+        synchronizer.queueToExt.queueData(new ExtOutputContainer(900L, [:]))
         def results = task.get()
 
         then:
         results.isPresent()
-        ExtResultContainer container = results.get()
+        ExtOutputContainer container = results.get()
         container.empty
     }
 

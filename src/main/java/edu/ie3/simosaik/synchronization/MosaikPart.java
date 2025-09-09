@@ -7,7 +7,7 @@
 package edu.ie3.simosaik.synchronization;
 
 import edu.ie3.simona.api.data.container.ExtInputContainer;
-import edu.ie3.simona.api.data.container.ExtResultContainer;
+import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import java.util.Optional;
 
@@ -47,7 +47,7 @@ public sealed interface MosaikPart permits Synchronizer {
   // getter methods
 
   /** Returns an option for result data from SIMONA. */
-  Optional<ExtResultContainer> requestResults();
+  Optional<ExtOutputContainer> requestResults();
 
   /**
    * Returns the next tick, for which mosaik should be executed. This method may return a tick

@@ -79,7 +79,7 @@ public final class MetaUtils {
     Model model = Model.of(entity.name).params("mapping").attrs(attributes);
 
     if (entity.equals(EM_COMMUNICATION)) {
-      return model.params("mapping", "max_delay").triggers(attributes);
+      return model.triggers(attributes);
     }
 
     if (entity.equals(EM_OPTIMIZER)) {

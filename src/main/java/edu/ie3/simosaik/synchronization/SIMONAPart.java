@@ -8,7 +8,7 @@ package edu.ie3.simosaik.synchronization;
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
-import edu.ie3.simona.api.data.container.ExtResultContainer;
+import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import java.util.Optional;
 
@@ -53,6 +53,9 @@ public sealed interface SIMONAPart permits Synchronizer {
   /** Returns {@code true}, if there are inputs from mosaik available. */
   boolean expectInput();
 
+  /** Returns the current mosaik tick. */
+  long currentMosaikTick();
+
   // setter methods
 
   /**
@@ -64,7 +67,7 @@ public sealed interface SIMONAPart permits Synchronizer {
    */
   void setDataQueues(
       ExtDataContainerQueue<ExtInputContainer> queueToSimona,
-      ExtDataContainerQueue<ExtResultContainer> queueToExt);
+      ExtDataContainerQueue<ExtOutputContainer> queueToExt);
 
   /**
    * Method for setting the finish flag in the {@link Synchronizer} to {@code true}. This flag

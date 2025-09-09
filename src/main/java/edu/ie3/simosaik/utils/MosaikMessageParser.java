@@ -15,12 +15,10 @@ import java.util.regex.Pattern;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
-import javax.measure.quantity.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
-import tech.units.indriya.unit.Units;
 
 public final class MosaikMessageParser {
 
@@ -71,34 +69,39 @@ public final class MosaikMessageParser {
 
     if (attr.equals(FLEX_REQUEST)) {
       Optional<String> sender = Optional.empty();
-      Optional<ComparableQuantity<Time>> delay = Optional.empty();
+      boolean disaggregated = false;
 
       if (value instanceof Map<?, ?> request) {
         sender =
             Optional.ofNullable(request.get("sender"))
                 .map(Object::toString)
                 .map(MosaikMessageParser::trim);
-        delay = extractDelay((Map<String, Object>) request);
+
+        try {
+          disaggregated = (boolean) request.get("disaggregated");
+        } catch (Exception ignored) {
+        }
       }
 
-      return new FlexRequestMessage(receiver, sender, delay);
+      return new FlexRequestMessage(receiver, sender, disaggregated);
 
-    } else if (attr.equals(FLEX_OPTIONS) && value instanceof Map<?, ?> map) {
-      Collection<Map<String, Object>> options =
-          (Collection<Map<String, java.lang.Object>>) map.values();
+    } else if (attr.equals(FLEX_OPTIONS) && value instanceof List<?> list) {
+      List<FlexOptionInformation> information = new ArrayList<>();
 
-      List<FlexOptionInformation> information =
-          options.stream()
-              .map(
-                  option ->
-                      new FlexOptionInformation(
-                          receiver,
-                          (String) option.get("sender"),
-                          extractQuantity(option, FLEX_OPTION_P_MIN),
-                          extractQuantity(option, FLEX_OPTION_P_REF),
-                          extractQuantity(option, FLEX_OPTION_P_MAX),
-                          extractDelay(option)))
-              .toList();
+      for (Object item : list) {
+
+        if (item instanceof Map<?, ?> map) {
+          Map<String, Object> option = (Map<String, Object>) map;
+
+          information.add(
+              new FlexOptionInformation(
+                  receiver,
+                  (String) option.get("sender"),
+                  extractQuantity(option, FLEX_OPTION_P_MIN),
+                  extractQuantity(option, FLEX_OPTION_P_REF),
+                  extractQuantity(option, FLEX_OPTION_P_MAX)));
+        }
+      }
 
       return new FlexOptionsMessage(information);
 
@@ -107,9 +110,9 @@ public final class MosaikMessageParser {
 
       return new FlexSetPointMessage(
           receiver,
+          (String) map.get("sender"),
           extractQuantity(setPoint, ACTIVE_POWER),
-          extractQuantity(setPoint, REACTIVE_POWER),
-          extractDelay(setPoint));
+          extractQuantity(setPoint, REACTIVE_POWER));
 
     } else if (value instanceof Double d) {
       if (Double.isNaN(d)) {
@@ -138,18 +141,14 @@ public final class MosaikMessageParser {
   public sealed interface FlexMessage extends Content
       permits FlexRequestMessage, FlexOptionsMessage, FlexSetPointMessage {}
 
-  public record FlexRequestMessage(
-      String receiver, Optional<String> sender, Optional<ComparableQuantity<Time>> delay)
+  public record FlexRequestMessage(String receiver, Optional<String> sender, boolean disaggregated)
       implements FlexMessage {}
 
   public record FlexOptionsMessage(List<FlexOptionInformation> information)
       implements FlexMessage {}
 
   public record FlexSetPointMessage(
-      String receiver,
-      ComparableQuantity<Power> p,
-      ComparableQuantity<Power> q,
-      Optional<ComparableQuantity<Time>> delay)
+      String receiver, String sender, ComparableQuantity<Power> p, ComparableQuantity<Power> q)
       implements FlexMessage {}
 
   public record FlexOptionInformation(
@@ -157,21 +156,7 @@ public final class MosaikMessageParser {
       String sender,
       ComparableQuantity<Power> pMin,
       ComparableQuantity<Power> pRef,
-      ComparableQuantity<Power> pMax,
-      Optional<ComparableQuantity<Time>> delay) {}
-
-  private static Optional<ComparableQuantity<Time>> extractDelay(Map<String, Object> map) {
-    if (map.containsKey(DELAY)) {
-      Object delay = map.get(DELAY);
-
-      if (delay instanceof Number n) {
-
-        return Optional.of(Quantities.getQuantity(n.doubleValue() / 1000, Units.SECOND));
-      }
-    }
-
-    return Optional.empty();
-  }
+      ComparableQuantity<Power> pMax) {}
 
   private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
       Map<String, Object> map, String field) {

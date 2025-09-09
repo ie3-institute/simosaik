@@ -10,7 +10,6 @@ import static edu.ie3.simosaik.SimosaikUnits.*;
 
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.datamodel.models.value.*;
-import edu.ie3.simona.api.data.connection.ExtEmDataConnection.EmMode;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
@@ -52,7 +51,11 @@ public final class SimosaikUtils {
       ExtEntityMapping entityMapping) {
     Map<UUID, Class<? extends Value>> assetsToValueClasses = new HashMap<>();
 
-    for (ExtEntityEntry extEntityEntry : entityMapping.getEntries(DataType.EXT_PRIMARY_INPUT)) {
+    List<ExtEntityEntry> entries = new ArrayList<>();
+    entries.addAll(entityMapping.getEntries(DataType.PRIMARY));
+    entries.addAll(entityMapping.getEntries(DataType.PRIMARY_RESULT));
+
+    for (ExtEntityEntry extEntityEntry : entries) {
       Optional<ColumnScheme> scheme = extEntityEntry.columnScheme();
 
       scheme.ifPresent(
@@ -63,40 +66,14 @@ public final class SimosaikUtils {
     return assetsToValueClasses;
   }
 
-  public static Optional<EmMode> findEmMode(Set<DataType> dataTypes) {
-    boolean base = dataTypes.contains(DataType.EXT_EM_INPUT);
-    boolean communication = dataTypes.contains(DataType.EXT_EM_COMMUNICATION);
-
-    if (base && communication) {
-      log.warn("Multiple em modes present! This is not supported!");
-      return Optional.empty();
-    } else if (base) {
-      return Optional.of(EmMode.BASE);
-    } else if (communication) {
-      return Optional.of(EmMode.EM_COMMUNICATION);
-    } else {
-      log.debug("No em mode present.");
-      return Optional.empty();
-    }
-  }
-
   public static List<UUID> buildEmData(ExtEntityMapping entityMapping) {
-    Set<DataType> dataTypes = entityMapping.getDataTypes();
+    List<UUID> uuids =
+        entityMapping.getEntries(DataType.EM).stream().map(ExtEntityEntry::uuid).toList();
 
-    if (dataTypes.contains(DataType.EXT_EM_INPUT)) {
-      return entityMapping.getEntries(DataType.EXT_EM_INPUT).stream()
-          .map(ExtEntityEntry::uuid)
-          .toList();
-
-    } else if (dataTypes.contains(DataType.EXT_EM_COMMUNICATION)) {
-      return entityMapping.getEntries(DataType.EXT_EM_COMMUNICATION).stream()
-          .map(ExtEntityEntry::uuid)
-          .toList();
-
-    } else {
+    if (uuids.isEmpty()) {
       log.warn("No em data found!");
-      return Collections.emptyList();
     }
+    return uuids;
   }
 
   public static Map<DataType, List<UUID>> buildResultMapping(ExtEntityMapping entityMapping) {
@@ -112,9 +89,8 @@ public final class SimosaikUtils {
           }
         };
 
-    consumer.accept(DataType.EXT_GRID_RESULT);
-    consumer.accept(DataType.EXT_PARTICIPANT_RESULT);
-    consumer.accept(DataType.EXT_FLEX_OPTIONS_RESULT);
+    consumer.accept(DataType.RESULT);
+    consumer.accept(DataType.PRIMARY_RESULT);
 
     return resultMapping;
   }

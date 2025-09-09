@@ -11,8 +11,9 @@ import static edu.ie3.simosaik.utils.MetaUtils.*;
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
+import edu.ie3.simona.api.data.connection.ExtEmDataConnection;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
-import edu.ie3.simona.api.data.container.ExtResultContainer;
+import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
@@ -22,12 +23,8 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
-import edu.ie3.util.quantities.PowerSystemUnits;
 import java.util.*;
 import java.util.logging.Logger;
-import javax.measure.quantity.Time;
-import tech.units.indriya.ComparableQuantity;
-import tech.units.indriya.quantity.Quantities;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
@@ -63,6 +60,7 @@ public class MosaikSimulator extends Simulator {
     List<Model> models = new ArrayList<>();
 
     long stepSize;
+    Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
 
     if (simParams.containsKey("step_size")) {
       stepSize = (Long) simParams.get("step_size");
@@ -82,6 +80,14 @@ public class MosaikSimulator extends Simulator {
         SimonaEntity simonaEntity = SimonaEntity.parseType(model);
         extEntityEntries.put(simonaEntity, Optional.empty());
         models.add(from(simonaEntity));
+
+        // setting up the em mode
+        switch (simonaEntity) {
+          case EM_COMMUNICATION ->
+              emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
+          case EM, EM_OPTIMIZER -> emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
+          default -> emMode = Optional.empty();
+        }
       }
     } else {
       logger.warning(
@@ -92,7 +98,8 @@ public class MosaikSimulator extends Simulator {
       synchronizer.sendInitData(
           new InitializationData.SimulatorData(
               (long) (stepSize * timeResolution),
-              extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER)));
+              extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER),
+              emMode));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -148,30 +155,6 @@ public class MosaikSimulator extends Simulator {
       logger.warning("No models are build, because no mapping was provided!");
     }
 
-    Optional<ComparableQuantity<Time>> maxDelay = Optional.empty();
-    Map<String, ComparableQuantity<Time>> delayParams = new HashMap<>();
-
-    if (modelParams.containsKey("max_delay")) {
-      Object delayOption = modelParams.get("max_delay");
-
-      if (delayOption instanceof Map<?, ?> delayMap) {
-
-        delayMap.forEach(
-            (id, delay) -> {
-              try {
-                delayParams.put(
-                    (String) id,
-                    Quantities.getQuantity((long) delay, PowerSystemUnits.MILLISECOND));
-
-              } catch (NumberFormatException ignored) {
-              }
-            });
-      } else if (delayOption instanceof Long defaultDelay) {
-
-        maxDelay = Optional.of(Quantities.getQuantity(defaultDelay, PowerSystemUnits.MILLISECOND));
-      }
-    }
-
     boolean allInitialized = extEntityEntries.values().stream().allMatch(Optional::isPresent);
 
     if (allInitialized) {
@@ -188,29 +171,15 @@ public class MosaikSimulator extends Simulator {
         synchronizer.sendInitData(new InitializationData.ModelData(mapping));
 
         // create input message processors
-        Map<String, UUID> primaryIdToUuid =
-            mapping.getExtId2UuidMapping(DataType.EXT_PRIMARY_INPUT);
+        Map<String, UUID> primaryIdToUuid = mapping.getExtId2UuidMapping(DataType.primaryTypes());
 
         if (!primaryIdToUuid.isEmpty())
           this.messageProcessors.add(new InputUtils.PrimaryMessageProcessor(primaryIdToUuid));
 
-        Map<String, UUID> emIdToUuid =
-            mapping.getExtId2UuidMapping(DataType.EXT_EM_INPUT, DataType.EXT_EM_COMMUNICATION);
+        Map<String, UUID> emIdToUuid = mapping.getExtId2UuidMapping(DataType.EM);
 
         if (!emIdToUuid.isEmpty()) {
-
-          maxDelay.ifPresent(
-              delay ->
-                  emIdToUuid
-                      .keySet()
-                      .forEach(
-                          key -> {
-                            if (!delayParams.containsKey(key)) {
-                              delayParams.put(key, delay);
-                            }
-                          }));
-
-          this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid, delayParams));
+          this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid));
         }
 
       } catch (InterruptedException e) {
@@ -272,14 +241,14 @@ public class MosaikSimulator extends Simulator {
     // requesting results from SIMONA
     // we will either get result for the current tick or no results, because SIMONA finished the
     // current tick
-    Optional<ExtResultContainer> resultOption = synchronizer.requestResults();
+    Optional<ExtOutputContainer> resultOption = synchronizer.requestResults();
 
     boolean finished = synchronizer.isFinished();
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
 
     if (resultOption.isPresent()) {
-      ExtResultContainer results = resultOption.get();
+      ExtOutputContainer results = resultOption.get();
 
       logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
@@ -292,7 +261,6 @@ public class MosaikSimulator extends Simulator {
               + data);
 
       return data;
-
     }
 
     if (finished) {
@@ -313,10 +281,10 @@ public class MosaikSimulator extends Simulator {
         return Collections.emptyMap();
       }
     } else {
-           logger.info("[" + time + "] Got no results from SIMONA!");
+      logger.info("[" + time + "] Got no results from SIMONA!");
 
-           return Collections.emptyMap();
-         }
+      return Collections.emptyMap();
+    }
   }
 
   protected void checkModelParams(int expected, int received) {

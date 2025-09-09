@@ -8,7 +8,7 @@ package edu.ie3.simosaik.synchronization;
 
 import edu.ie3.simona.api.data.ExtDataContainerQueue;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
-import edu.ie3.simona.api.data.container.ExtResultContainer;
+import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
 import java.util.Optional;
@@ -52,7 +52,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   // data queues
   private final InitializationQueue initDataQueue = new InitializationQueue();
   private ExtDataContainerQueue<ExtInputContainer> queueToSimona;
-  private ExtDataContainerQueue<ExtResultContainer> queueToExt;
+  private ExtDataContainerQueue<ExtOutputContainer> queueToExt;
 
   private boolean goToNextTick;
 
@@ -148,9 +148,14 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
+  public long currentMosaikTick() {
+    return scaledMosaikTick.get();
+  }
+
+  @Override
   public void setDataQueues(
       ExtDataContainerQueue<ExtInputContainer> queueToSimona,
-      ExtDataContainerQueue<ExtResultContainer> queueToExt) {
+      ExtDataContainerQueue<ExtOutputContainer> queueToExt) {
     this.queueToSimona = queueToSimona;
     this.queueToExt = queueToExt;
   }
@@ -281,23 +286,16 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public Optional<ExtResultContainer> requestResults() {
-    Optional<ExtResultContainer> container;
+  public Optional<ExtOutputContainer> requestResults() {
+    Optional<ExtOutputContainer> container;
 
     try {
       container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
+      boolean isFinished = isFinished();
 
-      while (container.isEmpty()) {
-        // no data found
-
-        if (!isFinished()) {
-          // SIMONA is not finished for the current tick
-          container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
-        } else {
-          log.info("Finished while waiting for results!");
-          // SIMONA went to the next tick, there will be no more data for the current tick
-          container = Optional.empty();
-        }
+      while (container.isEmpty() && !isFinished) {
+        container = queueToExt.pollContainer(100, TimeUnit.MILLISECONDS);
+        isFinished = isFinished();
       }
     } catch (InterruptedException e) {
       container = Optional.empty();
@@ -342,7 +340,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   @Override
   public void setMosaikStepSize(long stepSize) {
-    log.info("Mosaik step size is: {} (Scaled: {})", stepSize, stepSize / mosaikTimeScaling);
+    log.info("Mosaik step size is: {} (Scaled: {})", stepSize, stepSize * mosaikTimeScaling);
     mosaikStepSize = stepSize;
   }
 

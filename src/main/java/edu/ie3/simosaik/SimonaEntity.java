@@ -33,11 +33,9 @@ public enum SimonaEntity {
 
   public static DataType toType(SimonaEntity simonaEntity) {
     return switch (simonaEntity) {
-      case PRIMARY_P, PRIMARY_PH, PRIMARY_PQ, PRIMARY_PQH -> DataType.EXT_PRIMARY_INPUT;
-      case EM, EM_OPTIMIZER -> DataType.EXT_EM_INPUT;
-      case EM_COMMUNICATION -> DataType.EXT_EM_COMMUNICATION;
-      case GRID_RESULTS, NODE_RESULTS, LINE_RESULTS -> DataType.EXT_GRID_RESULT;
-      case PARTICIPANT_RESULTS -> DataType.EXT_PARTICIPANT_RESULT;
+      case PRIMARY_P, PRIMARY_PH, PRIMARY_PQ, PRIMARY_PQH -> DataType.PRIMARY;
+      case EM, EM_OPTIMIZER, EM_COMMUNICATION -> DataType.EM;
+      case GRID_RESULTS, NODE_RESULTS, LINE_RESULTS, PARTICIPANT_RESULTS -> DataType.RESULT;
     };
   }
 
