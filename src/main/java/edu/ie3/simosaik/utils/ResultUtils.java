@@ -197,6 +197,7 @@ public final class ResultUtils {
 
           data.put("receiver", receiverId);
           data.put("sender", senderId);
+          data.put("msg_id", senderId + "_" + UUID.randomUUID());
           data.put("disaggregated", disaggregated);
 
           flexRequestData.add(data);
@@ -220,6 +221,7 @@ public final class ResultUtils {
           Map<String, Object> data = new HashMap<>();
           data.put("receiver", receiverId);
           data.put("sender", senderId);
+          data.put("msg_id", senderId + "_" + UUID.randomUUID());
 
           if (power.isPresent()) {
             PValue setPoint = power.get();
@@ -297,6 +299,7 @@ public final class ResultUtils {
 
       data.put("receiver", receiver);
       data.put("sender", sender);
+      data.put("msg_id", sender + "_" + UUID.randomUUID());
 
       data.put(FLEX_OPTION_P_MIN, pMin);
       data.put(FLEX_OPTION_P_REF, pRef);
@@ -311,6 +314,7 @@ public final class ResultUtils {
 
       data.put("receiver", receiver);
       data.put("sender", sender);
+      data.put("msg_id", sender + "_" + UUID.randomUUID());
 
       data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
       data.put(FLEX_OPTION_MAP_P_REF, connectedPref);

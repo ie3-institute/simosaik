@@ -85,7 +85,13 @@ public final class MosaikMessageParser {
 
       return new FlexRequestMessage(receiver, sender, disaggregated);
 
-    } else if (attr.equals(FLEX_OPTIONS) && value instanceof List<?> list) {
+    } else if (attr.equals(FLEX_OPTIONS)) {
+      List<Object> list = new ArrayList<>();
+
+      if (value instanceof Map<?, ?> map) {
+        list.add(map);
+      }
+
       List<FlexOptionInformation> information = new ArrayList<>();
 
       for (Object item : list) {
@@ -125,7 +131,7 @@ public final class MosaikMessageParser {
 
       // throw an exception if we receive a value
       if (value != null) {
-        throw new ConversionException("Could not parse attribute: " + attr);
+        throw new ConversionException("Could not parse attribute: " + attr + "; Value: " + value);
       } else {
         return new NullValue(attr);
       }
