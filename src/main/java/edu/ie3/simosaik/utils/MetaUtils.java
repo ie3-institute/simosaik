@@ -136,7 +136,7 @@ public final class MetaUtils {
     if (nonPersistent != null) {
       JSONArray nonPersistentArray = new JSONArray();
       nonPersistentArray.addAll(triggers);
-      obj.put("non_persistent", nonPersistentArray);
+      obj.put("non-persistent", nonPersistentArray);
     }
 
     return obj;
