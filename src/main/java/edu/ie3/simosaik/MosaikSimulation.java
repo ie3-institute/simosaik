@@ -208,9 +208,9 @@ public class MosaikSimulation extends ExtCoSimulation {
       if (tick == extTick && containerOption.isPresent()) {
         ExtInputContainer container = containerOption.get();
 
-         log.info("Flex requests: {}", container.flexRequestsString());
-         log.info("Flex options: {}", container.flexOptionsString());
-         log.info("Set points: {}", container.setPointsString());
+        // log.info("Flex requests: {}", container.flexRequestsString());
+        // log.info("Flex options: {}", container.flexOptionsString());
+        // log.info("Set points: {}", container.setPointsString());
 
         // send received data to SIMONA
         var requests = container.extractFlexRequests();
