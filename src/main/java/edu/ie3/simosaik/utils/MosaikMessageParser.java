@@ -66,6 +66,7 @@ public final class MosaikMessageParser {
 
   @SuppressWarnings("unchecked")
   private static Content parseValue(String receiver, String attr, Object value) {
+      log.info("Receiver '{}', attr '{}' -> Value: {}", receiver, attr, value);
 
     if (attr.equals(FLEX_REQUEST)) {
       Optional<String> sender = Optional.empty();
@@ -90,6 +91,8 @@ public final class MosaikMessageParser {
 
       if (value instanceof Map<?, ?> map) {
         list.add(map);
+      } else if (value instanceof List<?> valueList) {
+          list.addAll(valueList);
       }
 
       List<FlexOptionInformation> information = new ArrayList<>();
