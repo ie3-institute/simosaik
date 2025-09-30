@@ -7,7 +7,7 @@
 package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.ExtLinkInterface;
-import edu.ie3.simona.api.simulation.ExtSimAdapterData;
+import edu.ie3.simona.api.data.ExtSimAdapterData;
 import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 
