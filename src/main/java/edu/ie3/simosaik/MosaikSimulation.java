@@ -122,25 +122,31 @@ public class MosaikSimulation extends ExtCoSimulation {
     log.info(
         "+++++++++++++++++++++++++++ Activities in External simulation: Tick {} has been triggered. +++++++++++++++++++++++++++",
         tick);
+
+    Optional<Long> maybeNextTick;
+
     try {
       long nextTick = tick + stepSize;
       synchronizer.updateNextTickSIMONA(Optional.empty());
       synchronizer.updateTickSIMONA(tick);
 
       if (!synchronizer.isFinished()) {
-        Optional<Long> maybeNextTick = activity(tick, nextTick);
+        maybeNextTick = activity(tick, nextTick);
 
         // setting the finished flag in the synchronizer for SIMONA
         synchronizer.setFinishedFlag();
-
-        return maybeNextTick;
       } else {
         // SIMONA will not receive data for the current tick
-        return Optional.of(nextTick);
+        maybeNextTick = Optional.of(nextTick);
       }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
+
+    log.info(
+        "+++++++++++++++++++++++++++ Activities in External simulation finished for tick {}. +++++++++++++++++++++++++++",
+        tick);
+    return maybeNextTick;
   }
 
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {

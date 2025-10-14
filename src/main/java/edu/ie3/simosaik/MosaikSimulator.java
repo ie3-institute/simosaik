@@ -233,7 +233,9 @@ public class MosaikSimulator extends Simulator {
     }
 
     // getting the next tick, could have changed since last request
-    return synchronizer.getNextTick();
+    nextTick = synchronizer.getNextTick();
+    logger.info("[" + time + "] Next tick: " + nextTick);
+    return nextTick;
   }
 
   @Override
@@ -250,31 +252,41 @@ public class MosaikSimulator extends Simulator {
     if (resultOption.isPresent()) {
       ExtOutputContainer results = resultOption.get();
 
-      logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
+      if (!results.isEmpty() && !finished) {
+        logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
-      Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
+        Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
 
-      logger.info(
-          "["
-              + time
-              + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
-              + data);
+        logger.info(
+            "["
+                + time
+                + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
+                + data);
 
-      return data;
+        return data;
+      }
     }
 
     if (finished) {
       // we are finished for the current tick
-
       if (synchronizer.outputNextTick()) {
+        // to prevent sending this info twice
+        synchronizer.setHasSendNextTick();
+
+        long nextTick = synchronizer.getNextTick();
+
         // we should output the next tick information for those entities, that are requesting this
         // information
-        logger.info("[" + time + "] Tick finished, sending only next tick information to mosaik.");
+        logger.info(
+            "["
+                + time
+                + "] Tick finished, sending only next tick information to mosaik. Next tick: "
+                + nextTick);
 
         // we set the no output flag to true, since we need to return an empty map for mosaik to
         // continue with the next tick
         synchronizer.setNoOutputFlag();
-        return ResultUtils.onlyTickInformation(map, synchronizer.getNextTick());
+        return ResultUtils.onlyTickInformation(map, nextTick);
       } else {
         // we will send an empty map, to signal mosaik, that this tick is finished
         logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
