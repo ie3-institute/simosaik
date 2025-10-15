@@ -130,6 +130,10 @@ public class MosaikSimulation extends ExtCoSimulation {
       synchronizer.updateNextTickSIMONA(Optional.empty());
       synchronizer.updateTickSIMONA(tick);
 
+      // clearing all previous data to prevent the usage of outdated data
+      queueToSimona.clear();
+      queueToExt.clear();
+
       if (!synchronizer.isFinished()) {
         maybeNextTick = activity(tick, nextTick);
 
@@ -261,6 +265,9 @@ public class MosaikSimulation extends ExtCoSimulation {
 
         queueToExt.queueData(outputContainer);
 
+      } else if (tick > extTick) {
+        log.info("Waiting for external simulation to reach tick: {}", tick);
+        queueToExt.queueData(new ExtOutputContainer(tick, maybeNextTick));
       } else {
         notFinished = false;
         extTick = synchronizer.currentMosaikTick();

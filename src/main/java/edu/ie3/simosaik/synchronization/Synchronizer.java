@@ -217,7 +217,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       goToNextTick = true;
 
       if (simonaTime < nextRegularMosaikTick) {
-          long scaledSimonaTime = (long) (time / mosaikTimeScaling);
+        long scaledSimonaTime = (long) (time / mosaikTimeScaling);
 
         log.info("SIMONA requires an intermediate tick for: {}", scaledSimonaTime);
         nextMosaikTick = scaledSimonaTime;
@@ -319,17 +319,17 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       long tick = maybeNextTick.get();
 
       if (tick == scaledMosaikTick.get()) {
-          System.out.println("getNextTick() -> _nextMosaikTick=" + mosaikTick);
+        System.out.println("getNextTick() -> _nextMosaikTick=" + mosaikTick);
         return nextMosaikTick;
       } else {
-          long t = (long) (tick / mosaikTimeScaling);
-          System.out.println("getNextTick() -> tick=" + t);
+        long t = (long) (tick / mosaikTimeScaling);
+        System.out.println("getNextTick() -> tick=" + t);
 
         return t;
       }
     }
 
-      System.out.println("getNextTick() -> nextMosaikTick=" + mosaikTick);
+    System.out.println("getNextTick() -> nextMosaikTick=" + mosaikTick);
     return nextMosaikTick;
   }
 
