@@ -47,6 +47,12 @@ public sealed interface SIMONAPart permits Synchronizer {
   <R extends InitializationData> R getInitializationData(Class<R> clazz)
       throws InterruptedException;
 
+    /**
+     *
+     * Returns the regular step size of the data provision.
+     */
+  long getStepSize();
+
   /** Returns {@code true}, if SIMONA is finished for the current tick. */
   boolean isFinished();
 

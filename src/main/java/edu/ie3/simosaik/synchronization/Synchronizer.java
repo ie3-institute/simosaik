@@ -11,14 +11,15 @@ import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public final class Synchronizer implements SIMONAPart, MosaikPart {
 
@@ -39,6 +40,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private final AtomicLong simonaTick = new AtomicLong(-1);
   private final AtomicReference<Optional<Long>> simonaNextTick =
       new AtomicReference<>(Optional.empty());
+  private long stepSizeSIMONA = 0L;
   private boolean hasNextTickChanged;
   private boolean isFinished = false;
 
@@ -143,7 +145,12 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
     return initDataQueue.take(clazz);
   }
 
-  @Override
+    @Override
+    public long getStepSize() {
+        return stepSizeSIMONA;
+    }
+
+    @Override
   public boolean expectInput() {
     return noInputs;
   }
@@ -359,6 +366,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   public void setMosaikStepSize(long stepSize) {
     log.info("Mosaik step size is: {} (Scaled: {})", stepSize, stepSize * mosaikTimeScaling);
     mosaikStepSize = stepSize;
+    stepSizeSIMONA = (long) (stepSize * mosaikTimeScaling);
   }
 
   @Override

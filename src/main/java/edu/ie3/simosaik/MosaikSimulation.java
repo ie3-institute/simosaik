@@ -47,8 +47,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   // connections
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
   private final ExtEmDataConnection extEmDataConnection;
-  private final ExtResultDataConnection
-      extResultDataConnection; // TODO: Check if we can switch to ResultListener
+  private final ExtResultDataConnection extResultDataConnection;
 
   public MosaikSimulation(SIMONAPart synchronizer) {
     this("MosaikSimulation", synchronizer);
@@ -62,7 +61,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     try {
       var initData = synchronizer.getInitializationData(InitializationData.SimulatorData.class);
 
-      this.stepSize = initData.stepSize();
+      this.stepSize = synchronizer.getStepSize();
       this.disaggregateFlex = initData.disaggregate();
 
       InitializationData.ModelData modelData =

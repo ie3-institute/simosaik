@@ -6,8 +6,6 @@
 
 package edu.ie3.simosaik;
 
-import static edu.ie3.simosaik.utils.MetaUtils.*;
-
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
@@ -23,17 +21,19 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
+
 import java.util.*;
 import java.util.logging.Logger;
 
+import static edu.ie3.simosaik.utils.MetaUtils.*;
+
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
-  protected final Logger logger = SimProcess.logger;
+    private final Logger logger = SimProcess.logger;
 
-  protected final Map<SimonaEntity, Optional<List<ExtEntityEntry>>> extEntityEntries =
-      new HashMap<>();
+    private final Map<SimonaEntity, Boolean> simonaEntities = new HashMap<>();
 
-  protected ExtEntityMapping mapping;
+    private ExtEntityMapping mapping;
   private final List<InputUtils.MessageProcessor> messageProcessors = new ArrayList<>();
 
   private final List<ParsedMessage> cache = new ArrayList<>();
@@ -42,13 +42,14 @@ public class MosaikSimulator extends Simulator {
 
   private final MosaikPart synchronizer;
 
-  public MosaikSimulator(MosaikPart synchronizer) {
-    this("MosaikSimulator", synchronizer);
+  public MosaikSimulator(MosaikPart synchronizer, ExtEntityMapping mapping) {
+    this("MosaikSimulator", synchronizer, mapping);
   }
 
-  public MosaikSimulator(String name, MosaikPart synchronizer) {
+  public MosaikSimulator(String name, MosaikPart synchronizer, ExtEntityMapping mapping) {
     super(name);
     this.synchronizer = synchronizer;
+    this.mapping = mapping;
   }
 
   @Override
@@ -78,7 +79,7 @@ public class MosaikSimulator extends Simulator {
 
       for (String model : modelTypes) {
         SimonaEntity simonaEntity = SimonaEntity.parseType(model);
-        extEntityEntries.put(simonaEntity, Optional.empty());
+          simonaEntities.put(simonaEntity, false);
         models.add(from(simonaEntity));
 
         // setting up the em mode
@@ -97,14 +98,13 @@ public class MosaikSimulator extends Simulator {
     try {
       synchronizer.sendInitData(
           new InitializationData.SimulatorData(
-              (long) (stepSize * timeResolution),
-              extEntityEntries.containsKey(SimonaEntity.EM_OPTIMIZER),
+              simonaEntities.containsKey(SimonaEntity.EM_OPTIMIZER),
               emMode));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
 
-    return createMeta(getType(extEntityEntries.keySet()), models);
+    return createMeta(getType(simonaEntities.keySet()), models);
   }
 
   @Override
@@ -146,7 +146,8 @@ public class MosaikSimulator extends Simulator {
           entries.add(new ExtEntityEntry(uuid, id, scheme, dataType));
         }
 
-        extEntityEntries.put(modelType, Optional.of(entries));
+        this.mapping = this.mapping.updateWith(entries);
+          simonaEntities.put(modelType, true);
 
       } catch (Exception e) {
         throw new RuntimeException("Could not build models of type '" + model + "', due to: ", e);
@@ -155,19 +156,10 @@ public class MosaikSimulator extends Simulator {
       logger.warning("No models are build, because no mapping was provided!");
     }
 
-    boolean allInitialized = extEntityEntries.values().stream().allMatch(Optional::isPresent);
+    boolean allInitialized = simonaEntities.values().stream().allMatch(x -> x == true);
 
     if (allInitialized) {
       try {
-        List<ExtEntityEntry> entries =
-            extEntityEntries.values().stream()
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .flatMap(Collection::stream)
-                .toList();
-
-        this.mapping = new ExtEntityMapping(entries);
-
         synchronizer.sendInitData(new InitializationData.ModelData(mapping));
 
         // create input message processors
@@ -177,6 +169,7 @@ public class MosaikSimulator extends Simulator {
           this.messageProcessors.add(new InputUtils.PrimaryMessageProcessor(primaryIdToUuid));
 
         Map<String, UUID> emIdToUuid = mapping.getExtId2UuidMapping(DataType.EM);
+        logger.info("EmMapping: " + emIdToUuid);
 
         if (!emIdToUuid.isEmpty()) {
           this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid));
