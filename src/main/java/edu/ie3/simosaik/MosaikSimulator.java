@@ -6,6 +6,8 @@
 
 package edu.ie3.simosaik;
 
+import static edu.ie3.simosaik.utils.MetaUtils.*;
+
 import de.offis.mosaik.api.SimProcess;
 import de.offis.mosaik.api.Simulator;
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
@@ -21,19 +23,16 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.MosaikMessageParser;
 import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
-
 import java.util.*;
 import java.util.logging.Logger;
 
-import static edu.ie3.simosaik.utils.MetaUtils.*;
-
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
-    private final Logger logger = SimProcess.logger;
+  private final Logger logger = SimProcess.logger;
 
-    private final Map<SimonaEntity, Boolean> simonaEntities = new HashMap<>();
+  private final Map<SimonaEntity, Boolean> simonaEntities = new HashMap<>();
 
-    private ExtEntityMapping mapping;
+  private ExtEntityMapping mapping;
   private final List<InputUtils.MessageProcessor> messageProcessors = new ArrayList<>();
 
   private final List<ParsedMessage> cache = new ArrayList<>();
@@ -79,7 +78,7 @@ public class MosaikSimulator extends Simulator {
 
       for (String model : modelTypes) {
         SimonaEntity simonaEntity = SimonaEntity.parseType(model);
-          simonaEntities.put(simonaEntity, false);
+        simonaEntities.put(simonaEntity, false);
         models.add(from(simonaEntity));
 
         // setting up the em mode
@@ -98,8 +97,7 @@ public class MosaikSimulator extends Simulator {
     try {
       synchronizer.sendInitData(
           new InitializationData.SimulatorData(
-              simonaEntities.containsKey(SimonaEntity.EM_OPTIMIZER),
-              emMode));
+              simonaEntities.containsKey(SimonaEntity.EM_OPTIMIZER), emMode));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -147,7 +145,7 @@ public class MosaikSimulator extends Simulator {
         }
 
         this.mapping = this.mapping.updateWith(entries);
-          simonaEntities.put(modelType, true);
+        simonaEntities.put(modelType, true);
 
       } catch (Exception e) {
         throw new RuntimeException("Could not build models of type '" + model + "', due to: ", e);

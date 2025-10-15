@@ -11,15 +11,14 @@ import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class Synchronizer implements SIMONAPart, MosaikPart {
 
@@ -145,12 +144,12 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
     return initDataQueue.take(clazz);
   }
 
-    @Override
-    public long getStepSize() {
-        return stepSizeSIMONA;
-    }
+  @Override
+  public long getStepSize() {
+    return stepSizeSIMONA;
+  }
 
-    @Override
+  @Override
   public boolean expectInput() {
     return noInputs;
   }

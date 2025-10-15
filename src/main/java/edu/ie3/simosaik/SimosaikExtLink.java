@@ -15,7 +15,6 @@ import edu.ie3.simona.api.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +38,8 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     assets.addAll(grid.getSystemParticipants().allEntitiesAsList());
 
     List<ExtEntityEntry> entries = new ArrayList<>();
-    assets.forEach(asset -> entries.add(new ExtEntityEntry(asset.getUuid(), asset.getId(), DataType.GENERAL)));
+    assets.forEach(
+        asset -> entries.add(new ExtEntityEntry(asset.getUuid(), asset.getId(), DataType.GENERAL)));
     ExtEntityMapping mapping = new ExtEntityMapping(entries);
 
     // for synchronising both simulations

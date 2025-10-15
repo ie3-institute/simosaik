@@ -15,7 +15,6 @@ import edu.ie3.simona.api.data.connection.ExtResultDataConnection;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.EmData;
-import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.ontology.em.EmCompletion;
 import edu.ie3.simona.api.ontology.em.EmDataResponseMessageToExt;
@@ -88,9 +87,9 @@ public class MosaikSimulation extends ExtCoSimulation {
       }
 
       // result data connection
-      Map<DataType, List<UUID>> resultInput = SimosaikUtils.buildResultMapping(entityMapping);
+      List<UUID> resultUuids = SimosaikUtils.buildResultMapping(entityMapping);
       this.extResultDataConnection =
-          !resultInput.isEmpty() ? buildResultConnection(resultInput, log) : null;
+          !resultUuids.isEmpty() ? buildResultConnection(resultUuids, log) : null;
 
     } catch (InterruptedException e) {
       throw new RuntimeException(e);

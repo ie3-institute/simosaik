@@ -16,7 +16,6 @@ import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
 import java.util.*;
-import java.util.function.Consumer;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
@@ -67,8 +66,7 @@ public final class SimosaikUtils {
   }
 
   public static List<UUID> buildEmData(ExtEntityMapping entityMapping) {
-    List<UUID> uuids =
-        entityMapping.getEntries(DataType.EM).stream().map(ExtEntityEntry::uuid).toList();
+    List<UUID> uuids = entityMapping.getAssets(DataType.EM);
 
     if (uuids.isEmpty()) {
       log.warn("No em data found!");
@@ -76,23 +74,8 @@ public final class SimosaikUtils {
     return uuids;
   }
 
-  public static Map<DataType, List<UUID>> buildResultMapping(ExtEntityMapping entityMapping) {
-    Map<DataType, List<UUID>> resultMapping = new HashMap<>();
-
-    Consumer<DataType> consumer =
-        type -> {
-          List<UUID> assets =
-              entityMapping.getEntries(type).stream().map(ExtEntityEntry::uuid).toList();
-
-          if (!assets.isEmpty()) {
-            resultMapping.put(type, assets);
-          }
-        };
-
-    consumer.accept(DataType.RESULT);
-    consumer.accept(DataType.PRIMARY_RESULT);
-
-    return resultMapping;
+  public static List<UUID> buildResultMapping(ExtEntityMapping entityMapping) {
+    return entityMapping.getAssets(DataType.resultTypes());
   }
 
   // converting inputs
