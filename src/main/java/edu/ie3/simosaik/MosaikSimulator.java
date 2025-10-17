@@ -144,7 +144,7 @@ public class MosaikSimulator extends Simulator {
           entries.add(new ExtEntityEntry(uuid, id, scheme, dataType));
         }
 
-        this.mapping = this.mapping.updateWith(entries);
+        this.mapping = this.mapping.include(entries);
         simonaEntities.put(modelType, true);
 
       } catch (Exception e) {
@@ -161,16 +161,13 @@ public class MosaikSimulator extends Simulator {
         synchronizer.sendInitData(new InitializationData.ModelData(mapping));
 
         // create input message processors
-        Map<String, UUID> primaryIdToUuid = mapping.getExtId2UuidMapping(DataType.primaryTypes());
+        Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping();
 
-        if (!primaryIdToUuid.isEmpty())
-          this.messageProcessors.add(new InputUtils.PrimaryMessageProcessor(primaryIdToUuid));
+        if (!idToUuid.isEmpty())
+          this.messageProcessors.add(new InputUtils.PrimaryMessageProcessor(idToUuid));
 
-        Map<String, UUID> emIdToUuid = mapping.getExtId2UuidMapping(DataType.EM);
-        logger.info("EmMapping: " + emIdToUuid);
-
-        if (!emIdToUuid.isEmpty()) {
-          this.messageProcessors.add(new InputUtils.EmMessageProcessor(emIdToUuid));
+        if (!idToUuid.isEmpty()) {
+          this.messageProcessors.add(new InputUtils.EmMessageProcessor(idToUuid));
         }
 
       } catch (InterruptedException e) {

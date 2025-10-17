@@ -32,15 +32,8 @@ public final class SimosaikExtLink implements ExtLinkInterface {
 
     String mosaikIP = arguments.mosaikIP();
 
-    JointGridContainer grid = data.getGrid();
-    List<AssetInput> assets = new ArrayList<>();
-    assets.addAll(grid.getRawGrid().allEntitiesAsList());
-    assets.addAll(grid.getSystemParticipants().allEntitiesAsList());
-
-    List<ExtEntityEntry> entries = new ArrayList<>();
-    assets.forEach(
-        asset -> entries.add(new ExtEntityEntry(asset.getUuid(), asset.getId(), DataType.GENERAL)));
-    ExtEntityMapping mapping = new ExtEntityMapping(entries);
+    // initial mapping from grid container
+    ExtEntityMapping mapping = new ExtEntityMapping(data.getGrid());
 
     // for synchronising both simulations
     Synchronizer synchronizer = new Synchronizer();

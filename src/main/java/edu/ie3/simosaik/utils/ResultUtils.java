@@ -6,11 +6,6 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.SimosaikUnits.*;
-import static edu.ie3.util.quantities.PowerSystemUnits.*;
-import static tech.units.indriya.unit.Units.AMPERE;
-import static tech.units.indriya.unit.Units.RADIAN;
-
 import edu.ie3.datamodel.models.result.NodeResult;
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.connector.ConnectorResult;
@@ -23,17 +18,22 @@ import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.*;
-import edu.ie3.simona.api.data.model.em.EmData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.SimosaikUnits;
-import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tech.units.indriya.ComparableQuantity;
+
 import javax.measure.quantity.Angle;
 import javax.measure.quantity.Dimensionless;
 import javax.measure.quantity.ElectricCurrent;
 import javax.measure.quantity.Power;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import tech.units.indriya.ComparableQuantity;
+import java.util.*;
+
+import static edu.ie3.simosaik.SimosaikUnits.*;
+import static edu.ie3.util.quantities.PowerSystemUnits.*;
+import static tech.units.indriya.unit.Units.AMPERE;
+import static tech.units.indriya.unit.Units.RADIAN;
 
 public final class ResultUtils {
   private static final Logger log = LoggerFactory.getLogger(ResultUtils.class);
@@ -184,58 +184,156 @@ public final class ResultUtils {
 
   private static Map<String, Object> handleEmData(
       List<EmData> emData, List<String> attrs, Map<UUID, String> uuidToId) {
-    List<Object> flexRequestData = new ArrayList<>();
-    Map<String, Object> flexOptionsData = new HashMap<>();
-    List<Object> setPointData = new ArrayList<>();
+      List<Object> comData = new ArrayList<>();
+      List<Object> flexRequestData = new ArrayList<>();
+      Map<String, Object> flexOptionsData = new HashMap<>();
+      List<Object> setPointData = new ArrayList<>();
 
-    for (EmData entry : emData) {
-      switch (entry) {
-        case FlexOptionRequest(UUID receiver, UUID sender, boolean disaggregated) -> {
-          Map<String, Object> data = new HashMap<>();
-          String senderId = uuidToId.get(sender);
-          String receiverId = uuidToId.get(receiver);
+      for (EmData entry : emData) {
+          switch (entry) {
+              case EmCommunicationMessage(UUID receiver, UUID sender, UUID msgId, EmData content) -> {
+                  Map<String, Object> data = new HashMap<>();
+                  String senderId = uuidToId.get(sender);
+                  String receiverId = uuidToId.get(receiver);
 
-          data.put("receiver", receiverId);
-          data.put("sender", senderId);
-          data.put("msg_id", senderId + "_" + UUID.randomUUID());
-          data.put("disaggregated", disaggregated);
+                  Map<String, Object> processedContent = new HashMap<>();
 
-          flexRequestData.add(data);
-        }
+                  // todo: refactor
+                  String type = switch (content) {
+                      case FlexOptionRequest r -> {
+                          processedContent.put("disaggregated", r.disaggregated());
+                          yield FLEX_REQUEST;
+                      }
+                      case FlexOptions(UUID r, UUID s, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptionsResult> disaggregated) -> {
+                          processedContent.put("sender", uuidToId.get(sender));
 
-        case FlexOptions flexOptions -> {
-          Map<String, Object> data =
-              handleFlexOptionResults(flexOptions.asResult(), attrs, uuidToId);
-          flexOptionsData.putAll(data);
-        }
+                          processedContent.put(FLEX_OPTION_P_MIN, toActive(pMin));
+                          processedContent.put(FLEX_OPTION_P_REF, toActive(pRef));
+                          processedContent.put(FLEX_OPTION_P_MAX, toActive(pMax));
 
-        case ExtendedFlexOptionsResult result -> {
-          Map<String, Object> data = handleFlexOptionResults(result, attrs, uuidToId);
-          flexOptionsData.putAll(data);
-        }
+                          if (!disaggregated.isEmpty()) {
+                              Map<String, Double> connectedPmin = new HashMap<>();
+                              Map<String, Double> connectedPref = new HashMap<>();
+                              Map<String, Double> connectedPmax = new HashMap<>();
 
-        case EmSetPoint(UUID receiver, UUID sender, Optional<PValue> power) -> {
-          String senderId = uuidToId.get(sender);
-          String receiverId = uuidToId.get(receiver);
+                              // add aggregated flex options
+                              for (UUID uuid : disaggregated.keySet()) {
+                                  String id = uuidToId.get(uuid);
+                                  FlexOptionsResult partialOption = disaggregated.get(uuid);
 
-          Map<String, Object> data = new HashMap<>();
-          data.put("receiver", receiverId);
-          data.put("sender", senderId);
-          data.put("msg_id", senderId + "_" + UUID.randomUUID());
+                                  connectedPmin.put(id, toActive(partialOption.getpMin()));
+                                  connectedPref.put(id, toActive(partialOption.getpRef()));
+                                  connectedPmax.put(id, toActive(partialOption.getpMax()));
+                              }
+                              processedContent.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
+                              processedContent.put(FLEX_OPTION_MAP_P_REF, connectedPref);
+                              processedContent.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
+                          }
 
-          if (power.isPresent()) {
-            PValue setPoint = power.get();
+                          yield FLEX_OPTIONS;
+                      }
+                      case FlexOptionsResult o -> {
+                          processedContent.put("sender", uuidToId.get(sender));
+                          processedContent.put(FLEX_OPTION_P_MIN, toActive(o.getpMin()));
+                          processedContent.put(FLEX_OPTION_P_REF, toActive(o.getpRef()));
+                          processedContent.put(FLEX_OPTION_P_MAX, toActive(o.getpMax()));
 
-            Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
-            Double reactive = null;
+                          if (o instanceof ExtendedFlexOptionsResult extended) {
+                              Map<UUID, FlexOptionsResult> disaggregated = extended.getDisaggregated();
 
-            if (setPoint instanceof SValue sValue) {
-              reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
-            }
+                              if (disaggregated != null && !disaggregated.isEmpty()) {
+                                  Map<String, Double> connectedPmin = new HashMap<>();
+                                  Map<String, Double> connectedPref = new HashMap<>();
+                                  Map<String, Double> connectedPmax = new HashMap<>();
 
-            data.put(ACTIVE_POWER, active);
-            data.put(REACTIVE_POWER, reactive);
-          }
+                                  // add aggregated flex options
+                                  for (UUID uuid : disaggregated.keySet()) {
+                                      String id = uuidToId.get(uuid);
+                                      FlexOptionsResult partialOption = disaggregated.get(uuid);
+
+                                      connectedPmin.put(id, toActive(partialOption.getpMin()));
+                                      connectedPref.put(id, toActive(partialOption.getpRef()));
+                                      connectedPmax.put(id, toActive(partialOption.getpMax()));
+                                  }
+                                  processedContent.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
+                                  processedContent.put(FLEX_OPTION_MAP_P_REF, connectedPref);
+                                  processedContent.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
+                              }
+                          }
+
+                          yield FLEX_OPTIONS;
+                      }
+                      case EmSetPoint s -> {
+                          Optional<PValue> power = s.power();
+
+                          if (power.isPresent()) {
+                              PValue setPoint = power.get();
+
+                              Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
+                              Double reactive = null;
+
+                              if (setPoint instanceof SValue sValue) {
+                                  reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
+                              }
+
+                              processedContent.put(ACTIVE_POWER, active);
+                              processedContent.put(REACTIVE_POWER, reactive);
+                          }
+
+                          yield FLEX_SET_POINT;
+                      }
+                      default -> "";
+                  };
+
+                  data.put("receiver", receiverId);
+                  data.put("sender", senderId);
+                  data.put("content", processedContent);
+                  data.put("msgId", msgId.toString());
+                  data.put("type", type);
+
+                 comData.add(data);
+              }
+
+              case FlexOptionRequest(UUID receiver, boolean disaggregated) -> {
+                  Map<String, Object> data = new HashMap<>();
+                  String receiverId = uuidToId.get(receiver);
+
+                  data.put("receiver", receiverId);
+                  data.put("disaggregated", disaggregated);
+
+                  flexRequestData.add(data);
+              }
+
+              case FlexOptions flexOptions -> {
+                  Map<String, Object> data =
+                          handleFlexOptionResults(flexOptions.asResult(), attrs, uuidToId);
+                  flexOptionsData.putAll(data);
+              }
+
+              case ExtendedFlexOptionsResult result -> {
+                  Map<String, Object> data = handleFlexOptionResults(result, attrs, uuidToId);
+                  flexOptionsData.putAll(data);
+              }
+
+              case EmSetPoint(UUID receiver, Optional<PValue> power) -> {
+                  String receiverId = uuidToId.get(receiver);
+
+                  Map<String, Object> data = new HashMap<>();
+                  data.put("receiver", receiverId);
+
+                  if (power.isPresent()) {
+                      PValue setPoint = power.get();
+
+                      Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
+                      Double reactive = null;
+
+                      if (setPoint instanceof SValue sValue) {
+                          reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
+                      }
+
+                      data.put(ACTIVE_POWER, active);
+                      data.put(REACTIVE_POWER, reactive);
+                  }
 
           setPointData.add(data);
         }
@@ -250,7 +348,10 @@ public final class ResultUtils {
 
     Map<String, Object> res = new HashMap<>();
 
-    if (!flexRequestData.isEmpty() && attrs.contains(FLEX_REQUEST))
+   if (!comData.isEmpty() && attrs.contains(FLEX_COM))
+      res.put(FLEX_COM, comData);
+
+   if (!flexRequestData.isEmpty() && attrs.contains(FLEX_REQUEST))
       res.put(FLEX_REQUEST, flexRequestData);
 
     if (!flexOptionsData.isEmpty()) res.putAll(flexOptionsData);
@@ -294,12 +395,8 @@ public final class ResultUtils {
     Map<String, Object> data = new HashMap<>();
 
     if (result instanceof ExtendedFlexOptionsResult extended && attrs.contains(FLEX_OPTIONS)) {
-      String receiver = uuidToId.get(extended.getReceiver());
       String sender = uuidToId.get(extended.getSender());
-
-      data.put("receiver", receiver);
       data.put("sender", sender);
-      data.put("msg_id", sender + "_" + UUID.randomUUID());
 
       data.put(FLEX_OPTION_P_MIN, pMin);
       data.put(FLEX_OPTION_P_REF, pRef);
@@ -309,12 +406,8 @@ public final class ResultUtils {
 
     } else if (result instanceof ExtendedFlexOptionsResult extended
         && attrs.contains(FLEX_OPTIONS_DISAGGREGATED)) {
-      String receiver = uuidToId.get(extended.getReceiver());
       String sender = uuidToId.get(extended.getSender());
-
-      data.put("receiver", receiver);
       data.put("sender", sender);
-      data.put("msg_id", sender + "_" + UUID.randomUUID());
 
       data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
       data.put(FLEX_OPTION_MAP_P_REF, connectedPref);

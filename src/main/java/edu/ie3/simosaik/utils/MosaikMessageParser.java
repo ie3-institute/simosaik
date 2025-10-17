@@ -57,7 +57,9 @@ public final class MosaikMessageParser {
 
         Content content = parseValue(receiver, attr, senderValue.getValue());
 
-        messages.add(new ParsedMessage(receiver, mosaikSender, content));
+        if  (content != null) {
+            messages.add(new ParsedMessage(receiver, mosaikSender, content));
+        }
       }
     }
 
@@ -68,23 +70,31 @@ public final class MosaikMessageParser {
   private static Content parseValue(String receiver, String attr, Object value) {
     log.info("Receiver '{}', attr '{}' -> Value: {}", receiver, attr, value);
 
-    if (attr.equals(FLEX_REQUEST)) {
-      Optional<String> sender = Optional.empty();
+    if (attr.equals(FLEX_COM)) {
+
+        if (value instanceof Map<?,?> map) {
+            String sender = (String) map.get("sender");
+            String msgId = (String) map.get("msgId");
+
+            Content content = parseValue(receiver, (String) map.get("type"), map.get("content"));
+            log.info("Content {}", content);
+
+            return new FlexComMessage(receiver, sender, msgId, content);
+        }
+
+        return null;
+
+    } else if (attr.equals(FLEX_REQUEST)) {
       boolean disaggregated = false;
 
       if (value instanceof Map<?, ?> request) {
-        sender =
-            Optional.ofNullable(request.get("sender"))
-                .map(Object::toString)
-                .map(MosaikMessageParser::trim);
-
         try {
           disaggregated = (boolean) request.get("disaggregated");
         } catch (Exception ignored) {
         }
       }
 
-      return new FlexRequestMessage(receiver, sender, disaggregated);
+      return new FlexRequestMessage(receiver, disaggregated);
 
     } else if (attr.equals(FLEX_OPTIONS)) {
       List<Object> list = new ArrayList<>();
@@ -148,9 +158,11 @@ public final class MosaikMessageParser {
   public record DoubleValue(String attr, double value) implements Content {}
 
   public sealed interface FlexMessage extends Content
-      permits FlexRequestMessage, FlexOptionsMessage, FlexSetPointMessage {}
+          permits FlexComMessage, FlexOptionsMessage, FlexRequestMessage, FlexSetPointMessage {}
 
-  public record FlexRequestMessage(String receiver, Optional<String> sender, boolean disaggregated)
+    public record FlexComMessage(String receiver, String sender, String msgId, Content content) implements FlexMessage {}
+
+  public record FlexRequestMessage(String receiver, boolean disaggregated)
       implements FlexMessage {}
 
   public record FlexOptionsMessage(List<FlexOptionInformation> information)

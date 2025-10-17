@@ -46,38 +46,6 @@ public final class SimosaikUtils {
     }
   }
 
-  public static Map<UUID, Class<? extends Value>> buildAssetsToValueClasses(
-      ExtEntityMapping entityMapping) {
-    Map<UUID, Class<? extends Value>> assetsToValueClasses = new HashMap<>();
-
-    List<ExtEntityEntry> entries = new ArrayList<>();
-    entries.addAll(entityMapping.getEntries(DataType.PRIMARY));
-    entries.addAll(entityMapping.getEntries(DataType.PRIMARY_RESULT));
-
-    for (ExtEntityEntry extEntityEntry : entries) {
-      Optional<ColumnScheme> scheme = extEntityEntry.columnScheme();
-
-      scheme.ifPresent(
-          columnScheme ->
-              assetsToValueClasses.put(extEntityEntry.uuid(), columnScheme.getValueClass()));
-    }
-
-    return assetsToValueClasses;
-  }
-
-  public static List<UUID> buildEmData(ExtEntityMapping entityMapping) {
-    List<UUID> uuids = entityMapping.getAssets(DataType.EM);
-
-    if (uuids.isEmpty()) {
-      log.warn("No em data found!");
-    }
-    return uuids;
-  }
-
-  public static List<UUID> buildResultMapping(ExtEntityMapping entityMapping) {
-    return entityMapping.getAssets(DataType.resultTypes());
-  }
-
   // converting inputs
 
   /**

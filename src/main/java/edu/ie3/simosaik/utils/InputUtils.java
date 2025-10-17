@@ -13,14 +13,16 @@ import static edu.ie3.simosaik.utils.SimosaikUtils.*;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
-import edu.ie3.simona.api.data.model.em.EmSetPoint;
-import edu.ie3.simona.api.data.model.em.FlexOptionRequest;
-import edu.ie3.simona.api.data.model.em.FlexOptions;
+import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tech.units.indriya.ComparableQuantity;
+
+import javax.measure.quantity.Power;
 
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
@@ -68,6 +70,7 @@ public final class InputUtils {
   public record EmMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
     public void process(
         ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
+        parseFlexComMessages(receiverToMessages,  idToUuid).forEach(container::addFlexComMessage);
       parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
       parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
       parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);
@@ -128,6 +131,45 @@ public final class InputUtils {
     return result;
   }
 
+
+  private static List<EmCommunicationMessage<?>> parseFlexComMessages(
+          Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid
+  ) {
+      if (idToUuid.isEmpty()) {
+          log.warn("No em external entity mapping found!");
+          return Collections.emptyList();
+      }
+
+
+
+      List<EmCommunicationMessage<?>> result = new ArrayList<>();
+
+      receiverToMessages.forEach((receiver, messages) -> {
+          log.info("Com messages: {}", messages);
+
+          if (idToUuid.containsKey(receiver)) {
+              UUID receiverUuid = idToUuid.get(receiver);
+
+              List<FlexComMessage> messageList = messages.stream().filter(m -> m.getClass() == FlexComMessage.class).map(FlexComMessage.class::cast).toList();
+
+              for (FlexComMessage msg : messageList) {
+                  UUID senderUuid = idToUuid.get(msg.sender());
+
+                  List<? extends EmData> data = switch (msg.content()) {
+                      case FlexRequestMessage r -> List.of(new FlexOptionRequest(receiverUuid, r.disaggregated()));
+                      case FlexOptionsMessage(List<FlexOptionInformation> information) -> information.stream().map(optionMessage -> new FlexOptions(receiverUuid, idToUuid.get(optionMessage.sender()), optionMessage.pRef(), optionMessage.pMin(), optionMessage.pMax())).toList();
+                      case FlexSetPointMessage(String r, String s, ComparableQuantity<Power> p, ComparableQuantity<Power> q) -> List.of(new EmSetPoint(senderUuid, p));
+                      default -> List.of();
+                  };
+
+                  data.forEach(d -> result.add(new EmCommunicationMessage<>(receiverUuid, senderUuid, d)));
+              }
+          }
+      });
+
+      return result;
+  }
+
   private static Map<UUID, FlexOptionRequest> parseFlexRequests(
       Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
     if (idToUuid.isEmpty()) {
@@ -159,7 +201,6 @@ public final class InputUtils {
               FlexOptionRequest request =
                   new FlexOptionRequest(
                       receiverUuid,
-                      requestMessage.sender().map(idToUuid::get).orElse(receiverUuid),
                       requestMessage.disaggregated());
 
               flexRequests.put(receiverUuid, request);
@@ -237,14 +278,13 @@ public final class InputUtils {
               }
 
               FlexSetPointMessage setPointMessage = setPointValues.getFirst();
-              UUID senderUuid = idToUuid.get(setPointMessage.sender());
 
               Optional<PValue> powerValue = toPValue(setPointMessage.p(), null);
 
               if (powerValue.isEmpty()) {
                 log.debug("No set point value found for asset {}.", receiver);
               } else {
-                setPoints.add(new EmSetPoint(receiverUuid, senderUuid, powerValue));
+                setPoints.add(new EmSetPoint(receiverUuid, powerValue));
               }
 
             } else {
@@ -267,7 +307,7 @@ public final class InputUtils {
                 if (setPoint.isEmpty()) {
                   log.debug("No set point value found for asset {}.", receiver);
                 } else {
-                  setPoints.add(new EmSetPoint(receiverUuid, receiverUuid, setPoint.get()));
+                  setPoints.add(new EmSetPoint(receiverUuid, setPoint.get()));
                 }
               }
             }

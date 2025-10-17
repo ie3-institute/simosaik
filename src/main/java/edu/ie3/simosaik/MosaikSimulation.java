@@ -15,6 +15,7 @@ import edu.ie3.simona.api.data.connection.ExtResultDataConnection;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.EmData;
+import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.ontology.em.EmCompletion;
 import edu.ie3.simona.api.ontology.em.EmDataResponseMessageToExt;
@@ -69,8 +70,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       ExtEntityMapping entityMapping = modelData.mapping();
 
       // primary data connection
-      Map<UUID, Class<? extends Value>> primaryInput =
-          SimosaikUtils.buildAssetsToValueClasses(entityMapping);
+      Map<UUID, Class<? extends Value>> primaryInput = entityMapping.getPrimaryMapping();
 
       this.extPrimaryDataConnection =
           !primaryInput.isEmpty() ? buildPrimaryConnection(primaryInput, log) : null;
@@ -79,7 +79,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       Optional<EmMode> emMode = initData.emMode();
 
       if (emMode.isPresent()) {
-        List<UUID> controlledEms = SimosaikUtils.buildEmData(entityMapping);
+        List<UUID> controlledEms = entityMapping.getAssets(DataType.EM);
 
         this.extEmDataConnection = buildEmConnection(controlledEms, emMode.get(), log);
       } else {
@@ -87,7 +87,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       }
 
       // result data connection
-      List<UUID> resultUuids = SimosaikUtils.buildResultMapping(entityMapping);
+      List<UUID> resultUuids = entityMapping.getAssets(DataType.RESULT);
       this.extResultDataConnection =
           !resultUuids.isEmpty() ? buildResultConnection(resultUuids, log) : null;
 
@@ -216,19 +216,24 @@ public class MosaikSimulation extends ExtCoSimulation {
       if (tick == extTick && containerOption.isPresent()) {
         ExtInputContainer container = containerOption.get();
 
-        // log.info("Flex requests: {}", container.flexRequestsString());
-        // log.info("Flex options: {}", container.flexOptionsString());
-        // log.info("Set points: {}", container.setPointsString());
+         log.info("Flex requests: {}", container.flexRequestsString());
+         log.info("Flex options: {}", container.flexOptionsString());
+         log.info("Set points: {}", container.setPointsString());
 
         // send received data to SIMONA
         var requests = container.extractFlexRequests();
         var options = container.extractFlexOptions();
         var setPoints = container.extractSetPoints();
+        var emMessages = container.extractEmMessages();
 
-        boolean sentEmData =
-            extEmDataConnection.sendEmData(tick, requests, options, setPoints, maybeNextTick);
+        boolean sentEmRequests = extEmDataConnection.sendFlexRequest(tick, requests.keySet(), disaggregateFlex);
 
-        if (sentEmData) {
+        boolean sentEmComData = extEmDataConnection.sendEmData(tick, emMessages, maybeNextTick);
+
+        boolean sentSetPoints = extEmDataConnection.sendSetPoints(tick, setPoints, maybeNextTick);
+
+        if (sentEmRequests || sentEmComData || sentSetPoints) {
+          log.info("Sending em messages: {}", emMessages);
           log.info("Sending em data: {}, {}, {}", requests, options, setPoints);
         } else {
           extTick = synchronizer.currentMosaikTick();
