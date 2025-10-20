@@ -228,63 +228,64 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   public Map<String, Object> getData(Map<String, List<String>> map) {
-    // requesting results from SIMONA
-    // we will either get result for the current tick or no results, because SIMONA finished the
-    // current tick
-    Optional<ExtOutputContainer> resultOption = synchronizer.requestResults();
+      // requesting results from SIMONA
+      // we will either get result for the current tick or no results, because SIMONA finished the
+      // current tick
+      Optional<ExtOutputContainer> resultOption = synchronizer.requestResults();
 
-    boolean finished = synchronizer.isFinished();
+      boolean finished = synchronizer.isFinished();
 
-    logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
+      logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
 
-    if (resultOption.isPresent()) {
-      ExtOutputContainer results = resultOption.get();
+      if (resultOption.isPresent()) {
+          ExtOutputContainer results = resultOption.get();
 
-      if (!results.isEmpty() && !finished) {
-        logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
+          if (!results.isEmpty() && !finished) {
+              logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
 
-        Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
+              Map<String, Object> data = ResultUtils.createOutput(results, map, mapping);
 
-        logger.info(
-            "["
-                + time
-                + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
-                + data);
+              logger.info(
+                      "["
+                              + time
+                              + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
+                              + data);
 
-        return data;
+              return data;
+          }
       }
-    }
 
-    if (finished) {
-      // we are finished for the current tick
-      if (synchronizer.outputNextTick()) {
-        // to prevent sending this info twice
-        synchronizer.setHasSendNextTick();
+      if (finished) {
+          // we are finished for the current tick
+          if (synchronizer.outputNextTick()) {
+              // to prevent sending this info twice
+              synchronizer.setHasSendNextTick();
 
-        long nextTick = synchronizer.getNextTick();
+              long nextTick = synchronizer.getNextTick();
 
-        // we should output the next tick information for those entities, that are requesting this
-        // information
-        logger.info(
-            "["
-                + time
-                + "] Tick finished, sending only next tick information to mosaik. Next tick: "
-                + nextTick);
+              // we should output the next tick information for those entities, that are requesting this
+              // information
+              logger.info(
+                      "["
+                              + time
+                              + "] Tick finished, sending only next tick information to mosaik. Next tick: "
+                              + nextTick);
 
-        // we set the no output flag to true, since we need to return an empty map for mosaik to
-        // continue with the next tick
-        synchronizer.setNoOutputFlag();
-        return ResultUtils.onlyTickInformation(map, nextTick);
+              // we set the no output flag to true, since we need to return an empty map for mosaik to
+              // continue with the next tick
+              synchronizer.setNoOutputFlag();
+              return ResultUtils.onlyTickInformation(map, nextTick);
+          } else {
+              // we will send an empty map, to signal mosaik, that this tick is finished
+              logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
+              return Collections.emptyMap();
+          }
       } else {
-        // we will send an empty map, to signal mosaik, that this tick is finished
-        logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
-        return Collections.emptyMap();
-      }
-    } else {
-      logger.info("[" + time + "] Got no results from SIMONA!");
+          logger.info("[" + time + "] Got no results from SIMONA!");
 
-      return Collections.emptyMap();
-    }
+          return Collections.emptyMap();
+
+      }
   }
 
   protected void checkModelParams(int expected, int received) {
