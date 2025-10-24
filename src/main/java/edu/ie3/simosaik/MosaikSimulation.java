@@ -15,6 +15,7 @@ import edu.ie3.simona.api.data.connection.ExtResultDataConnection;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.EmData;
+import edu.ie3.simona.api.data.model.em.EmSetPoint;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.ontology.em.EmCompletion;
@@ -169,7 +170,19 @@ public class MosaikSimulation extends ExtCoSimulation {
           sendFlexOptionsToExt(extEmDataConnection, tick, disaggregateFlex, log);
 
           // we will send the received set points to SIMONA
-          sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
+          Map<UUID, EmSetPoint> inputData = queueToSimona.takeData(ExtInputContainer::extractSetPoints);
+
+          while (inputData.isEmpty()) {
+              inputData = queueToSimona.takeData(ExtInputContainer::extractSetPoints);
+          }
+
+          log.info("Em set points: {}", inputData);
+          boolean wasSent = extEmDataConnection.sendSetPoints(tick, inputData, maybeNextTick);
+          if (!wasSent) {
+             log.warn("No set point data was sent to SIMONA!");
+          }
+
+//          sendEmSetPointsToSimona(extEmDataConnection, tick, inputData, maybeNextTick, log);
 
           // we will receive an em completion message
           extEmDataConnection.receiveWithType(EmCompletion.class);

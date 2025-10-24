@@ -47,12 +47,10 @@ public final class MetaUtils {
           List.of(SIMONA_NEXT_TICK, FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT, FLEX_COM);
       case EM_OPTIMIZER ->
           List.of(
-              ACTIVE_POWER,
-              REACTIVE_POWER,
-              FLEX_SET_POINT,
-              FLEX_OPTION_MAP_P_MIN,
-              FLEX_OPTION_MAP_P_REF,
-              FLEX_OPTION_MAP_P_MAX,
+                  SIMONA_NEXT_TICK,
+                  FLEX_REQUEST,
+                  FLEX_OPTIONS,
+                  FLEX_SET_POINT,
               FLEX_OPTIONS_DISAGGREGATED);
       case GRID_RESULTS -> ALL_GRID_UNITS;
       case NODE_RESULTS -> List.of(VOLTAGE_MAG, VOLTAGE_ANG);

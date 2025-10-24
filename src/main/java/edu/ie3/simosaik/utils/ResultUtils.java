@@ -204,7 +204,7 @@ public final class ResultUtils {
                           processedContent.put("disaggregated", r.disaggregated());
                           yield FLEX_REQUEST;
                       }
-                      case FlexOptions(UUID r, UUID s, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptionsResult> disaggregated) -> {
+                      case PowerLimitFlexOptions(UUID r, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptions> disaggregated) -> {
                           processedContent.put("sender", uuidToId.get(sender));
 
                           processedContent.put(FLEX_OPTION_P_MIN, toActive(pMin));
@@ -219,11 +219,13 @@ public final class ResultUtils {
                               // add aggregated flex options
                               for (UUID uuid : disaggregated.keySet()) {
                                   String id = uuidToId.get(uuid);
-                                  FlexOptionsResult partialOption = disaggregated.get(uuid);
+                                  FlexOptions partialOption = disaggregated.get(uuid);
 
-                                  connectedPmin.put(id, toActive(partialOption.getpMin()));
-                                  connectedPref.put(id, toActive(partialOption.getpRef()));
-                                  connectedPmax.put(id, toActive(partialOption.getpMax()));
+                                  if (partialOption instanceof PowerLimitFlexOptions p) {
+                                      connectedPmin.put(id, toActive(p.pMin()));
+                                      connectedPref.put(id, toActive(p.pRef()));
+                                      connectedPmax.put(id, toActive(p.pMax()));
+                                  }
                               }
                               processedContent.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
                               processedContent.put(FLEX_OPTION_MAP_P_REF, connectedPref);
@@ -239,7 +241,7 @@ public final class ResultUtils {
                           processedContent.put(FLEX_OPTION_P_MAX, toActive(o.getpMax()));
 
                           if (o instanceof ExtendedFlexOptionsResult extended) {
-                              Map<UUID, FlexOptionsResult> disaggregated = extended.getDisaggregated();
+                              Map<UUID, FlexOptions> disaggregated = extended.getDisaggregated();
 
                               if (disaggregated != null && !disaggregated.isEmpty()) {
                                   Map<String, Double> connectedPmin = new HashMap<>();
@@ -249,11 +251,23 @@ public final class ResultUtils {
                                   // add aggregated flex options
                                   for (UUID uuid : disaggregated.keySet()) {
                                       String id = uuidToId.get(uuid);
-                                      FlexOptionsResult partialOption = disaggregated.get(uuid);
+                                      FlexOptions partialOption = disaggregated.get(uuid);
 
-                                      connectedPmin.put(id, toActive(partialOption.getpMin()));
-                                      connectedPref.put(id, toActive(partialOption.getpRef()));
-                                      connectedPmax.put(id, toActive(partialOption.getpMax()));
+                                      switch (partialOption) {
+                                          case PowerLimitFlexOptions p -> {
+                                              connectedPmin.put(id, toActive(p.pMin()));
+                                              connectedPref.put(id, toActive(p.pRef()));
+                                              connectedPmax.put(id, toActive(p.pMax()));
+                                          }
+
+                                          case ExtendedFlexOptionsResult flexOptionsResult -> {
+                                              connectedPmin.put(id, toActive(flexOptionsResult.getpMin()));
+                                              connectedPref.put(id, toActive(flexOptionsResult.getpRef()));
+                                              connectedPmax.put(id, toActive(flexOptionsResult.getpMax()));
+                                          }
+                                          default ->
+                                                  log.warn("Unhandled FlexOptionsResult type '{}'.", partialOption.getClass());
+                                      }
                                   }
                                   processedContent.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
                                   processedContent.put(FLEX_OPTION_MAP_P_REF, connectedPref);
@@ -304,9 +318,10 @@ public final class ResultUtils {
                   flexRequestData.add(data);
               }
 
-              case FlexOptions flexOptions -> {
-                  Map<String, Object> data =
-                          handleFlexOptionResults(flexOptions.asResult(), attrs, uuidToId);
+              case PowerLimitFlexOptions(UUID model, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptions> disaggregated) -> {
+                  ExtendedFlexOptionsResult res = new ExtendedFlexOptionsResult(null, model, pRef, pMin, pMax, disaggregated);
+
+                  Map<String, Object> data = handleFlexOptionResults(res, attrs, uuidToId);
                   flexOptionsData.putAll(data);
               }
 
@@ -315,7 +330,7 @@ public final class ResultUtils {
                   flexOptionsData.putAll(data);
               }
 
-              case EmSetPoint(UUID receiver, Optional<PValue> power) -> {
+              case EmSetPoint(UUID receiver, Optional<PValue> power, Map<UUID, PValue> disaggregated) -> {
                   String receiverId = uuidToId.get(receiver);
 
                   Map<String, Object> data = new HashMap<>();
@@ -380,23 +395,36 @@ public final class ResultUtils {
 
     if (result instanceof ExtendedFlexOptionsResult extended) {
       // add disaggregated flex options
-      Map<UUID, FlexOptionsResult> disaggregatedOptions = extended.getDisaggregated();
+      Map<UUID, FlexOptions> disaggregatedOptions = extended.getDisaggregated();
 
       for (UUID uuid : disaggregatedOptions.keySet()) {
         String id = uuidToId.get(uuid);
-        FlexOptionsResult partialOption = disaggregatedOptions.get(uuid);
+        FlexOptions partialOption = disaggregatedOptions.get(uuid);
 
-        connectedPmin.put(id, toActive(partialOption.getpMin()));
-        connectedPref.put(id, toActive(partialOption.getpRef()));
-        connectedPmax.put(id, toActive(partialOption.getpMax()));
+        switch (partialOption) {
+            case PowerLimitFlexOptions p -> {
+                connectedPmin.put(id, toActive(p.pMin()));
+                connectedPref.put(id, toActive(p.pRef()));
+                connectedPmax.put(id, toActive(p.pMax()));
+            }
+
+            case ExtendedFlexOptionsResult flexOptionsResult -> {
+                connectedPmin.put(id, toActive(flexOptionsResult.getpMin()));
+                connectedPref.put(id, toActive(flexOptionsResult.getpRef()));
+                connectedPmax.put(id, toActive(flexOptionsResult.getpMax()));
+            }
+            default ->
+                log.warn("Unhandled FlexOptionsResult type '{}'.", partialOption.getClass());
+        }
+
       }
     }
 
     Map<String, Object> data = new HashMap<>();
 
     if (result instanceof ExtendedFlexOptionsResult extended && attrs.contains(FLEX_OPTIONS)) {
-      String sender = uuidToId.get(extended.getSender());
-      data.put("sender", sender);
+      String model = uuidToId.get(extended.getInputModel());
+      data.put("model", model);
 
       data.put(FLEX_OPTION_P_MIN, pMin);
       data.put(FLEX_OPTION_P_REF, pRef);
@@ -406,7 +434,7 @@ public final class ResultUtils {
 
     } else if (result instanceof ExtendedFlexOptionsResult extended
         && attrs.contains(FLEX_OPTIONS_DISAGGREGATED)) {
-      String sender = uuidToId.get(extended.getSender());
+      String sender = uuidToId.get(extended.getInputModel());
       data.put("sender", sender);
 
       data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);

@@ -6,23 +6,22 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.SimosaikUnits.ACTIVE_POWER;
-import static edu.ie3.simosaik.SimosaikUnits.REACTIVE_POWER;
-import static edu.ie3.simosaik.utils.SimosaikUtils.*;
-
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.Value;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simosaik.utils.MosaikMessageParser.*;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 
 import javax.measure.quantity.Power;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static edu.ie3.simosaik.SimosaikUnits.ACTIVE_POWER;
+import static edu.ie3.simosaik.SimosaikUnits.REACTIVE_POWER;
+import static edu.ie3.simosaik.utils.SimosaikUtils.*;
 
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
@@ -157,7 +156,7 @@ public final class InputUtils {
 
                   List<? extends EmData> data = switch (msg.content()) {
                       case FlexRequestMessage r -> List.of(new FlexOptionRequest(receiverUuid, r.disaggregated()));
-                      case FlexOptionsMessage(List<FlexOptionInformation> information) -> information.stream().map(optionMessage -> new FlexOptions(receiverUuid, idToUuid.get(optionMessage.sender()), optionMessage.pRef(), optionMessage.pMin(), optionMessage.pMax())).toList();
+                      case FlexOptionsMessage(List<FlexOptionInformation> information) -> information.stream().map(optionMessage -> new PowerLimitFlexOptions(receiverUuid, optionMessage.pRef(), optionMessage.pMin(), optionMessage.pMax())).toList();
                       case FlexSetPointMessage(String r, String s, ComparableQuantity<Power> p, ComparableQuantity<Power> q) -> List.of(new EmSetPoint(senderUuid, p));
                       default -> List.of();
                   };
@@ -233,9 +232,8 @@ public final class InputUtils {
                     .flatMap(m -> m.information().stream())
                     .map(
                         optionMessage ->
-                            new FlexOptions(
+                                (FlexOptions) new PowerLimitFlexOptions(
                                 receiverUuid,
-                                idToUuid.get(optionMessage.sender()),
                                 optionMessage.pRef(),
                                 optionMessage.pMin(),
                                 optionMessage.pMax()))
@@ -284,7 +282,7 @@ public final class InputUtils {
               if (powerValue.isEmpty()) {
                 log.debug("No set point value found for asset {}.", receiver);
               } else {
-                setPoints.add(new EmSetPoint(receiverUuid, powerValue));
+                setPoints.add(new EmSetPoint(receiverUuid, powerValue, Collections.emptyMap()));
               }
 
             } else {
