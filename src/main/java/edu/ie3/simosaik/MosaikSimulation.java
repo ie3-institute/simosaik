@@ -173,15 +173,17 @@ public class MosaikSimulation extends ExtCoSimulation {
           Map<UUID, FlexOptionRequest> requestMap = queueToSimona.takeData(ExtInputContainer::extractFlexRequests);
 
           // send flex option requests to SIMONA
-          extEmDataConnection.sendEmData(tick, requestMap, Collections.emptyMap(), Collections.emptyMap(), maybeNextTick);
+          extEmDataConnection.sendEmData(tick, requestMap, Collections.emptyMap(), Collections.emptyMap());
 
           // send flex options to mosaik
           ExtOutputContainer container = new ExtOutputContainer(tick);
-          extEmDataConnection.receiveWithType(FlexOptionsResponse.class).receiverToFlexOptions().forEach(container::addEmData);
-          queueToExt.queueData(container);
+          extEmDataConnection.receiveWithType(FlexOptionsResponse.class).receiverToFlexOptions()
+                  .forEach((r, d) -> d.forEach(option -> container.addEmData(r, option)));
+
+            queueToExt.queueData(container);
 
           // we will send the received set points to SIMONA
-          sendEmSetPointsToSimona(extEmDataConnection, tick, maybeNextTick, log);
+          sendEmSetPointsToSimona(extEmDataConnection, tick, log);
 
           // we will receive an em completion message
           Optional<Long> nextTickOption = extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
@@ -241,9 +243,9 @@ public class MosaikSimulation extends ExtCoSimulation {
 
         boolean sentEmRequests = extEmDataConnection.sendFlexRequest(tick, requests.keySet(), disaggregateFlex);
 
-        boolean sentEmComData = extEmDataConnection.sendEmData(tick, emMessages, maybeNextTick);
+        boolean sentEmComData = extEmDataConnection.sendCommunicationMessage(tick, emMessages);
 
-        boolean sentSetPoints = extEmDataConnection.sendSetPoints(tick, setPoints, maybeNextTick);
+        boolean sentSetPoints = extEmDataConnection.sendEmData(tick, setPoints, log);
 
         if (sentEmRequests || sentEmComData || sentSetPoints) {
           log.info("Sending em messages: {}", emMessages);

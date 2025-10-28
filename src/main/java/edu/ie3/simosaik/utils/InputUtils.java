@@ -156,7 +156,7 @@ public final class InputUtils {
 
                   List<? extends EmData> data = switch (msg.content()) {
                       case FlexRequestMessage r -> List.of(new FlexOptionRequest(receiverUuid, r.disaggregated()));
-                      case FlexOptionsMessage(List<FlexOptionInformation> information) -> information.stream().map(optionMessage -> new PowerLimitFlexOptions(receiverUuid, optionMessage.pRef(), optionMessage.pMin(), optionMessage.pMax())).toList();
+                      case FlexOptionsMessage(List<FlexOptionInformation> information) -> information.stream().map(optionMessage -> new PowerLimitFlexOptions(receiverUuid, idToUuid.get(optionMessage.sender()), optionMessage.pRef(), optionMessage.pMin(), optionMessage.pMax())).toList();
                       case FlexSetPointMessage(String r, String s, ComparableQuantity<Power> p, ComparableQuantity<Power> q) -> List.of(new EmSetPoint(senderUuid, p));
                       default -> List.of();
                   };
@@ -234,6 +234,7 @@ public final class InputUtils {
                         optionMessage ->
                                 (FlexOptions) new PowerLimitFlexOptions(
                                 receiverUuid,
+                                idToUuid.get(optionMessage.sender()),
                                 optionMessage.pRef(),
                                 optionMessage.pMin(),
                                 optionMessage.pMax()))

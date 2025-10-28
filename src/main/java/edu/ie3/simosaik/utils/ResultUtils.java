@@ -19,7 +19,6 @@ import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.SimosaikUnits;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
@@ -46,8 +45,8 @@ public final class ResultUtils {
       String externalEntity = entry.getKey();
       List<String> attrs = entry.getValue();
 
-      if (attrs.contains(SimosaikUnits.SIMONA_NEXT_TICK)) {
-        output.put(externalEntity, Map.of(SimosaikUnits.SIMONA_NEXT_TICK, nextTick));
+      if (attrs.contains(SIMONA_NEXT_TICK)) {
+        output.put(externalEntity, Map.of(SIMONA_NEXT_TICK, nextTick));
       }
     }
 
@@ -204,7 +203,7 @@ public final class ResultUtils {
                           processedContent.put("disaggregated", r.disaggregated());
                           yield FLEX_REQUEST;
                       }
-                      case PowerLimitFlexOptions(UUID r, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptions> disaggregated) -> {
+                      case PowerLimitFlexOptions(UUID r, UUID s, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptions> disaggregated) -> {
                           processedContent.put("sender", uuidToId.get(sender));
 
                           processedContent.put(FLEX_OPTION_P_MIN, toActive(pMin));
@@ -230,49 +229,6 @@ public final class ResultUtils {
                               processedContent.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
                               processedContent.put(FLEX_OPTION_MAP_P_REF, connectedPref);
                               processedContent.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
-                          }
-
-                          yield FLEX_OPTIONS;
-                      }
-                      case FlexOptionsResult o -> {
-                          processedContent.put("sender", uuidToId.get(sender));
-                          processedContent.put(FLEX_OPTION_P_MIN, toActive(o.getpMin()));
-                          processedContent.put(FLEX_OPTION_P_REF, toActive(o.getpRef()));
-                          processedContent.put(FLEX_OPTION_P_MAX, toActive(o.getpMax()));
-
-                          if (o instanceof ExtendedFlexOptionsResult extended) {
-                              Map<UUID, FlexOptions> disaggregated = extended.getDisaggregated();
-
-                              if (disaggregated != null && !disaggregated.isEmpty()) {
-                                  Map<String, Double> connectedPmin = new HashMap<>();
-                                  Map<String, Double> connectedPref = new HashMap<>();
-                                  Map<String, Double> connectedPmax = new HashMap<>();
-
-                                  // add aggregated flex options
-                                  for (UUID uuid : disaggregated.keySet()) {
-                                      String id = uuidToId.get(uuid);
-                                      FlexOptions partialOption = disaggregated.get(uuid);
-
-                                      switch (partialOption) {
-                                          case PowerLimitFlexOptions p -> {
-                                              connectedPmin.put(id, toActive(p.pMin()));
-                                              connectedPref.put(id, toActive(p.pRef()));
-                                              connectedPmax.put(id, toActive(p.pMax()));
-                                          }
-
-                                          case ExtendedFlexOptionsResult flexOptionsResult -> {
-                                              connectedPmin.put(id, toActive(flexOptionsResult.getpMin()));
-                                              connectedPref.put(id, toActive(flexOptionsResult.getpRef()));
-                                              connectedPmax.put(id, toActive(flexOptionsResult.getpMax()));
-                                          }
-                                          default ->
-                                                  log.warn("Unhandled FlexOptionsResult type '{}'.", partialOption.getClass());
-                                      }
-                                  }
-                                  processedContent.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
-                                  processedContent.put(FLEX_OPTION_MAP_P_REF, connectedPref);
-                                  processedContent.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
-                              }
                           }
 
                           yield FLEX_OPTIONS;
@@ -318,16 +274,23 @@ public final class ResultUtils {
                   flexRequestData.add(data);
               }
 
-              case PowerLimitFlexOptions(UUID model, ComparableQuantity<Power> pRef, ComparableQuantity<Power> pMin, ComparableQuantity<Power> pMax, Map<UUID, FlexOptions> disaggregated) -> {
-                  ExtendedFlexOptionsResult res = new ExtendedFlexOptionsResult(null, model, pRef, pMin, pMax, disaggregated);
+              case PowerLimitFlexOptions(UUID receiver, UUID model, ComparableQuantity<Power> refPower, ComparableQuantity<Power> minPower, ComparableQuantity<Power> maxPower, Map<UUID, FlexOptions> disaggregated) -> {
+                  String receiverId = uuidToId.get(receiver);
+                  String modelId = uuidToId.get(model);
 
-                  Map<String, Object> data = handleFlexOptionResults(res, attrs, uuidToId);
-                  flexOptionsData.putAll(data);
-              }
+                  Map<String, Object> data = new HashMap<>();
+                  data.put("receiver", receiverId);
+                  data.put("model", modelId);
 
-              case ExtendedFlexOptionsResult result -> {
-                  Map<String, Object> data = handleFlexOptionResults(result, attrs, uuidToId);
-                  flexOptionsData.putAll(data);
+                  double pMin = toActive(minPower);
+                  double pRef = toActive(refPower);
+                  double pMax = toActive(maxPower);
+
+                  data.put(FLEX_OPTION_P_MIN, pMin);
+                  data.put(FLEX_OPTION_P_REF, pRef);
+                  data.put(FLEX_OPTION_P_MAX, pMax);
+
+                  flexOptionsData.put(FLEX_OPTIONS, data);
               }
 
               case EmSetPoint(UUID receiver, Optional<PValue> power, Map<UUID, PValue> disaggregated) -> {
@@ -395,28 +358,15 @@ public final class ResultUtils {
 
     if (result instanceof ExtendedFlexOptionsResult extended) {
       // add disaggregated flex options
-      Map<UUID, FlexOptions> disaggregatedOptions = extended.getDisaggregated();
+      Map<UUID, FlexOptionsResult> disaggregatedOptions = extended.getDisaggregated();
 
       for (UUID uuid : disaggregatedOptions.keySet()) {
         String id = uuidToId.get(uuid);
-        FlexOptions partialOption = disaggregatedOptions.get(uuid);
+          FlexOptionsResult partialOption = disaggregatedOptions.get(uuid);
 
-        switch (partialOption) {
-            case PowerLimitFlexOptions p -> {
-                connectedPmin.put(id, toActive(p.pMin()));
-                connectedPref.put(id, toActive(p.pRef()));
-                connectedPmax.put(id, toActive(p.pMax()));
-            }
-
-            case ExtendedFlexOptionsResult flexOptionsResult -> {
-                connectedPmin.put(id, toActive(flexOptionsResult.getpMin()));
-                connectedPref.put(id, toActive(flexOptionsResult.getpRef()));
-                connectedPmax.put(id, toActive(flexOptionsResult.getpMax()));
-            }
-            default ->
-                log.warn("Unhandled FlexOptionsResult type '{}'.", partialOption.getClass());
-        }
-
+        connectedPmin.put(id, toActive(partialOption.getpMin()));
+        connectedPref.put(id, toActive(partialOption.getpRef()));
+        connectedPmax.put(id, toActive(partialOption.getpMax()));
       }
     }
 
