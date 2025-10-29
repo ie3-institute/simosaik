@@ -8,7 +8,6 @@ package edu.ie3.simosaik.utils;
 
 import static edu.ie3.simosaik.SimosaikUnits.*;
 
-import edu.ie3.simosaik.exceptions.ConversionException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -57,8 +56,8 @@ public final class MosaikMessageParser {
 
         Content content = parseValue(receiver, attr, senderValue.getValue());
 
-        if  (content != null) {
-            messages.add(new ParsedMessage(receiver, mosaikSender, content));
+        if (content != null) {
+          messages.add(new ParsedMessage(receiver, mosaikSender, content));
         }
       }
     }
@@ -66,90 +65,67 @@ public final class MosaikMessageParser {
     return messages;
   }
 
-  @SuppressWarnings("unchecked")
   private static Content parseValue(String receiver, String attr, Object value) {
     log.info("Receiver '{}', attr '{}' -> Value: {}", receiver, attr, value);
 
-    if (attr.equals(FLEX_COM)) {
-
-        if (value instanceof Map<?,?> map) {
-            String sender = (String) map.get("sender");
-            String msgId = (String) map.get("msgId");
-
-            Content content = parseValue(receiver, (String) map.get("type"), map.get("content"));
-            log.info("Content {}", content);
-
-            return new FlexComMessage(receiver, sender, msgId, content);
-        }
-
-        return null;
-
-    } else if (attr.equals(FLEX_REQUEST)) {
-      boolean disaggregated = false;
-
-      if (value instanceof Map<?, ?> request) {
-        try {
-          disaggregated = (boolean) request.get("disaggregated");
-        } catch (Exception ignored) {
+    return switch (attr) {
+      case FLEX_REQUEST -> new FlexRequestMessage(receiver, extract(value, "disaggregated", false));
+      case FLEX_OPTIONS -> parseFlexOptions(receiver, value, false);
+        // case FLEX_OPTIONS_DISAGGREGATED -> parseFlexOptions(receiver, value, true);
+      case FLEX_SET_POINT ->
+          new FlexSetPointMessage(
+              receiver,
+              extract(value, "sender", ""),
+              extractQuantity(value, ACTIVE_POWER),
+              extractQuantity(value, REACTIVE_POWER));
+      case FLEX_COM -> parseEmComMessage(receiver, value);
+      default -> {
+        if (value instanceof Double d) {
+          yield new DoubleValue(attr, d);
+        } else {
+          log.warn("Unsupported attribute '{}'", attr);
+          yield new NullValue(attr);
         }
       }
-
-      return new FlexRequestMessage(receiver, disaggregated);
-
-    } else if (attr.equals(FLEX_OPTIONS)) {
-      List<Object> list = new ArrayList<>();
-
-      if (value instanceof Map<?, ?> map) {
-        list.add(map);
-      } else if (value instanceof List<?> valueList) {
-        list.addAll(valueList);
-      }
-
-      List<FlexOptionInformation> information = new ArrayList<>();
-
-      for (Object item : list) {
-
-        if (item instanceof Map<?, ?> map) {
-          Map<String, Object> option = (Map<String, Object>) map;
-
-          information.add(
-              new FlexOptionInformation(
-                  receiver,
-                  (String) option.get("sender"),
-                  extractQuantity(option, FLEX_OPTION_P_MIN),
-                  extractQuantity(option, FLEX_OPTION_P_REF),
-                  extractQuantity(option, FLEX_OPTION_P_MAX)));
-        }
-      }
-
-      return new FlexOptionsMessage(information);
-
-    } else if (attr.equals(FLEX_SET_POINT) && value instanceof Map<?, ?> map) {
-      Map<String, Object> setPoint = (Map<String, Object>) map;
-
-      return new FlexSetPointMessage(
-          receiver,
-          (String) map.get("sender"),
-          extractQuantity(setPoint, ACTIVE_POWER),
-          extractQuantity(setPoint, REACTIVE_POWER));
-
-    } else if (value instanceof Double d) {
-      if (Double.isNaN(d)) {
-        log.warn("Value for attribute '{}' for receiver '{}' is NaN.", attr, receiver);
-      }
-
-      return new DoubleValue(attr, d);
-
-    } else {
-
-      // throw an exception if we receive a value
-      if (value != null) {
-        throw new ConversionException("Could not parse attribute: " + attr + "; Value: " + value);
-      } else {
-        return new NullValue(attr);
-      }
-    }
+    };
   }
+
+  private static FlexOptionsMessage parseFlexOptions(
+      String receiver, Object value, boolean disaggregated) {
+    Map<String, FlexOptionInformation> receiverToInformation = new HashMap<>();
+
+    if (disaggregated) {
+      // not supported yet
+      // TODO: add handling of disaggregated flex options
+    } else {
+      receiverToInformation.put(
+          receiver,
+          new FlexOptionInformation(
+              receiver,
+              extract(value, "sender", ""),
+              extractQuantity(value, FLEX_OPTION_P_MIN),
+              extractQuantity(value, FLEX_OPTION_P_REF),
+              extractQuantity(value, FLEX_OPTION_P_MAX)));
+    }
+
+    return new FlexOptionsMessage(receiverToInformation);
+  }
+
+  private static FlexComMessage parseEmComMessage(String receiver, Object value) {
+    if (value instanceof Map<?, ?> map) {
+      String sender = (String) map.get("sender");
+      String msgId = (String) map.get("msgId");
+
+      Content content = parseValue(receiver, (String) map.get("type"), map.get("content"));
+      log.info("Content {}", content);
+
+      return new FlexComMessage(receiver, sender, msgId, content);
+    }
+
+    return null;
+  }
+
+  // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
   public sealed interface Content permits FlexMessage, DoubleValue, NullValue {}
 
@@ -158,14 +134,14 @@ public final class MosaikMessageParser {
   public record DoubleValue(String attr, double value) implements Content {}
 
   public sealed interface FlexMessage extends Content
-          permits FlexComMessage, FlexOptionsMessage, FlexRequestMessage, FlexSetPointMessage {}
+      permits FlexComMessage, FlexOptionsMessage, FlexRequestMessage, FlexSetPointMessage {}
 
-    public record FlexComMessage(String receiver, String sender, String msgId, Content content) implements FlexMessage {}
-
-  public record FlexRequestMessage(String receiver, boolean disaggregated)
+  public record FlexComMessage(String receiver, String sender, String msgId, Content content)
       implements FlexMessage {}
 
-  public record FlexOptionsMessage(List<FlexOptionInformation> information)
+  public record FlexRequestMessage(String receiver, boolean disaggregated) implements FlexMessage {}
+
+  public record FlexOptionsMessage(Map<String, FlexOptionInformation> receiverToInformation)
       implements FlexMessage {}
 
   public record FlexSetPointMessage(
@@ -178,20 +154,6 @@ public final class MosaikMessageParser {
       ComparableQuantity<Power> pMin,
       ComparableQuantity<Power> pRef,
       ComparableQuantity<Power> pMax) {}
-
-  private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
-      Map<String, Object> map, String field) {
-    if (map.containsKey(field)) {
-      Object value = map.get(field);
-
-      if (value instanceof Double d) {
-        Unit<Q> unit = getPSDMUnit(field);
-        return Quantities.getQuantity(d, unit);
-      }
-    }
-
-    return null;
-  }
 
   public static String trim(String sender) {
     Pattern dot = Pattern.compile("\\.");
@@ -208,5 +170,33 @@ public final class MosaikMessageParser {
     } else {
       return sender.split("\\.")[count];
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <V> V extract(Object obj, String field, V defaultValue) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return (V) map.get(field);
+      } catch (ClassCastException ignored) {
+      }
+    }
+    return defaultValue;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
+      Object obj, String field) {
+    if (obj == null) {
+      return null;
+    }
+
+    try {
+      Map<String, Double> map = (Map<String, Double>) obj;
+      Unit<Q> unit = getPSDMUnit(field);
+      return Quantities.getQuantity(map.get(field), unit);
+    } catch (Exception ignored) {
+    }
+
+    return null;
   }
 }

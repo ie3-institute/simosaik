@@ -6,17 +6,11 @@
 
 package edu.ie3.simosaik;
 
-import edu.ie3.datamodel.models.input.AssetInput;
-import edu.ie3.datamodel.models.input.container.JointGridContainer;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.ExtSimAdapterData;
-import edu.ie3.simona.api.mapping.DataType;
-import edu.ie3.simona.api.mapping.ExtEntityEntry;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-import java.util.ArrayList;
-import java.util.List;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
   private MosaikSimulation extSim;

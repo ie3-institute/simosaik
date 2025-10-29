@@ -342,7 +342,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public boolean outputNextTick() {
     // we only output the next tick, if we can send outputs to mosaik and
-      // if either the next tick has changed or if the next tick haven't been sent yet
+    // if either the next tick has changed or if the next tick haven't been sent yet
     return !noOutputs && (hasNextTickChanged || !hasSendNextTick);
   }
 

@@ -8,11 +8,7 @@ package edu.ie3.simosaik.utils;
 
 import static edu.ie3.simosaik.SimosaikUnits.*;
 
-import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.datamodel.models.value.*;
-import edu.ie3.simona.api.mapping.DataType;
-import edu.ie3.simona.api.mapping.ExtEntityEntry;
-import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
 import java.util.*;

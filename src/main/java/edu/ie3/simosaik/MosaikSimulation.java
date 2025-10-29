@@ -25,13 +25,12 @@ import edu.ie3.simona.api.ontology.em.FlexOptionsResponse;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.SIMONAPart;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
@@ -170,23 +169,28 @@ public class MosaikSimulation extends ExtCoSimulation {
           // first we send flex options to mosaik
           // sendFlexOptionsToExt(extEmDataConnection, tick, disaggregateFlex, log);
 
-          Map<UUID, FlexOptionRequest> requestMap = queueToSimona.takeData(ExtInputContainer::extractFlexRequests);
+          Map<UUID, FlexOptionRequest> requestMap =
+              queueToSimona.takeData(ExtInputContainer::extractFlexRequests);
 
           // send flex option requests to SIMONA
-          extEmDataConnection.sendEmData(tick, requestMap, Collections.emptyMap(), Collections.emptyMap());
+          extEmDataConnection.sendEmData(
+              tick, requestMap, Collections.emptyMap(), Collections.emptyMap());
 
           // send flex options to mosaik
           ExtOutputContainer container = new ExtOutputContainer(tick);
-          extEmDataConnection.receiveWithType(FlexOptionsResponse.class).receiverToFlexOptions()
-                  .forEach((r, d) -> d.forEach(option -> container.addEmData(r, option)));
+          extEmDataConnection
+              .receiveWithType(FlexOptionsResponse.class)
+              .receiverToFlexOptions()
+              .forEach((r, d) -> d.forEach(option -> container.addEmData(r, option)));
 
-            queueToExt.queueData(container);
+          queueToExt.queueData(container);
 
           // we will send the received set points to SIMONA
           sendEmSetPointsToSimona(extEmDataConnection, tick, log);
 
           // we will receive an em completion message
-          Optional<Long> nextTickOption = extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
+          Optional<Long> nextTickOption =
+              extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
           log.info("Received completion for tick: {}. Next tick option: {}", tick, nextTickOption);
         }
         case EM_COMMUNICATION -> {
@@ -231,9 +235,9 @@ public class MosaikSimulation extends ExtCoSimulation {
       if (tick == extTick && containerOption.isPresent()) {
         ExtInputContainer container = containerOption.get();
 
-         log.info("Flex requests: {}", container.flexRequestsString());
-         log.info("Flex options: {}", container.flexOptionsString());
-         log.info("Set points: {}", container.setPointsString());
+        log.info("Flex requests: {}", container.flexRequestsString());
+        log.info("Flex options: {}", container.flexOptionsString());
+        log.info("Set points: {}", container.setPointsString());
 
         // send received data to SIMONA
         var requests = container.extractFlexRequests();
@@ -241,7 +245,8 @@ public class MosaikSimulation extends ExtCoSimulation {
         var setPoints = container.extractSetPoints();
         var emMessages = container.extractEmMessages();
 
-        boolean sentEmRequests = extEmDataConnection.sendFlexRequest(tick, requests.keySet(), disaggregateFlex);
+        boolean sentEmRequests =
+            extEmDataConnection.sendFlexRequest(tick, requests.keySet(), disaggregateFlex);
 
         boolean sentEmComData = extEmDataConnection.sendCommunicationMessage(tick, emMessages);
 
