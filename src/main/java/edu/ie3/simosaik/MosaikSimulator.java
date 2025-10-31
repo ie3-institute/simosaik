@@ -33,9 +33,8 @@ public class MosaikSimulator extends Simulator {
   private final Map<SimonaEntity, Boolean> simonaEntities = new HashMap<>();
 
   private ExtEntityMapping mapping;
-  private final List<InputUtils.MessageProcessor> messageProcessors = new ArrayList<>();
-
-  private final List<ParsedMessage> cache = new ArrayList<>();
+  private final Map<String, ColumnScheme> primaryType = new HashMap<>();
+  private final Map<String, Object> cache = new HashMap<>();
 
   private long time;
 
@@ -63,7 +62,7 @@ public class MosaikSimulator extends Simulator {
     Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
 
     if (simParams.containsKey("step_size")) {
-      stepSize = (Long) simParams.get("step_size");
+      stepSize = (long) simParams.get("step_size");
 
       // update the mosaik step size
       synchronizer.setMosaikStepSize(stepSize);
@@ -140,6 +139,9 @@ public class MosaikSimulator extends Simulator {
 
           DataType dataType = SimonaEntity.toType(modelType);
 
+          // add primary data information for this model
+          scheme.ifPresent(s -> primaryType.put(id, s));
+
           // add simona external entity entry
           entries.add(new ExtEntityEntry(uuid, id, scheme, dataType));
         }
@@ -159,17 +161,6 @@ public class MosaikSimulator extends Simulator {
     if (allInitialized) {
       try {
         synchronizer.sendInitData(new InitializationData.ModelData(mapping));
-
-        // create input message processors
-        Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping();
-
-        if (!idToUuid.isEmpty())
-          this.messageProcessors.add(new InputUtils.PrimaryMessageProcessor(idToUuid));
-
-        if (!idToUuid.isEmpty()) {
-          this.messageProcessors.add(new InputUtils.EmMessageProcessor(idToUuid));
-        }
-
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
@@ -186,6 +177,10 @@ public class MosaikSimulator extends Simulator {
       this.time = time;
     }
 
+    // filtering the inputs
+    Map<String, Object> filteredInputs = InputUtils.filter(inputs, cache);
+    cache.putAll(filteredInputs);
+
     // updating the mosaik time
     long scaledTime = synchronizer.updateMosaikTime(time);
 
@@ -194,17 +189,12 @@ public class MosaikSimulator extends Simulator {
 
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
-    // processing mosaik inputs
-    List<ParsedMessage> parsedMessages = MosaikMessageParser.parse(inputs);
-    List<ParsedMessage> filtered = MosaikMessageParser.filter(parsedMessages, cache);
-    cache.addAll(filtered);
-
     // log the expected next tick
     logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
-    if (!filtered.isEmpty()) {
+    if (!inputs.isEmpty()) {
       ExtInputContainer extDataForSimona =
-          InputUtils.createInputDataContainer(scaledTime, nextTick, filtered, messageProcessors);
+          InputUtils.createInput(scaledTime, nextTick, mapping, inputs, primaryType);
 
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
 

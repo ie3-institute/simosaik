@@ -6,331 +6,240 @@
 
 package edu.ie3.simosaik.utils;
 
-import static edu.ie3.simosaik.SimosaikUnits.ACTIVE_POWER;
-import static edu.ie3.simosaik.SimosaikUnits.REACTIVE_POWER;
-import static edu.ie3.simosaik.utils.SimosaikUtils.*;
-
-import edu.ie3.datamodel.models.value.PValue;
-import edu.ie3.datamodel.models.value.Value;
+import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
+import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
-import edu.ie3.simosaik.utils.MosaikMessageParser.*;
-import java.util.*;
-import java.util.stream.Collectors;
-import javax.measure.quantity.Power;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
+import tech.units.indriya.quantity.Quantities;
+
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import static edu.ie3.simosaik.SimosaikUnits.*;
 
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
-  public static ExtInputContainer createInputDataContainer(
+
+  public static Map<String, Object> filter(
+          Map<String, Object> inputs, Map<String, Object> cache
+  ) {
+      Predicate<Map.Entry<String, Object>> filterFcn = e -> {
+          String key = e.getKey();
+
+          if (cache.containsKey(key)) {
+              Object value = e.getValue();
+              return value != null && !cache.get(key).equals(value);
+          } else {
+              return false;
+          }
+      };
+
+      return inputs.entrySet().stream().filter(filterFcn).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+
+  @SuppressWarnings("unchecked")
+  public static ExtInputContainer createInput(
       long tick,
-      long nextTick,
-      List<ParsedMessage> mosaikMessages,
-      List<MessageProcessor> messageProcessors) {
-    log.debug("Parsed messages: {}", mosaikMessages);
+      long nexTick,
+      ExtEntityMapping mapping,
+      Map<String, Object> inputData,
+      Map<String, ColumnScheme> primaryType) {
+    ExtInputContainer container = new ExtInputContainer(tick, nexTick);
 
-    Map<String, List<Content>> receiverToMessages = new HashMap<>();
+    // handling the input data
+    for (Map.Entry<String, Object> entry : inputData.entrySet()) {
+      String receiverId = entry.getKey();
+      UUID receiver = mapping.from(receiverId);
 
-    mosaikMessages.stream()
-        .collect(Collectors.groupingBy(ParsedMessage::receiver))
-        .forEach(
-            (receiver, messages) ->
-                receiverToMessages.put(
-                    receiver, messages.stream().map(ParsedMessage::content).toList()));
+      Map<String, Object> attrToData = (Map<String, Object>) entry.getValue();
 
-    log.debug("Receivers to messages: {}.", receiverToMessages);
+      // handling primary input data
+      if (primaryType.containsKey(receiverId)) {
+        handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
+      }
 
-    // building input container
-    ExtInputContainer container = new ExtInputContainer(tick, nextTick);
+      // handling of flex/em data
+      handleFlexData(container, mapping, receiver, attrToData);
 
-    // process all input data
-    messageProcessors.forEach(processor -> processor.process(container, receiverToMessages));
+    }
 
     return container;
   }
 
-  // message processors
-
-  public sealed interface MessageProcessor permits PrimaryMessageProcessor, EmMessageProcessor {
-    void process(ExtInputContainer container, Map<String, List<Content>> receiverToMessages);
-  }
-
-  public record PrimaryMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
-    public void process(
-        ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
-      parsePrimary(receiverToMessages, idToUuid).forEach(container::addPrimaryValue);
-    }
-  }
-
-  public record EmMessageProcessor(Map<String, UUID> idToUuid) implements MessageProcessor {
-    public void process(
-        ExtInputContainer container, Map<String, List<Content>> receiverToMessages) {
-      parseFlexComMessages(receiverToMessages, idToUuid).forEach(container::addFlexComMessage);
-      parseFlexRequests(receiverToMessages, idToUuid).forEach(container::addRequest);
-      parseFlexOptions(receiverToMessages, idToUuid).forEach(container::addFlexOptions);
-      parseSetPoints(receiverToMessages, idToUuid).forEach(container::addSetPoint);
-    }
-  }
-
-  // private method for message parsing
-
-  private static Map<UUID, Value> parsePrimary(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
-    if (idToUuid.isEmpty()) {
-      log.warn("No primary external entity mapping found!");
-      return Collections.emptyMap();
-    }
-
-    Map<UUID, Value> result = new HashMap<>();
-
-    receiverToMessages.forEach(
-        (receiver, messages) -> {
-          UUID receiverUuid = idToUuid.get(receiver);
-
-          List<DoubleValue> dvs =
-              messages.stream()
-                  .filter(msg -> msg.getClass() == DoubleValue.class)
-                  .map(DoubleValue.class::cast)
-                  .toList();
-
-          Map<String, Double> attrToDouble = new HashMap<>();
-
-          for (DoubleValue dv : dvs) {
-            String attr = dv.attr();
-            double d = dv.value();
-
-            if (attrToDouble.containsKey(attr)) {
-              double sum = attrToDouble.get(attr) + d;
-              attrToDouble.put(attr, sum);
-            } else {
-              attrToDouble.put(attr, d);
-            }
+  private static void handlePrimaryData(
+      ExtInputContainer container,
+      UUID receiver,
+      ColumnScheme primaryType,
+      Map<String, Object> attrToData) {
+    Value value =
+        switch (primaryType) {
+          case ColumnScheme.ACTIVE_POWER -> new PValue(extractQuantity(attrToData, ACTIVE_POWER));
+          case ColumnScheme.APPARENT_POWER ->
+              new SValue(
+                  extractQuantity(attrToData, ACTIVE_POWER),
+                  extractQuantity(attrToData, REACTIVE_POWER));
+          case ColumnScheme.ACTIVE_POWER_AND_HEAT_DEMAND ->
+              new HeatAndPValue(
+                  extractQuantity(attrToData, ACTIVE_POWER),
+                  extractQuantity(attrToData, THERMAL_POWER));
+          case ColumnScheme.APPARENT_POWER_AND_HEAT_DEMAND ->
+              new HeatAndSValue(
+                  extractQuantity(attrToData, ACTIVE_POWER),
+                  extractQuantity(attrToData, REACTIVE_POWER),
+                  extractQuantity(attrToData, THERMAL_POWER));
+          default -> {
+            log.warn("Unsupported primary type: {}", primaryType);
+            yield null;
           }
+        };
 
-          List<Value> values = convert(attrToDouble);
-
-          if (values.isEmpty()) {
-            log.debug("No primary value found for asset {}.", receiver);
-
-          } else {
-            if (values.size() > 1) {
-              log.warn(
-                  "Unexpected number of primary values for asset '{}'. Only the first one is considered",
-                  receiver);
-            }
-
-            result.put(receiverUuid, values.getFirst());
-          }
-        });
-
-    return result;
+    if (value != null) {
+      container.addPrimaryValue(receiver, value);
+    }
   }
 
-  private static List<EmCommunicationMessage<?>> parseFlexComMessages(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
-    if (idToUuid.isEmpty()) {
-      log.warn("No em external entity mapping found!");
-      return Collections.emptyList();
-    }
+  @SuppressWarnings("unchecked")
+  private static void  handleFlexData(
+          ExtInputContainer container,
+          ExtEntityMapping mapping,
+          UUID receiver,
+          Map<String, Object> attrToData
+  ) {
 
-    List<EmCommunicationMessage<?>> result = new ArrayList<>();
+      for (Map.Entry<String, Object> e : attrToData.entrySet()) {
+          String attr = e.getKey();
+          Map<String, Object> senderToValues = (Map<String, Object>) e.getValue();
 
-    receiverToMessages.forEach(
-        (receiver, messages) -> {
-          log.info("Com messages: {}", messages);
+          // try handling em data
+          if (senderToValues.size() == 1) {
+              // possible, since the map is not empty
+              Object value = senderToValues.values().iterator().next();
 
-          if (idToUuid.containsKey(receiver)) {
-            UUID receiverUuid = idToUuid.get(receiver);
-
-            List<FlexComMessage> messageList =
-                messages.stream()
-                    .filter(m -> m.getClass() == FlexComMessage.class)
-                    .map(FlexComMessage.class::cast)
-                    .toList();
-
-            for (FlexComMessage msg : messageList) {
-              UUID senderUuid = idToUuid.get(msg.sender());
-
-              List<? extends EmData> data =
-                  switch (msg.content()) {
-                    case FlexRequestMessage r ->
-                        List.of(new FlexOptionRequest(receiverUuid, r.disaggregated()));
-                    case FlexOptionsMessage(Map<String, FlexOptionInformation> information) ->
-                        information.values().stream()
-                            .map(
-                                optionMessage ->
-                                    new PowerLimitFlexOptions(
-                                        receiverUuid,
-                                        idToUuid.get(optionMessage.sender()),
-                                        optionMessage.pRef(),
-                                        optionMessage.pMin(),
-                                        optionMessage.pMax()))
-                            .toList();
-                    case FlexSetPointMessage(
-                            String r,
-                            String s,
-                            ComparableQuantity<Power> p,
-                            ComparableQuantity<Power> q) ->
-                        List.of(new EmSetPoint(senderUuid, p));
-                    default -> List.of();
-                  };
-
-              data.forEach(
-                  d -> result.add(new EmCommunicationMessage<>(receiverUuid, senderUuid, d)));
-            }
-          }
-        });
-
-    return result;
-  }
-
-  private static Map<UUID, FlexOptionRequest> parseFlexRequests(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
-    if (idToUuid.isEmpty()) {
-      log.warn("No em external entity mapping found!");
-      return Collections.emptyMap();
-    }
-
-    Map<UUID, FlexOptionRequest> flexRequests = new HashMap<>();
-
-    receiverToMessages.forEach(
-        (receiver, messages) -> {
-          if (idToUuid.containsKey(receiver)) {
-            UUID receiverUuid = idToUuid.get(receiver);
-
-            List<FlexRequestMessage> requests =
-                messages.stream()
-                    .filter(m -> m.getClass() == FlexRequestMessage.class)
-                    .map(FlexRequestMessage.class::cast)
-                    .toList();
-
-            if (requests.size() > 1) {
-              log.warn(
-                  "Receiver '{}' received flex requests from multiple senders! This should not be possible!",
-                  receiverUuid);
-            }
-
-            if (!requests.isEmpty()) {
-              FlexRequestMessage requestMessage = requests.getFirst();
-              FlexOptionRequest request =
-                  new FlexOptionRequest(receiverUuid, requestMessage.disaggregated());
-
-              flexRequests.put(receiverUuid, request);
-            }
-          }
-        });
-
-    return flexRequests;
-  }
-
-  private static Map<UUID, List<FlexOptions>> parseFlexOptions(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
-    if (idToUuid.isEmpty()) {
-      log.warn("No em external entity mapping found!");
-      return Collections.emptyMap();
-    }
-
-    Map<UUID, List<FlexOptions>> flexOptions = new HashMap<>();
-
-    receiverToMessages.forEach(
-        (receiver, messages) -> {
-          if (idToUuid.containsKey(receiver)) {
-
-            UUID receiverUuid = idToUuid.get(receiver);
-
-            List<FlexOptions> options =
-                messages.stream()
-                    .filter(m -> m.getClass() == FlexOptionsMessage.class)
-                    .map(FlexOptionsMessage.class::cast)
-                    .flatMap(m -> m.receiverToInformation().values().stream())
-                    .map(
-                        optionMessage ->
-                            (FlexOptions)
-                                new PowerLimitFlexOptions(
-                                    receiverUuid,
-                                    idToUuid.get(optionMessage.sender()),
-                                    optionMessage.pRef(),
-                                    optionMessage.pMin(),
-                                    optionMessage.pMax()))
-                    .toList();
-
-            if (!options.isEmpty()) {
-              flexOptions.put(receiverUuid, options);
-            }
-          }
-        });
-
-    return flexOptions;
-  }
-
-  private static List<EmSetPoint> parseSetPoints(
-      Map<String, List<Content>> receiverToMessages, Map<String, UUID> idToUuid) {
-    if (idToUuid.isEmpty()) {
-      log.warn("No em external entity mapping found!");
-      return Collections.emptyList();
-    }
-
-    List<EmSetPoint> setPoints = new ArrayList<>();
-
-    receiverToMessages.forEach(
-        (receiver, messages) -> {
-          if (idToUuid.containsKey(receiver)) {
-
-            UUID receiverUuid = idToUuid.get(receiver);
-
-            List<FlexSetPointMessage> setPointValues =
-                messages.stream()
-                    .filter(m -> m.getClass() == FlexSetPointMessage.class)
-                    .map(FlexSetPointMessage.class::cast)
-                    .toList();
-
-            if (!setPointValues.isEmpty()) {
-
-              if (setPointValues.size() > 1) {
-                log.debug("Received multiple set points for asset '{}'!", receiver);
+              EmData emData = handleFlexData(mapping, receiver, attr, value);
+              switch (emData) {
+                  case FlexOptionRequest r -> container.addRequest(r.receiver(), r);
+                  case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
+                  case EmSetPoint s -> container.addSetPoint(s);
+                  case EmCommunicationMessage<?> c -> container.addFlexComMessage(c);
+                  case null, default -> log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
               }
-
-              FlexSetPointMessage setPointMessage = setPointValues.getFirst();
-
-              Optional<PValue> powerValue = toPValue(setPointMessage.p(), null);
-
-              if (powerValue.isEmpty()) {
-                log.debug("No set point value found for asset {}.", receiver);
-              } else {
-                setPoints.add(new EmSetPoint(receiverUuid, powerValue, Collections.emptyMap()));
-              }
-
-            } else {
-              // if set point is given as double values
-
-              Map<String, Double> attrToValue =
-                  messages.stream()
-                      .filter(m -> m.getClass() == DoubleValue.class)
-                      .map(DoubleValue.class::cast)
-                      .collect(Collectors.toMap(DoubleValue::attr, DoubleValue::value));
-
-              if (attrToValue.size() > 2) {
-                log.debug("Received multiple set point values for asset '{}'!", receiver);
-              } else {
-
-                Optional<PValue> setPoint =
-                    toPValue(
-                        extract(attrToValue, ACTIVE_POWER), extract(attrToValue, REACTIVE_POWER));
-
-                if (setPoint.isEmpty()) {
-                  log.debug("No set point value found for asset {}.", receiver);
-                } else {
-                  setPoints.add(new EmSetPoint(receiverUuid, setPoint.get()));
-                }
-              }
-            }
           }
-        });
+      }
+  }
 
-    log.info("Set points: {}", setPoints);
-    return setPoints;
+  private static EmData handleFlexData(
+      ExtEntityMapping mapping, UUID receiver, String attr, Object value) {
+    return switch (attr) {
+      case FLEX_REQUEST -> new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
+      case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value, false);
+      case FLEX_OPTIONS_DISAGGREGATED -> parseFlexOptions(mapping, receiver, value, true);
+      case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
+      case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
+      default -> {
+        log.warn("Unexpected value: {}", attr);
+        yield null;
+      }
+    };
+  }
+
+  private static EmData parseFlexOptions(
+      ExtEntityMapping mapping, UUID receiver, Object value, boolean disaggregated) {
+    if (disaggregated) {
+      // not supported yet
+      // TODO: add handling of disaggregated flex options
+      return null;
+    } else {
+      UUID sender = mapping.get(extract(value, "sender", "")).orElse(receiver);
+
+      return new PowerLimitFlexOptions(
+          receiver,
+          sender,
+              extractQuantity(value, FLEX_OPTION_P_REF),
+              extractQuantity(value, FLEX_OPTION_P_MIN),
+          extractQuantity(value, FLEX_OPTION_P_MAX));
+    }
+  }
+
+  private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
+      if (value == null) {
+          return null;
+      }
+
+    // TODO: add handling of disaggregated set points
+    ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);
+    ComparableQuantity<Power> reactive = extractQuantity(value, REACTIVE_POWER);
+
+    PValue power;
+
+    if (reactive != null) {
+      power = new SValue(active, reactive);
+    } else {
+      power = new PValue(active);
+    }
+
+    return new EmSetPoint(receiver, power);
+  }
+
+  private static EmData parseEmComMessage(ExtEntityMapping mapping, UUID receiver, Object value) {
+    if (value instanceof Map<?, ?> map) {
+      String senderId = (String) map.get("sender");
+      UUID sender = mapping.from(senderId);
+
+      UUID msgId = null;
+      EmData content = null;
+
+      try {
+        msgId = UUID.fromString((String) map.get("msgId"));
+        content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
+      } catch (Exception ignored) {
+      }
+
+      log.info("Content {}", content);
+
+      return new EmCommunicationMessage<>(receiver, sender, msgId, content);
+    }
+
+    return null;
+  }
+
+  // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  @SuppressWarnings("unchecked")
+  private static <V> V extract(Object obj, String field, V defaultValue) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return (V) map.get(field);
+      } catch (ClassCastException ignored) {
+      }
+    }
+    return defaultValue;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
+      Object obj, String field) {
+    if (obj == null) {
+      return null;
+    }
+
+    try {
+      Map<String, Double> map = (Map<String, Double>) obj;
+      Unit<Q> unit = getPSDMUnit(field);
+      return Quantities.getQuantity(map.get(field), unit);
+    } catch (Exception ignored) {
+    }
+
+    return null;
   }
 }
