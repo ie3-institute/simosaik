@@ -6,47 +6,45 @@
 
 package edu.ie3.simosaik.utils;
 
+import static edu.ie3.simosaik.SimosaikUnits.*;
+
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
-import static edu.ie3.simosaik.SimosaikUnits.*;
-
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
-
-  public static Map<String, Object> filter(
-          Map<String, Object> inputs, Map<String, Object> cache
-  ) {
-      Predicate<Map.Entry<String, Object>> filterFcn = e -> {
+  public static Map<String, Object> filter(Map<String, Object> inputs, Map<String, Object> cache) {
+    Predicate<Map.Entry<String, Object>> filterFcn =
+        e -> {
           String key = e.getKey();
 
           if (cache.containsKey(key)) {
-              Object value = e.getValue();
-              return value != null && !cache.get(key).equals(value);
+            Object value = e.getValue();
+            return value != null && !cache.get(key).equals(value);
           } else {
-              return false;
+            return false;
           }
-      };
+        };
 
-      return inputs.entrySet().stream().filter(filterFcn).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    return inputs.entrySet().stream()
+        .filter(filterFcn)
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
-
 
   @SuppressWarnings("unchecked")
   public static ExtInputContainer createInput(
@@ -71,7 +69,6 @@ public final class InputUtils {
 
       // handling of flex/em data
       handleFlexData(container, mapping, receiver, attrToData);
-
     }
 
     return container;
@@ -110,32 +107,32 @@ public final class InputUtils {
   }
 
   @SuppressWarnings("unchecked")
-  private static void  handleFlexData(
-          ExtInputContainer container,
-          ExtEntityMapping mapping,
-          UUID receiver,
-          Map<String, Object> attrToData
-  ) {
+  private static void handleFlexData(
+      ExtInputContainer container,
+      ExtEntityMapping mapping,
+      UUID receiver,
+      Map<String, Object> attrToData) {
 
-      for (Map.Entry<String, Object> e : attrToData.entrySet()) {
-          String attr = e.getKey();
-          Map<String, Object> senderToValues = (Map<String, Object>) e.getValue();
+    for (Map.Entry<String, Object> e : attrToData.entrySet()) {
+      String attr = e.getKey();
+      Map<String, Object> senderToValues = (Map<String, Object>) e.getValue();
 
-          // try handling em data
-          if (senderToValues.size() == 1) {
-              // possible, since the map is not empty
-              Object value = senderToValues.values().iterator().next();
+      // try handling em data
+      if (senderToValues.size() == 1) {
+        // possible, since the map is not empty
+        Object value = senderToValues.values().iterator().next();
 
-              EmData emData = handleFlexData(mapping, receiver, attr, value);
-              switch (emData) {
-                  case FlexOptionRequest r -> container.addRequest(r.receiver(), r);
-                  case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
-                  case EmSetPoint s -> container.addSetPoint(s);
-                  case EmCommunicationMessage<?> c -> container.addFlexComMessage(c);
-                  case null, default -> log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
-              }
-          }
+        EmData emData = handleFlexData(mapping, receiver, attr, value);
+        switch (emData) {
+          case FlexOptionRequest r -> container.addRequest(r.receiver(), r);
+          case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
+          case EmSetPoint s -> container.addSetPoint(s);
+          case EmCommunicationMessage<?> c -> container.addFlexComMessage(c);
+          case null, default ->
+              log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
+        }
       }
+    }
   }
 
   private static EmData handleFlexData(
@@ -165,16 +162,16 @@ public final class InputUtils {
       return new PowerLimitFlexOptions(
           receiver,
           sender,
-              extractQuantity(value, FLEX_OPTION_P_REF),
-              extractQuantity(value, FLEX_OPTION_P_MIN),
+          extractQuantity(value, FLEX_OPTION_P_REF),
+          extractQuantity(value, FLEX_OPTION_P_MIN),
           extractQuantity(value, FLEX_OPTION_P_MAX));
     }
   }
 
   private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
-      if (value == null) {
-          return null;
-      }
+    if (value == null) {
+      return null;
+    }
 
     // TODO: add handling of disaggregated set points
     ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);

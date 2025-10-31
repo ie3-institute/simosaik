@@ -20,8 +20,6 @@ import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.MosaikPart;
 import edu.ie3.simosaik.utils.InputUtils;
-import edu.ie3.simosaik.utils.MosaikMessageParser;
-import edu.ie3.simosaik.utils.MosaikMessageParser.ParsedMessage;
 import edu.ie3.simosaik.utils.ResultUtils;
 import java.util.*;
 import java.util.logging.Logger;
