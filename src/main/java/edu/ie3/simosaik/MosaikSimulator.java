@@ -107,52 +107,73 @@ public class MosaikSimulator extends Simulator {
   public List<Map<String, Object>> create(int num, String model, Map<String, Object> modelParams) {
     List<Map<String, Object>> entities = new ArrayList<>();
 
-    if (modelParams.containsKey("mapping")) {
-      try {
-        Map<String, String> mapping = (Map<String, String>) modelParams.get("mapping");
+    SimonaEntity modelType = SimonaEntity.parseType(model);
+    DataType dataType = SimonaEntity.toType(modelType);
 
-        // check model params
-        checkModelParams(mapping.size(), num);
-        SimonaEntity modelType = SimonaEntity.parseType(model);
-        List<ExtEntityEntry> entries = new ArrayList<>();
+    Optional<ColumnScheme> scheme =
+        switch (modelType) {
+          case PRIMARY_P -> Optional.of(ColumnScheme.ACTIVE_POWER);
+          case PRIMARY_PH -> Optional.of(ColumnScheme.ACTIVE_POWER_AND_HEAT_DEMAND);
+          case PRIMARY_PQ -> Optional.of(ColumnScheme.APPARENT_POWER);
+          case PRIMARY_PQH -> Optional.of(ColumnScheme.APPARENT_POWER_AND_HEAT_DEMAND);
+          default -> Optional.empty();
+        };
 
-        for (Map.Entry<String, String> entry : mapping.entrySet()) {
-          UUID uuid = UUID.fromString(entry.getKey());
-          String id = entry.getValue();
+    Object included = modelParams.get("use");
+    if (included == null) {
+      // to support old field name
+      included = modelParams.get("mapping");
+    }
 
-          // add mosaik model
+    List<String> givenIds = new ArrayList<>();
+
+    if (included instanceof Map<?, ?> map) {
+      Map<String, String> entityMapping = (Map<String, String>) map;
+
+      List<ExtEntityEntry> entries =
+          entityMapping.entrySet().stream()
+              .map(
+                  e -> {
+                    UUID uuid = UUID.fromString(e.getKey());
+                    String id = e.getValue();
+
+                    givenIds.add(id);
+
+                    return new ExtEntityEntry(uuid, id, scheme, dataType);
+                  })
+              .toList();
+
+      mapping = mapping.include(entries);
+
+    } else if (included instanceof List<?> list) {
+      givenIds.addAll((List<String>) list);
+      mapping = mapping.include(dataType, givenIds, scheme);
+    }
+
+    if (scheme.isPresent() && givenIds.isEmpty()) {
+      throw new IllegalArgumentException("Missing parameter 'use' primary input!");
+    }
+
+    List<String> ids = new ArrayList<>();
+
+    if (givenIds.isEmpty()) {
+      mapping.getAssets(dataType).forEach(uuid -> ids.add(mapping.from(uuid)));
+    } else {
+      // use given ids to build models
+      ids.addAll(givenIds);
+    }
+
+    ids.forEach(
+        id -> {
+          scheme.ifPresent(column -> primaryType.put(id, column));
+
           Map<String, Object> entity = new HashMap<>();
           entity.put("eid", id);
           entity.put("type", model);
           entities.add(entity);
+        });
 
-          Optional<ColumnScheme> scheme =
-              switch (modelType) {
-                case PRIMARY_P -> Optional.of(ColumnScheme.ACTIVE_POWER);
-                case PRIMARY_PH -> Optional.of(ColumnScheme.ACTIVE_POWER_AND_HEAT_DEMAND);
-                case PRIMARY_PQ -> Optional.of(ColumnScheme.APPARENT_POWER);
-                case PRIMARY_PQH -> Optional.of(ColumnScheme.APPARENT_POWER_AND_HEAT_DEMAND);
-                default -> Optional.empty();
-              };
-
-          DataType dataType = SimonaEntity.toType(modelType);
-
-          // add primary data information for this model
-          scheme.ifPresent(s -> primaryType.put(id, s));
-
-          // add simona external entity entry
-          entries.add(new ExtEntityEntry(uuid, id, scheme, dataType));
-        }
-
-        this.mapping = this.mapping.include(entries);
-        simonaEntities.put(modelType, true);
-
-      } catch (Exception e) {
-        throw new RuntimeException("Could not build models of type '" + model + "', due to: ", e);
-      }
-    } else {
-      logger.warning("No models are build, because no mapping was provided!");
-    }
+    simonaEntities.put(modelType, true);
 
     boolean allInitialized = simonaEntities.values().stream().allMatch(x -> x == true);
 
@@ -162,6 +183,15 @@ public class MosaikSimulator extends Simulator {
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
+    }
+
+    if (entities.size() != num) {
+      logger.warning(
+          "The number of entities to built '"
+              + num
+              + "' does not match the number of built entities '"
+              + entities.size()
+              + "'!");
     }
 
     return entities;
@@ -272,24 +302,6 @@ public class MosaikSimulator extends Simulator {
       logger.info("[" + time + "] Got no results from SIMONA!");
 
       return Collections.emptyMap();
-    }
-  }
-
-  protected void checkModelParams(int expected, int received) {
-    if (received < expected) {
-      throw new IllegalArgumentException(
-          "Requested "
-              + expected
-              + " entities, but the provided mapping contains only information for "
-              + received
-              + " entities!");
-    } else if (received > expected) {
-      throw new IllegalArgumentException(
-          "Requested "
-              + expected
-              + " entities, but the provided mapping contains information for more entities ("
-              + received
-              + ")!");
     }
   }
 }

@@ -37,7 +37,6 @@ public final class SimosaikUnits {
   public static final String FLEX_REQUEST = "Flex[request]";
   public static final String FLEX_OPTIONS = "Flex[options]";
   public static final String FLEX_SET_POINT = "EM[setPoint]";
-  public static final String FLEX_OPTIONS_DISAGGREGATED = "Flex[disaggregated]";
   public static final String FLEX_COM = "Flex[com]";
 
   public static final String FLEX_OPTION_P_MIN = "PMin[MW]";
@@ -48,11 +47,16 @@ public final class SimosaikUnits {
   public static final String FLEX_OPTION_MAP_P_REF = "idToPRef[MW]";
   public static final String FLEX_OPTION_MAP_P_MAX = "idToPMax[MW]";
 
-  public static final List<String> ALL_GRID_UNITS =
-      List.of(VOLTAGE_MAG, VOLTAGE_ANG, CURRENT_MAG, CURRENT_ANG);
-
-  public static final List<String> ALL_PARTICIPANT_UNITS =
-      List.of(ACTIVE_POWER, REACTIVE_POWER, THERMAL_POWER, SOC);
+  public static final List<String> ALL_RESULTS_UNITS =
+      List.of(
+          VOLTAGE_MAG,
+          VOLTAGE_ANG,
+          CURRENT_MAG,
+          CURRENT_ANG,
+          ACTIVE_POWER,
+          REACTIVE_POWER,
+          THERMAL_POWER,
+          SOC);
 
   /** Method to return the corresponding psdm unit to a mosaik unit. */
   @SuppressWarnings("unchecked")

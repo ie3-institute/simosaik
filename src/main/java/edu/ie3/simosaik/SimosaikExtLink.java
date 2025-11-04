@@ -13,6 +13,7 @@ import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
+
   private MosaikSimulation extSim;
 
   @Override

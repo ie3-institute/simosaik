@@ -38,10 +38,7 @@ public final class MetaUtils {
           List.of(SIMONA_NEXT_TICK, FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT);
       case EM_COMMUNICATION ->
           List.of(SIMONA_NEXT_TICK, FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT, FLEX_COM);
-      case GRID_RESULTS -> ALL_GRID_UNITS;
-      case NODE_RESULTS -> List.of(VOLTAGE_MAG, VOLTAGE_ANG);
-      case LINE_RESULTS -> List.of(CURRENT_MAG, CURRENT_ANG);
-      case PARTICIPANT_RESULTS -> ALL_PARTICIPANT_UNITS;
+      case RESULTS -> ALL_RESULTS_UNITS;
     };
   }
 
@@ -60,7 +57,7 @@ public final class MetaUtils {
   public static Model from(SimonaEntity entity) {
     List<String> attributes = getAttributes(entity);
 
-    Model model = Model.of(entity.name).params("mapping").attrs(attributes);
+    Model model = Model.of(entity.name).params("mapping", "include", "use").attrs(attributes);
 
     if (entity.equals(EM_COMMUNICATION)) {
       return model.triggers(attributes);

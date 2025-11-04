@@ -343,17 +343,6 @@ public final class OutputUtils {
 
       return Map.of(FLEX_OPTIONS, data);
 
-    } else if (result instanceof ExtendedFlexOptionsResult extended
-        && attrs.contains(FLEX_OPTIONS_DISAGGREGATED)) {
-      String sender = uuidToId.get(extended.getInputModel());
-      data.put("sender", sender);
-
-      data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
-      data.put(FLEX_OPTION_MAP_P_REF, connectedPref);
-      data.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
-
-      return Map.of(FLEX_OPTIONS_DISAGGREGATED, data);
-
     } else {
       if (attrs.contains(FLEX_OPTION_P_MIN)) data.put(FLEX_OPTION_P_MIN, pMin);
 

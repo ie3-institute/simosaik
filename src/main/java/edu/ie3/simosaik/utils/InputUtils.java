@@ -141,7 +141,6 @@ public final class InputUtils {
     return switch (attr) {
       case FLEX_REQUEST -> new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
       case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value, false);
-      case FLEX_OPTIONS_DISAGGREGATED -> parseFlexOptions(mapping, receiver, value, true);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
       case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
       default -> {

@@ -18,12 +18,7 @@ public enum SimonaEntity {
   EM("EM"),
   EM_COMMUNICATION("EmCommunication"),
   EM_OPTIMIZER("EmOptimizer"),
-
-  GRID_RESULTS("GridResults"),
-  NODE_RESULTS("NodeResults"),
-  LINE_RESULTS("LineResults"),
-
-  PARTICIPANT_RESULTS("ParticipantResults");
+  RESULTS("Results");
 
   public final String name;
 
@@ -35,7 +30,7 @@ public enum SimonaEntity {
     return switch (simonaEntity) {
       case PRIMARY_P, PRIMARY_PH, PRIMARY_PQ, PRIMARY_PQH -> DataType.PRIMARY;
       case EM, EM_OPTIMIZER, EM_COMMUNICATION -> DataType.EM;
-      case GRID_RESULTS, NODE_RESULTS, LINE_RESULTS, PARTICIPANT_RESULTS -> DataType.RESULT;
+      case RESULTS -> DataType.RESULT;
     };
   }
 
@@ -50,10 +45,7 @@ public enum SimonaEntity {
               case "em" -> EM;
               case "Communication", "communication" -> EM_COMMUNICATION;
               case "em_optimizer" -> EM_OPTIMIZER;
-              case "Grid", "grid" -> GRID_RESULTS;
-              case "node_res", "Node_res" -> NODE_RESULTS;
-              case "line_res", "Line_res" -> LINE_RESULTS;
-              case "Participant", "participant" -> PARTICIPANT_RESULTS;
+              case "res", "results" -> RESULTS;
               default -> throw new IllegalArgumentException("Unknown model type: " + modelType);
             };
 
