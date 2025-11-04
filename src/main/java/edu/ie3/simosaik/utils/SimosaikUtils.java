@@ -8,27 +8,21 @@ package edu.ie3.simosaik.utils;
 
 import static edu.ie3.simosaik.SimosaikUnits.*;
 
-import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.datamodel.models.value.*;
-import edu.ie3.simona.api.mapping.DataType;
-import edu.ie3.simona.api.mapping.ExtEntityEntry;
-import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.MosaikSimulator;
 import edu.ie3.simosaik.RunSimosaik;
-import java.util.*;
-import java.util.function.Consumer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
 
 /** Class with helpful methods to couple SIMONA and MOSAIK */
 public final class SimosaikUtils {
-
-  private static final Logger log = LoggerFactory.getLogger(SimosaikUtils.class);
 
   private SimosaikUtils() {}
 
@@ -45,54 +39,6 @@ public final class SimosaikUtils {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  public static Map<UUID, Class<? extends Value>> buildAssetsToValueClasses(
-      ExtEntityMapping entityMapping) {
-    Map<UUID, Class<? extends Value>> assetsToValueClasses = new HashMap<>();
-
-    List<ExtEntityEntry> entries = new ArrayList<>();
-    entries.addAll(entityMapping.getEntries(DataType.PRIMARY));
-    entries.addAll(entityMapping.getEntries(DataType.PRIMARY_RESULT));
-
-    for (ExtEntityEntry extEntityEntry : entries) {
-      Optional<ColumnScheme> scheme = extEntityEntry.columnScheme();
-
-      scheme.ifPresent(
-          columnScheme ->
-              assetsToValueClasses.put(extEntityEntry.uuid(), columnScheme.getValueClass()));
-    }
-
-    return assetsToValueClasses;
-  }
-
-  public static List<UUID> buildEmData(ExtEntityMapping entityMapping) {
-    List<UUID> uuids =
-        entityMapping.getEntries(DataType.EM).stream().map(ExtEntityEntry::uuid).toList();
-
-    if (uuids.isEmpty()) {
-      log.warn("No em data found!");
-    }
-    return uuids;
-  }
-
-  public static Map<DataType, List<UUID>> buildResultMapping(ExtEntityMapping entityMapping) {
-    Map<DataType, List<UUID>> resultMapping = new HashMap<>();
-
-    Consumer<DataType> consumer =
-        type -> {
-          List<UUID> assets =
-              entityMapping.getEntries(type).stream().map(ExtEntityEntry::uuid).toList();
-
-          if (!assets.isEmpty()) {
-            resultMapping.put(type, assets);
-          }
-        };
-
-    consumer.accept(DataType.RESULT);
-    consumer.accept(DataType.PRIMARY_RESULT);
-
-    return resultMapping;
   }
 
   // converting inputs

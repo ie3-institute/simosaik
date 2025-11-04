@@ -7,7 +7,8 @@
 package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.ExtLinkInterface;
-import edu.ie3.simona.api.simulation.ExtSimAdapterData;
+import edu.ie3.simona.api.data.ExtSimAdapterData;
+import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
 
@@ -25,11 +26,14 @@ public final class SimosaikExtLink implements ExtLinkInterface {
 
     String mosaikIP = arguments.mosaikIP();
 
+    // initial mapping from grid container
+    ExtEntityMapping mapping = new ExtEntityMapping(data.getGrid());
+
     // for synchronising both simulations
     Synchronizer synchronizer = new Synchronizer();
 
     // creating and starting the simulator
-    MosaikSimulator simulator = new MosaikSimulator(synchronizer);
+    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping);
     SimosaikUtils.startMosaikSimulation(simulator, mosaikIP);
 
     // creating the external simulation

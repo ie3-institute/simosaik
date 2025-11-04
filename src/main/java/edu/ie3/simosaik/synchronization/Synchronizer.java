@@ -33,11 +33,13 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private long nextMosaikTick = 0L;
   private boolean noInputs = false;
   private boolean noOutputs = false;
+  private boolean hasSendNextTick = false;
 
   // SIMONA fields
   private final AtomicLong simonaTick = new AtomicLong(-1);
   private final AtomicReference<Optional<Long>> simonaNextTick =
       new AtomicReference<>(Optional.empty());
+  private long stepSizeSIMONA = 0L;
   private boolean hasNextTickChanged;
   private boolean isFinished = false;
 
@@ -143,8 +145,13 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
+  public long getStepSize() {
+    return stepSizeSIMONA;
+  }
+
+  @Override
   public boolean expectInput() {
-    return noInputs;
+    return !noInputs;
   }
 
   @Override
@@ -170,6 +177,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public long updateMosaikTime(long time) throws InterruptedException {
     noInputs = false;
+    hasSendNextTick = false;
     long simonaTime = simonaTick.get();
     long scaledMosaikTime = (long) (time * mosaikTimeScaling);
 
@@ -215,8 +223,10 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       goToNextTick = true;
 
       if (simonaTime < nextRegularMosaikTick) {
-        log.info("SIOMANA requires an intermediate tick for: {}", simonaTime);
-        nextMosaikTick = simonaTime;
+        long scaledSimonaTime = (long) (time / mosaikTimeScaling);
+
+        log.info("SIMONA requires an intermediate tick for: {}", scaledSimonaTime);
+        nextMosaikTick = scaledSimonaTime;
       }
 
     } else if (scaledMosaikTime > simonaTime) {
@@ -275,6 +285,9 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public boolean sendInputData(ExtInputContainer inputData) {
     try {
+      // clear all remaining results, since we received new input data
+      queueToExt.clear();
+
       queueToSimona.queueData(inputData);
 
       return true;
@@ -312,20 +325,25 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       long tick = maybeNextTick.get();
 
       if (tick == scaledMosaikTick.get()) {
+        System.out.println("getNextTick() -> _nextMosaikTick=" + mosaikTick);
         return nextMosaikTick;
       } else {
-        return (long) (tick / mosaikTimeScaling);
+        long t = (long) (tick / mosaikTimeScaling);
+        System.out.println("getNextTick() -> tick=" + t);
+
+        return t;
       }
     }
 
+    System.out.println("getNextTick() -> nextMosaikTick=" + mosaikTick);
     return nextMosaikTick;
   }
 
   @Override
   public boolean outputNextTick() {
-    // we only output the next tick, if we can send outputs to mosaik, the next tick has changed and
-    // the next tick is not equal to the next regular mosaik tick
-    return !noOutputs && hasNextTickChanged && getNextTick() != nextRegularMosaikTick;
+    // we only output the next tick, if we can send outputs to mosaik and
+    // if either the next tick has changed or if the next tick haven't been sent yet
+    return !noOutputs && (hasNextTickChanged || !hasSendNextTick);
   }
 
   @Override
@@ -339,9 +357,15 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
+  public void setHasSendNextTick() {
+    hasSendNextTick = true;
+  }
+
+  @Override
   public void setMosaikStepSize(long stepSize) {
     log.info("Mosaik step size is: {} (Scaled: {})", stepSize, stepSize * mosaikTimeScaling);
     mosaikStepSize = stepSize;
+    stepSizeSIMONA = (long) (stepSize * mosaikTimeScaling);
   }
 
   @Override

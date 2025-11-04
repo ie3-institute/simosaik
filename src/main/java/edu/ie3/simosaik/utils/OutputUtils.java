@@ -19,24 +19,23 @@ import edu.ie3.datamodel.models.result.system.ElectricalEnergyStorageResult;
 import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantWithHeatResult;
+import edu.ie3.datamodel.models.value.HeatAndPValue;
+import edu.ie3.datamodel.models.value.HeatAndSValue;
 import edu.ie3.datamodel.models.value.PValue;
 import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.*;
-import edu.ie3.simona.api.data.model.em.EmData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.SimosaikUnits;
+import edu.ie3.util.interval.ClosedInterval;
 import java.util.*;
-import javax.measure.quantity.Angle;
-import javax.measure.quantity.Dimensionless;
-import javax.measure.quantity.ElectricCurrent;
-import javax.measure.quantity.Power;
+import java.util.stream.Collectors;
+import javax.measure.quantity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 
-public final class ResultUtils {
-  private static final Logger log = LoggerFactory.getLogger(ResultUtils.class);
+public final class OutputUtils {
+  private static final Logger log = LoggerFactory.getLogger(OutputUtils.class);
 
   public static Map<String, Object> onlyTickInformation(
       Map<String, List<String>> requestedAttributes, long nextTick) {
@@ -46,8 +45,8 @@ public final class ResultUtils {
       String externalEntity = entry.getKey();
       List<String> attrs = entry.getValue();
 
-      if (attrs.contains(SimosaikUnits.SIMONA_NEXT_TICK)) {
-        output.put(externalEntity, Map.of(SimosaikUnits.SIMONA_NEXT_TICK, nextTick));
+      if (attrs.contains(SIMONA_NEXT_TICK)) {
+        output.put(externalEntity, Map.of(SIMONA_NEXT_TICK, nextTick));
       }
     }
 
@@ -59,11 +58,7 @@ public final class ResultUtils {
       Map<String, List<String>> requestedAttributes,
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
-
     log.warn("Result container: {}", container.getResults());
-
-    Map<String, UUID> idToUuid = mapping.getExtId2UuidMapping();
-    Map<UUID, String> uuidToId = mapping.getExtUuid2IdMapping();
 
     Map<String, Object> output = new HashMap<>();
 
@@ -71,40 +66,54 @@ public final class ResultUtils {
       String externalEntity = entry.getKey();
       List<String> attrs = entry.getValue();
 
-      if (idToUuid.containsKey(externalEntity)) {
-        UUID asset = idToUuid.get(externalEntity);
+      UUID asset = mapping.from(externalEntity);
 
-        List<ResultEntity> results = container.getResult(asset);
-        List<EmData> emData = container.getEmData(asset);
+      List<ResultEntity> results = container.getResult(asset);
+      List<EmData> emData = container.getEmData(asset);
 
-        log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
+      log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
 
+      if (!results.isEmpty() || !emData.isEmpty()) {
         Map<String, Object> data = new HashMap<>();
 
         // handle results
         for (ResultEntity result : results) {
-          data.putAll(handleResult(result, attrs, uuidToId));
+          data.putAll(handleResult(result, attrs, mapping));
         }
 
         // handle em data
-        data.putAll(handleEmData(emData, attrs, uuidToId));
+        emData.stream()
+            .map(d -> handleEmData(d, mapping))
+            .collect(Collectors.groupingBy(ProcessedEmData::attr))
+            .forEach(
+                (attr, processedEmDataList) -> {
+                  if (attr.equals(FLEX_COM)) {
+                    data.put(
+                        attr, processedEmDataList.stream().map(ProcessedEmData::data).toList());
+                  } else {
+                    data.put(attr, processedEmDataList.getFirst().data);
+                  }
+                });
 
         if (!data.isEmpty()) {
           output.put(externalEntity, data);
         }
 
       } else {
-        log.debug("No results found for asset {}.", externalEntity);
+        log.warn("No results or em data found for asset {}.", externalEntity);
       }
     }
+
+    log.warn("Output: {}", output);
 
     return output;
   }
 
   private static Map<String, Object> handleResult(
-      ResultEntity result, List<String> attrs, Map<UUID, String> uuidToId) {
+      ResultEntity result, List<String> attrs, ExtEntityMapping mapping) {
     return switch (result) {
-      case FlexOptionsResult options -> handleFlexOptionResults(options, attrs, uuidToId);
+      case FlexOptionsResult options ->
+          handleFlexOptionResults(options, attrs, mapping.getExtUuid2IdMapping());
       case SystemParticipantResult participant -> handleParticipantResult(participant, attrs);
       case NodeResult n -> {
         Map<String, Object> data = new HashMap<>();
@@ -182,79 +191,112 @@ public final class ResultUtils {
     return data;
   }
 
-  private static Map<String, Object> handleEmData(
-      List<EmData> emData, List<String> attrs, Map<UUID, String> uuidToId) {
-    List<Object> flexRequestData = new ArrayList<>();
-    Map<String, Object> flexOptionsData = new HashMap<>();
-    List<Object> setPointData = new ArrayList<>();
-
-    for (EmData entry : emData) {
-      switch (entry) {
-        case FlexOptionRequest(UUID receiver, UUID sender, boolean disaggregated) -> {
-          Map<String, Object> data = new HashMap<>();
-          String senderId = uuidToId.get(sender);
-          String receiverId = uuidToId.get(receiver);
-
-          data.put("receiver", receiverId);
-          data.put("sender", senderId);
-          data.put("disaggregated", disaggregated);
-
-          flexRequestData.add(data);
-        }
-
-        case FlexOptions flexOptions -> {
-          Map<String, Object> data =
-              handleFlexOptionResults(flexOptions.asResult(), attrs, uuidToId);
-          flexOptionsData.putAll(data);
-        }
-
-        case ExtendedFlexOptionsResult result -> {
-          Map<String, Object> data = handleFlexOptionResults(result, attrs, uuidToId);
-          flexOptionsData.putAll(data);
-        }
-
-        case EmSetPoint(UUID receiver, UUID sender, Optional<PValue> power) -> {
-          String senderId = uuidToId.get(sender);
-          String receiverId = uuidToId.get(receiver);
-
-          Map<String, Object> data = new HashMap<>();
-          data.put("receiver", receiverId);
-          data.put("sender", senderId);
-
-          if (power.isPresent()) {
-            PValue setPoint = power.get();
-
-            Double active = setPoint.getP().map(ResultUtils::toActive).orElse(null);
-            Double reactive = null;
-
-            if (setPoint instanceof SValue sValue) {
-              reactive = sValue.getQ().map(ResultUtils::toReactive).orElse(null);
-            }
-
-            data.put(ACTIVE_POWER, active);
-            data.put(REACTIVE_POWER, reactive);
-          }
-
-          setPointData.add(data);
-        }
-
-        case null, default -> {
-          if (entry != null) {
-            log.warn("Result of type '{}' is currently not supported.", entry.getClass());
-          }
-        }
+  private static ProcessedEmData handleEmData(EmData emData, ExtEntityMapping mapping) {
+    return switch (emData) {
+      case FlexOptionRequest(UUID receiver, boolean disaggregated) -> {
+        Map<String, Object> data = new HashMap<>();
+        data.put("receiver", mapping.from(receiver));
+        data.put("disaggregated", disaggregated);
+        yield new ProcessedEmData(FLEX_REQUEST, data);
       }
-    }
+      case FlexOptions o -> new ProcessedEmData(FLEX_OPTIONS, handleFlexOptions(o, mapping, true));
 
+      case EmSetPoint(UUID receiver, Optional<PValue> power, Map<UUID, PValue> disaggregated) -> {
+        Map<String, Object> data = new HashMap<>();
+        data.put("receiver", mapping.from(receiver));
+
+        // only add power if it is not empty
+        power.ifPresent(powerValue -> data.putAll(fromPValue(powerValue)));
+
+        // handle disaggregated set points
+        Map<String, Map<String, Double>> disaggregatedSetPoints = new HashMap<>();
+        disaggregated.forEach(
+            (uuid, setPoint) ->
+                disaggregatedSetPoints.put(mapping.from(uuid), fromPValue(setPoint)));
+
+        data.put("disaggregated", disaggregatedSetPoints);
+
+        yield new ProcessedEmData(FLEX_SET_POINT, data);
+      }
+
+      case EmCommunicationMessage(UUID receiver, UUID sender, UUID msgId, EmData content) -> {
+        Map<String, Object> data = new HashMap<>();
+        data.put("receiver", mapping.from(receiver));
+        data.put("sender", mapping.from(sender));
+        data.put("msgId", msgId.toString());
+
+        // handle content
+        ProcessedEmData processedContent = handleEmData(content, mapping);
+
+        data.put("type", processedContent.attr);
+        data.put("content", processedContent.data);
+
+        yield new ProcessedEmData(FLEX_COM, data);
+      }
+
+      case null, default -> {
+        log.warn("Result of type '{}' is currently not supported.", emData);
+        yield new ProcessedEmData("", Collections.emptyMap());
+      }
+    };
+  }
+
+  private static Map<String, Object> handleFlexOptions(
+      FlexOptions options, ExtEntityMapping mapping, boolean considerDisaggregated) {
+    Map<UUID, FlexOptions> disaggregated = options.disaggregated();
     Map<String, Object> res = new HashMap<>();
 
-    if (!flexRequestData.isEmpty() && attrs.contains(FLEX_REQUEST))
-      res.put(FLEX_REQUEST, flexRequestData);
+    // handling of receiver
+    res.put("receiver", mapping.from(options.receiver()));
 
-    if (!flexOptionsData.isEmpty()) res.putAll(flexOptionsData);
+    switch (options) {
+      case PowerLimitFlexOptions(
+          UUID receiver,
+          UUID model,
+          ComparableQuantity<Power> pRef,
+          ComparableQuantity<Power> pMin,
+          ComparableQuantity<Power> pMax,
+          Map<UUID, FlexOptions> d) -> {
+        res.put("model", mapping.from(model));
+        res.put(FLEX_OPTION_P_REF, toActive(pRef));
+        res.put(FLEX_OPTION_P_MIN, toActive(pMin));
+        res.put(FLEX_OPTION_P_MAX, toActive(pMax));
+      }
 
-    if (!setPointData.isEmpty() && attrs.contains(FLEX_SET_POINT))
-      res.put(FLEX_SET_POINT, setPointData);
+      case EnergyBoundariesFlexOptions(
+          UUID receiver,
+          UUID model,
+          String flexType,
+          ComparableQuantity<Power> pMin,
+          ComparableQuantity<Power> pMax,
+          ComparableQuantity<Dimensionless> etaCharge,
+          ComparableQuantity<Dimensionless> etaDischarge,
+          Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits,
+          Map<UUID, FlexOptions> d) -> {
+        res.put("model", mapping.from(model));
+        res.put("flexType", flexType);
+
+        res.put(FLEX_OPTION_P_MIN, toActive(pMin));
+        res.put(FLEX_OPTION_P_MAX, toActive(pMax));
+
+        res.put("eta_charge", toPercent(etaCharge));
+        res.put("eta_discharge", toPercent(etaDischarge));
+
+        log.warn("Tick to energy limits is currently not supported.");
+      }
+
+      default -> log.warn("Result of type '{}' is currently not supported.", options);
+    }
+
+    // handling of disaggregated flex options
+    if (considerDisaggregated) {
+      res.put(
+          "disaggregated",
+          disaggregated.entrySet().stream()
+              .collect(
+                  Collectors.toMap(
+                      Map.Entry::getKey, e -> handleFlexOptions(e.getValue(), mapping, false))));
+    }
 
     return res;
   }
@@ -292,11 +334,8 @@ public final class ResultUtils {
     Map<String, Object> data = new HashMap<>();
 
     if (result instanceof ExtendedFlexOptionsResult extended && attrs.contains(FLEX_OPTIONS)) {
-      String receiver = uuidToId.get(extended.getReceiver());
-      String sender = uuidToId.get(extended.getSender());
-
-      data.put("receiver", receiver);
-      data.put("sender", sender);
+      String model = uuidToId.get(extended.getInputModel());
+      data.put("model", model);
 
       data.put(FLEX_OPTION_P_MIN, pMin);
       data.put(FLEX_OPTION_P_REF, pRef);
@@ -306,10 +345,7 @@ public final class ResultUtils {
 
     } else if (result instanceof ExtendedFlexOptionsResult extended
         && attrs.contains(FLEX_OPTIONS_DISAGGREGATED)) {
-      String receiver = uuidToId.get(extended.getReceiver());
-      String sender = uuidToId.get(extended.getSender());
-
-      data.put("receiver", receiver);
+      String sender = uuidToId.get(extended.getInputModel());
       data.put("sender", sender);
 
       data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
@@ -336,6 +372,24 @@ public final class ResultUtils {
   }
 
   // converting results
+  public static Map<String, Double> fromPValue(PValue pValue) {
+    Map<String, Double> data = new HashMap<>();
+
+    pValue.getP().ifPresent(p -> data.put("p", toActive(p)));
+
+    if (pValue instanceof SValue sValue) {
+      sValue.getQ().ifPresent(q -> data.put("q", toReactive(q)));
+    }
+
+    if (pValue instanceof HeatAndPValue hValue) {
+      hValue.getHeatDemand().ifPresent(h -> data.put("h", toActive(h)));
+    } else if (pValue instanceof HeatAndSValue hValue) {
+      hValue.getHeatDemand().ifPresent(h -> data.put("h", toActive(h)));
+    }
+
+    return data;
+  }
+
   public static double toActive(ComparableQuantity<Power> c) {
     return c.to(MEGAWATT).getValue().doubleValue();
   }
@@ -359,4 +413,7 @@ public final class ResultUtils {
   public static double toPercent(ComparableQuantity<Dimensionless> c) {
     return c.to(PERCENT).getValue().doubleValue();
   }
+
+  // helper class
+  private record ProcessedEmData(String attr, Map<String, Object> data) {}
 }

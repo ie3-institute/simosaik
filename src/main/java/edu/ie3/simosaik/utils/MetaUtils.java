@@ -34,26 +34,10 @@ public final class MetaUtils {
       case PRIMARY_PH -> List.of(ACTIVE_POWER, THERMAL_POWER);
       case PRIMARY_PQ -> List.of(ACTIVE_POWER, REACTIVE_POWER);
       case PRIMARY_PQH -> List.of(ACTIVE_POWER, REACTIVE_POWER, THERMAL_POWER);
-      case EM ->
-          List.of(
-              ACTIVE_POWER,
-              REACTIVE_POWER,
-              FLEX_SET_POINT,
-              FLEX_OPTION_P_MIN,
-              FLEX_OPTION_P_REF,
-              FLEX_OPTION_P_MAX,
-              FLEX_OPTIONS);
-      case EM_COMMUNICATION ->
+      case EM, EM_OPTIMIZER ->
           List.of(SIMONA_NEXT_TICK, FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT);
-      case EM_OPTIMIZER ->
-          List.of(
-              ACTIVE_POWER,
-              REACTIVE_POWER,
-              FLEX_SET_POINT,
-              FLEX_OPTION_MAP_P_MIN,
-              FLEX_OPTION_MAP_P_REF,
-              FLEX_OPTION_MAP_P_MAX,
-              FLEX_OPTIONS_DISAGGREGATED);
+      case EM_COMMUNICATION ->
+          List.of(SIMONA_NEXT_TICK, FLEX_REQUEST, FLEX_OPTIONS, FLEX_SET_POINT, FLEX_COM);
       case GRID_RESULTS -> ALL_GRID_UNITS;
       case NODE_RESULTS -> List.of(VOLTAGE_MAG, VOLTAGE_ANG);
       case LINE_RESULTS -> List.of(CURRENT_MAG, CURRENT_ANG);
@@ -136,7 +120,7 @@ public final class MetaUtils {
     if (nonPersistent != null) {
       JSONArray nonPersistentArray = new JSONArray();
       nonPersistentArray.addAll(triggers);
-      obj.put("non_persistent", nonPersistentArray);
+      obj.put("non-persistent", nonPersistentArray);
     }
 
     return obj;
