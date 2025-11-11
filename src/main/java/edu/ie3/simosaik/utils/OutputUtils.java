@@ -58,7 +58,7 @@ public final class OutputUtils {
       Map<String, List<String>> requestedAttributes,
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
-    log.warn("Result container: {}", container.getResults());
+    log.debug("Result container: {}", container.getResults());
 
     Map<String, Object> output = new HashMap<>();
 
@@ -103,8 +103,6 @@ public final class OutputUtils {
         log.warn("No results or em data found for asset {}.", externalEntity);
       }
     }
-
-    log.warn("Output: {}", output);
 
     return output;
   }

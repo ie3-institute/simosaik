@@ -68,6 +68,12 @@ public class MosaikSimulator extends Simulator {
       throw new IllegalArgumentException("Step size must be set!");
     }
 
+    boolean sendUnchangedResults = false;
+
+    if (simParams.containsKey("send_unchanged_results")) {
+      sendUnchangedResults = (boolean) simParams.get("send_unchanged_results");
+    }
+
     if (simParams.containsKey("models")) {
       List<String> modelTypes = (List<String>) simParams.get("models");
 
@@ -92,7 +98,7 @@ public class MosaikSimulator extends Simulator {
     }
 
     try {
-      synchronizer.sendInitData(new InitializationData.SimulatorData(emMode));
+      synchronizer.sendInitData(new InitializationData.SimulatorData(sendUnchangedResults, emMode));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -244,8 +250,6 @@ public class MosaikSimulator extends Simulator {
     // current tick
     Optional<ExtOutputContainer> resultOption = synchronizer.requestResults();
 
-    log.warn("Is finished: {}", synchronizer.isFinished());
-    log.warn("Result option: {}", resultOption);
     resultOption.ifPresent(
         c -> {
           log.warn("Results: {}", c.getResults());

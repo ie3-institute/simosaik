@@ -42,6 +42,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected static final Logger log = LoggerFactory.getLogger(MosaikSimulation.class);
 
   protected final long stepSize;
+  protected final boolean sendUnchangedResults;
 
   private final SIMONAPart synchronizer;
 
@@ -63,6 +64,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       var initData = synchronizer.getInitializationData(InitializationData.SimulatorData.class);
 
       this.stepSize = synchronizer.getStepSize();
+      this.sendUnchangedResults = initData.sendUnchangedResults();
 
       InitializationData.ModelData modelData =
           synchronizer.getInitializationData(InitializationData.ModelData.class);
@@ -240,6 +242,7 @@ public class MosaikSimulation extends ExtCoSimulation {
 
   protected Optional<Long> activity2(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
+    Set<ResultEntity> cache = new HashSet<>();
 
     while (true) {
       Map<UUID, List<ResultEntity>> resultsToBeSend = new HashMap<>();
@@ -307,8 +310,23 @@ public class MosaikSimulation extends ExtCoSimulation {
 
       // handle results
       if (extResultDataConnection != null) {
-        resultsToBeSend.putAll(extResultDataConnection.requestResults(tick));
-        // log.warn("Received results from SIMONA: {}", resultsToBeSend);
+        Map<UUID, List<ResultEntity>> results = extResultDataConnection.requestResults(tick);
+
+        if (sendUnchangedResults) {
+          resultsToBeSend.putAll(results);
+        } else {
+          results.forEach(
+              (uuid, res) -> {
+                List<ResultEntity> filtered = res.stream().filter(r -> !cache.contains(r)).toList();
+
+                if (!filtered.isEmpty()) {
+                  resultsToBeSend.put(uuid, filtered);
+
+                  // update cache
+                  cache.addAll(filtered);
+                }
+              });
+        }
       }
 
       ExtOutputContainer container = new ExtOutputContainer(tick, maybeNextTick);
