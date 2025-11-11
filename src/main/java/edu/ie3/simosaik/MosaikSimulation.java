@@ -281,6 +281,7 @@ public class MosaikSimulation extends ExtCoSimulation {
           }
 
           EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
+          log.warn("Received em response {}", received);
 
           switch (received) {
             case EmCompletion(Optional<Long> nextEmTick) -> {
@@ -295,6 +296,8 @@ public class MosaikSimulation extends ExtCoSimulation {
             }
             case EmResultResponse(Map<UUID, List<EmData>> emResults) -> {
               emDataFromSIMONA.putAll(emResults);
+
+              log.info("Received em results: {}", emResults);
 
               if (emDataFromSIMONA.isEmpty()) {
                 sendAnyway = true;

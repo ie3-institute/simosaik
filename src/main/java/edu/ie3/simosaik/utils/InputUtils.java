@@ -164,7 +164,7 @@ public final class InputUtils {
       // TODO: add handling of disaggregated flex options
       return null;
     } else {
-      UUID sender = mapping.get(extract(value, "sender", "")).orElse(receiver);
+      UUID sender = mapping.get(extract(value, "model", "")).orElse(receiver);
 
       return new PowerLimitFlexOptions(
           receiver,
