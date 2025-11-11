@@ -17,6 +17,8 @@ import java.util.Optional;
  */
 public sealed interface MosaikPart permits Synchronizer {
 
+  int getQueueSize();
+
   // update methods
 
   /**

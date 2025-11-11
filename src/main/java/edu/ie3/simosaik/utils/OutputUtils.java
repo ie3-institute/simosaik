@@ -71,7 +71,7 @@ public final class OutputUtils {
       List<ResultEntity> results = container.getResult(asset);
       List<EmData> emData = container.getEmData(asset);
 
-      log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
+      // log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
 
       if (!results.isEmpty() || !emData.isEmpty()) {
         Map<String, Object> data = new HashMap<>();
@@ -193,7 +193,7 @@ public final class OutputUtils {
 
   private static ProcessedEmData handleEmData(EmData emData, ExtEntityMapping mapping) {
     return switch (emData) {
-      case FlexOptionRequest(UUID receiver, boolean disaggregated) -> {
+      case FlexOptionRequest(UUID receiver, boolean disaggregated, boolean releaseControl) -> {
         Map<String, Object> data = new HashMap<>();
         data.put("receiver", mapping.from(receiver));
         data.put("disaggregated", disaggregated);
@@ -223,7 +223,7 @@ public final class OutputUtils {
         Map<String, Object> data = new HashMap<>();
         data.put("receiver", mapping.from(receiver));
         data.put("sender", mapping.from(sender));
-        data.put("msgId", msgId.toString());
+        data.put("msg_id", msgId.toString());
 
         // handle content
         ProcessedEmData processedContent = handleEmData(content, mapping);

@@ -37,7 +37,7 @@ public final class InputUtils {
             Object value = e.getValue();
             return value != null && !cache.get(key).equals(value);
           } else {
-            return false;
+            return true;
           }
         };
 
@@ -139,7 +139,14 @@ public final class InputUtils {
   private static EmData handleFlexData(
       ExtEntityMapping mapping, UUID receiver, String attr, Object value) {
     return switch (attr) {
-      case FLEX_REQUEST -> new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
+      case FLEX_REQUEST -> {
+        if (compareFieldValue(value, "release_control", true)) {
+          log.warn("Release control for {}", receiver);
+          yield FlexOptionRequest.releaseControl(receiver);
+        } else {
+          yield new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
+        }
+      }
       case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value, false);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
       case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
@@ -197,7 +204,7 @@ public final class InputUtils {
       EmData content = null;
 
       try {
-        msgId = UUID.fromString((String) map.get("msgId"));
+        msgId = UUID.fromString((String) map.get("msg_id"));
         content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
       } catch (Exception ignored) {
       }
@@ -211,6 +218,24 @@ public final class InputUtils {
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  @SuppressWarnings("unchecked")
+  private static <V> boolean compareFieldValue(Object obj, String field, V expectedValue) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        V value = (V) map.get(field);
+
+        if (value == null) {
+          return false;
+        }
+
+        return value.equals(expectedValue);
+      } catch (ClassCastException ignored) {
+      }
+    }
+
+    return false;
+  }
 
   @SuppressWarnings("unchecked")
   private static <V> V extract(Object obj, String field, V defaultValue) {

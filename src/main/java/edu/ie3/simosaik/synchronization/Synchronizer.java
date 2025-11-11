@@ -175,6 +175,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   // mosaik part
 
   @Override
+  public int getQueueSize() {
+    return queueToExt.size();
+  }
+
+  @Override
   public long updateMosaikTime(long time) throws InterruptedException {
     noInputs = false;
     hasSendNextTick = false;

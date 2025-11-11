@@ -16,11 +16,9 @@ public interface InitializationData {
   /**
    * Simulator data that is use.
    *
-   * @param disaggregate true, if disaggregated flex options should be requested.
    * @param emMode option for the mode of an external em data connection
    */
-  record SimulatorData(boolean disaggregate, Optional<ExtEmDataConnection.EmMode> emMode)
-      implements InitializationData {}
+  record SimulatorData(Optional<ExtEmDataConnection.EmMode> emMode) implements InitializationData {}
 
   /**
    * Model data that is used.
