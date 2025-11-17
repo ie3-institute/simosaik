@@ -306,6 +306,17 @@ public class MosaikSimulation extends ExtCoSimulation {
             default -> log.warn("Received unsupported data response: {}", received);
           }
         }
+      } else if (extTick > tick) {
+          log.warn("Received inputs for next tick: {}", extTick);
+
+          if (extEmDataConnection != null) {
+              log.info("External simulator finished tick {}. Request completion.", tick);
+              extEmDataConnection.requestCompletion(tick, extTick);
+
+              maybeNextTick = Optional.of(extTick);
+              log.warn("Next tick: {}", maybeNextTick);
+          }
+          break;
       } else {
         log.warn("Received inputs for previous tick: {}", extTick);
         break;
