@@ -17,6 +17,7 @@ import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.EmData;
 import edu.ie3.simona.api.data.model.em.FlexOptionRequest;
+import edu.ie3.simona.api.data.model.em.FlexOptions;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.ontology.em.EmCompletion;
@@ -88,10 +89,14 @@ public class MosaikSimulation extends ExtCoSimulation {
         this.extEmDataConnection = null;
       }
 
-      // result data connection
-      List<UUID> resultUuids = entityMapping.getAssets(DataType.RESULT);
-      this.extResultDataConnection =
-          !resultUuids.isEmpty() ? buildResultConnection(resultUuids, log) : null;
+      if (initData.sendResults()) {
+        // result data connection
+        List<UUID> resultUuids = entityMapping.getAssets(DataType.RESULT);
+        this.extResultDataConnection =
+            !resultUuids.isEmpty() ? buildResultConnection(resultUuids, log) : null;
+      } else {
+        this.extResultDataConnection = null;
+      }
 
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -303,20 +308,26 @@ public class MosaikSimulation extends ExtCoSimulation {
                 sendAnyway = true;
               }
             }
+            case FlexOptionsResponse(Map<UUID, List<FlexOptions>> receiverToFlexOptions) ->
+                receiverToFlexOptions.forEach(
+                    (receiver, data) ->
+                        emDataFromSIMONA
+                            .computeIfAbsent(receiver, k -> new ArrayList<>())
+                            .addAll(data));
             default -> log.warn("Received unsupported data response: {}", received);
           }
         }
       } else if (extTick > tick) {
-          log.warn("Received inputs for next tick: {}", extTick);
+        log.warn("Received inputs for next tick: {}", extTick);
 
-          if (extEmDataConnection != null) {
-              log.info("External simulator finished tick {}. Request completion.", tick);
-              extEmDataConnection.requestCompletion(tick, extTick);
+        if (extEmDataConnection != null) {
+          log.info("External simulator finished tick {}. Request completion.", tick);
+          extEmDataConnection.requestCompletion(tick, extTick);
 
-              maybeNextTick = Optional.of(extTick);
-              log.warn("Next tick: {}", maybeNextTick);
-          }
-          break;
+          maybeNextTick = Optional.of(extTick);
+          log.warn("Next tick: {}", maybeNextTick);
+        }
+        break;
       } else {
         log.warn("Received inputs for previous tick: {}", extTick);
         break;

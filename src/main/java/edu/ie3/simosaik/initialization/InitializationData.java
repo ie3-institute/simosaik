@@ -18,7 +18,10 @@ public interface InitializationData {
    *
    * @param emMode option for the mode of an external em data connection
    */
-  record SimulatorData(boolean sendUnchangedResults, Optional<ExtEmDataConnection.EmMode> emMode)
+  record SimulatorData(
+      boolean sendResults,
+      boolean sendUnchangedResults,
+      Optional<ExtEmDataConnection.EmMode> emMode)
       implements InitializationData {}
 
   /**

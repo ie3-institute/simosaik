@@ -6,6 +6,7 @@
 
 package edu.ie3.simosaik;
 
+import static edu.ie3.simosaik.SimonaEntity.RESULTS;
 import static edu.ie3.simosaik.utils.MetaUtils.*;
 
 import de.offis.mosaik.api.SimProcess;
@@ -98,7 +99,9 @@ public class MosaikSimulator extends Simulator {
     }
 
     try {
-      synchronizer.sendInitData(new InitializationData.SimulatorData(sendUnchangedResults, emMode));
+      synchronizer.sendInitData(
+          new InitializationData.SimulatorData(
+              simonaEntities.containsKey(RESULTS), sendUnchangedResults, emMode));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -125,8 +128,13 @@ public class MosaikSimulator extends Simulator {
 
     Object included = modelParams.get("use");
     if (included == null) {
-      // to support old field name
-      included = modelParams.get("mapping");
+      Object mapping = modelParams.get("mapping");
+
+      if (mapping != null) {
+        log.warn("Using deprecated parameter 'mapping', please change this to 'use'.");
+        // to support old field name
+        included = mapping;
+      }
     }
 
     List<String> givenIds = new ArrayList<>();
