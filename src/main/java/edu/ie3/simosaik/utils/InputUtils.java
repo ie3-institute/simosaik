@@ -268,7 +268,7 @@ public final class InputUtils {
   private static <V> V extract(Object obj, String field, V defaultValue) {
     if (obj instanceof Map<?, ?> map) {
       try {
-        return (V) map.get(field);
+        return Optional.ofNullable((V) map.get(field)).orElse(defaultValue);
       } catch (ClassCastException ignored) {
       }
     }

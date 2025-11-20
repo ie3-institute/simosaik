@@ -20,10 +20,7 @@ import edu.ie3.simona.api.data.model.em.FlexOptionRequest;
 import edu.ie3.simona.api.data.model.em.FlexOptions;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simona.api.ontology.em.EmCompletion;
-import edu.ie3.simona.api.ontology.em.EmDataResponseMessageToExt;
-import edu.ie3.simona.api.ontology.em.EmResultResponse;
-import edu.ie3.simona.api.ontology.em.FlexOptionsResponse;
+import edu.ie3.simona.api.ontology.em.*;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.SIMONAPart;
@@ -170,81 +167,6 @@ public class MosaikSimulation extends ExtCoSimulation {
     return maybeNextTick;
   }
 
-  protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
-    Optional<Long> maybeNextTick = Optional.of(nextTick);
-
-    boolean expectInputs = synchronizer.expectInput();
-    log.warn("Expects inputs: {}", expectInputs);
-
-    if (extPrimaryDataConnection != null && expectInputs) {
-      // sending primary data to SIMONA
-      sendPrimaryDataToSimona(extPrimaryDataConnection, tick, maybeNextTick, log);
-    }
-
-    if (extEmDataConnection != null) {
-      // using em connection
-      switch (extEmDataConnection.mode) {
-        case BASE -> {
-          // first we send flex options to mosaik
-          // sendFlexOptionsToExt(extEmDataConnection, tick, disaggregateFlex, log);
-
-          Map<UUID, FlexOptionRequest> requestMap =
-              queueToSimona.takeData(ExtInputContainer::extractFlexRequests);
-
-          // send flex option requests to SIMONA
-          extEmDataConnection.sendEmData(
-              tick, requestMap, Collections.emptyMap(), Collections.emptyMap());
-
-          // send flex options to mosaik
-          ExtOutputContainer container = new ExtOutputContainer(tick);
-          extEmDataConnection
-              .receiveWithType(FlexOptionsResponse.class)
-              .receiverToFlexOptions()
-              .forEach((r, d) -> d.forEach(option -> container.addEmData(r, option)));
-
-          queueToExt.queueData(container);
-
-          // we will send the received set points to SIMONA
-          var setPoints = queueToSimona.takeContainer().extractSetPoints();
-          extEmDataConnection.sendEmData(
-              tick, Collections.emptyMap(), Collections.emptyMap(), setPoints);
-
-          // we will receive an em completion message
-          Optional<Long> nextTickOption =
-              extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
-          log.info("Received completion for tick: {}. Next tick option: {}", tick, nextTickOption);
-        }
-        case EM_COMMUNICATION -> {
-          Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
-
-          if (nextEmChangeTick.isPresent()) {
-            if (nextEmChangeTick.get() < nextTick) {
-              maybeNextTick = nextEmChangeTick;
-            }
-          } else {
-            log.warn("There are no em inputs for tick '{}'. Skipping em communication.", tick);
-          }
-        }
-        default ->
-            throw new IllegalStateException(
-                "The mode '" + extEmDataConnection.mode + "' is currently not supported!");
-      }
-    }
-
-    if (extResultDataConnection != null) {
-      Map<UUID, List<ResultEntity>> resultsToBeSend = extResultDataConnection.requestResults(tick);
-      log.warn("Received results from SIMONA: {}", resultsToBeSend);
-      ExtOutputContainer container = new ExtOutputContainer(tick, maybeNextTick);
-      container.addResults(resultsToBeSend);
-      queueToExt.queueData(container);
-
-      // sending results to mosaik
-      // sendResultToExt(extResultDataConnection, tick, maybeNextTick, log);
-    }
-
-    return maybeNextTick;
-  }
-
   protected Optional<Long> activity2(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
     Set<ResultEntity> cache = new HashSet<>();
@@ -322,7 +244,13 @@ public class MosaikSimulation extends ExtCoSimulation {
 
         if (extEmDataConnection != null) {
           log.info("External simulator finished tick {}. Request completion.", tick);
-          extEmDataConnection.requestCompletion(tick, extTick);
+          extEmDataConnection.sendExtMsg(new RequestEmCompletion(tick, Optional.of(nextTick)));
+
+          // used to empty the queue
+          EmDataResponseMessageToExt msg = extEmDataConnection.receiveAny();
+          if (msg instanceof EmResultResponse(Map<UUID, List<EmData>> emResults) && !emResults.isEmpty()) {
+              log.warn("Received unexpected em results after requesting completion. Results: {}", emResults);
+          }
 
           maybeNextTick = Optional.of(extTick);
           log.warn("Next tick: {}", maybeNextTick);
@@ -366,6 +294,83 @@ public class MosaikSimulation extends ExtCoSimulation {
     return maybeNextTick;
   }
 
+  @Deprecated
+  protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
+        Optional<Long> maybeNextTick = Optional.of(nextTick);
+
+        boolean expectInputs = synchronizer.expectInput();
+        log.warn("Expects inputs: {}", expectInputs);
+
+        if (extPrimaryDataConnection != null && expectInputs) {
+            // sending primary data to SIMONA
+            sendPrimaryDataToSimona(extPrimaryDataConnection, tick, maybeNextTick, log);
+        }
+
+        if (extEmDataConnection != null) {
+            // using em connection
+            switch (extEmDataConnection.mode) {
+                case BASE -> {
+                    // first we send flex options to mosaik
+                    // sendFlexOptionsToExt(extEmDataConnection, tick, disaggregateFlex, log);
+
+                    Map<UUID, FlexOptionRequest> requestMap =
+                            queueToSimona.takeData(ExtInputContainer::extractFlexRequests);
+
+                    // send flex option requests to SIMONA
+                    extEmDataConnection.sendEmData(
+                            tick, requestMap, Collections.emptyMap(), Collections.emptyMap());
+
+                    // send flex options to mosaik
+                    ExtOutputContainer container = new ExtOutputContainer(tick);
+                    extEmDataConnection
+                            .receiveWithType(FlexOptionsResponse.class)
+                            .receiverToFlexOptions()
+                            .forEach((r, d) -> d.forEach(option -> container.addEmData(r, option)));
+
+                    queueToExt.queueData(container);
+
+                    // we will send the received set points to SIMONA
+                    var setPoints = queueToSimona.takeContainer().extractSetPoints();
+                    extEmDataConnection.sendEmData(
+                            tick, Collections.emptyMap(), Collections.emptyMap(), setPoints);
+
+                    // we will receive an em completion message
+                    Optional<Long> nextTickOption =
+                            extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
+                    log.info("Received completion for tick: {}. Next tick option: {}", tick, nextTickOption);
+                }
+                case EM_COMMUNICATION -> {
+                    Optional<Long> nextEmChangeTick = useFlexCommunication(extEmDataConnection, tick);
+
+                    if (nextEmChangeTick.isPresent()) {
+                        if (nextEmChangeTick.get() < nextTick) {
+                            maybeNextTick = nextEmChangeTick;
+                        }
+                    } else {
+                        log.warn("There are no em inputs for tick '{}'. Skipping em communication.", tick);
+                    }
+                }
+                default ->
+                        throw new IllegalStateException(
+                                "The mode '" + extEmDataConnection.mode + "' is currently not supported!");
+            }
+        }
+
+        if (extResultDataConnection != null) {
+            Map<UUID, List<ResultEntity>> resultsToBeSend = extResultDataConnection.requestResults(tick);
+            log.warn("Received results from SIMONA: {}", resultsToBeSend);
+            ExtOutputContainer container = new ExtOutputContainer(tick, maybeNextTick);
+            container.addResults(resultsToBeSend);
+            queueToExt.queueData(container);
+
+            // sending results to mosaik
+            // sendResultToExt(extResultDataConnection, tick, maybeNextTick, log);
+        }
+
+        return maybeNextTick;
+    }
+
+  @Deprecated
   protected Optional<Long> useFlexCommunication(ExtEmDataConnection extEmDataConnection, long tick)
       throws InterruptedException {
     // handle flex requests
