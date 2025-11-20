@@ -13,8 +13,8 @@ import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.measure.Quantity;
@@ -180,19 +180,46 @@ public final class InputUtils {
       return null;
     }
 
-    // TODO: add handling of disaggregated set points
+    BiFunction<ComparableQuantity<Power>, ComparableQuantity<Power>, PValue> builder =
+        (active, reactive) -> {
+          if (reactive != null) {
+            return new SValue(active, reactive);
+          } else if (active != null) {
+            return new PValue(active);
+          } else {
+            return null;
+          }
+        };
+
+    // handling of disaggregated set points
+    Map<String, Object> disaggregated = extract(value, "disaggregated", Collections.emptyMap());
+    Map<UUID, PValue> disaggregatedSetPoints = new HashMap<>();
+
+    disaggregated.forEach(
+        (id, data) -> {
+          UUID model = mapping.from(id);
+
+          ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);
+          ComparableQuantity<Power> reactive = extractQuantity(value, REACTIVE_POWER);
+
+          Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
+
+          power.ifPresent(p -> disaggregatedSetPoints.put(model, p));
+        });
+
+    // handling of aggregated set point
     ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);
     ComparableQuantity<Power> reactive = extractQuantity(value, REACTIVE_POWER);
 
-    PValue power;
+    Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
 
-    if (reactive != null) {
-      power = new SValue(active, reactive);
-    } else {
-      power = new PValue(active);
+    if (power.isPresent() && !disaggregatedSetPoints.isEmpty()) {
+      log.warn(
+          "Got aggregated and disaggregated set point(s) at the same time for model '{}'. This could cause problems!",
+          reactive);
     }
 
-    return new EmSetPoint(receiver, power);
+    return new EmSetPoint(receiver, power, disaggregatedSetPoints);
   }
 
   private static EmData parseEmComMessage(ExtEntityMapping mapping, UUID receiver, Object value) {
