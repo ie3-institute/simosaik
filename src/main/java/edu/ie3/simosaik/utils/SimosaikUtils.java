@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
@@ -32,10 +33,13 @@ public final class SimosaikUtils {
    * @param mosaikSimulator Simulator that extends the MOSAIK API
    * @param mosaikIP IP address for the connection with MOSAIK
    */
-  public static void startMosaikSimulation(MosaikSimulator mosaikSimulator, String mosaikIP) {
+  public static Supplier<Boolean> startMosaikSimulation(
+      MosaikSimulator mosaikSimulator, String mosaikIP) {
     try {
       RunSimosaik simosaikRunner = new RunSimosaik(mosaikIP, mosaikSimulator);
-      new Thread(simosaikRunner, "Simosaik").start();
+      Thread thread = new Thread(simosaikRunner, "Simosaik");
+      thread.start();
+      return thread::isAlive;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
