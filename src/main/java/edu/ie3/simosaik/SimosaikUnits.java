@@ -26,6 +26,8 @@ public final class SimosaikUnits {
   public static final String CURRENT_MAG = "I[A]";
   public static final String CURRENT_ANG = "I[RAD]";
 
+  public static final String CONGESTION = "Congestion";
+
   // participant units -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   public static final String ACTIVE_POWER = "P[MW]";
   public static final String REACTIVE_POWER = "Q[MVAr]";
@@ -49,6 +51,7 @@ public final class SimosaikUnits {
 
   public static final List<String> ALL_RESULTS_UNITS =
       List.of(
+          CONGESTION,
           VOLTAGE_MAG,
           VOLTAGE_ANG,
           CURRENT_MAG,

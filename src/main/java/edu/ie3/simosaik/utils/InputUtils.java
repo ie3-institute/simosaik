@@ -140,11 +140,10 @@ public final class InputUtils {
       ExtEntityMapping mapping, UUID receiver, String attr, Object value) {
     return switch (attr) {
       case FLEX_REQUEST -> {
-        if (compareFieldValue(value, "release_control", true)) {
-          log.warn("Release control for {}", receiver);
-          yield FlexOptionRequest.releaseControl(receiver);
-        } else {
+        if (value != null) {
           yield new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
+        } else {
+          yield null;
         }
       }
       case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value, false);
