@@ -207,7 +207,7 @@ public final class OutputUtils {
 
   private static ProcessedEmData handleEmData(EmData emData, ExtEntityMapping mapping) {
     return switch (emData) {
-      case FlexOptionRequest(UUID receiver, boolean disaggregated, boolean releaseControl) -> {
+      case FlexOptionRequest(UUID receiver, boolean disaggregated) -> {
         Map<String, Object> data = new HashMap<>();
         data.put("receiver", mapping.from(receiver));
         data.put("disaggregated", disaggregated);

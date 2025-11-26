@@ -8,9 +8,9 @@ package edu.ie3.simosaik.utils;
 
 import static edu.ie3.simosaik.SimosaikUnits.*;
 
+import de.offis.mosaik.api.SimProcess;
 import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simosaik.MosaikSimulator;
-import edu.ie3.simosaik.RunSimosaik;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,16 +33,24 @@ public final class SimosaikUtils {
    * @param mosaikSimulator Simulator that extends the MOSAIK API
    * @param mosaikIP IP address for the connection with MOSAIK
    */
-  public static Supplier<Boolean> startMosaikSimulation(
-      MosaikSimulator mosaikSimulator, String mosaikIP) {
-    try {
-      RunSimosaik simosaikRunner = new RunSimosaik(mosaikIP, mosaikSimulator);
-      Thread thread = new Thread(simosaikRunner, "Simosaik");
-      thread.start();
-      return thread::isAlive;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+  public static Supplier<Boolean> startMosaikSimulator(
+      MosaikSimulator mosaikSimulator, String mosaikIP, Thread.UncaughtExceptionHandler handler) {
+
+    // mosaik simulator thread
+    Thread thread =
+        new Thread("Simosaik") {
+          @Override
+          public void run() {
+            try {
+              SimProcess.startSimulation(new String[] {mosaikIP}, mosaikSimulator);
+            } catch (Exception e) {
+              handler.uncaughtException(this, e);
+            }
+          }
+        };
+
+    thread.start();
+    return thread::isAlive;
   }
 
   // converting inputs

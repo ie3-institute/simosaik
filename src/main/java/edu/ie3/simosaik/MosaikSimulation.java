@@ -45,6 +45,7 @@ public class MosaikSimulation extends ExtCoSimulation {
 
   private final SIMONAPart synchronizer;
   private final Supplier<Boolean> mosaikStateSupplier;
+  public boolean run = true;
 
   // connections
   private final ExtPrimaryDataConnection extPrimaryDataConnection;
@@ -175,7 +176,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
     Set<ResultEntity> cache = new HashSet<>();
 
-    while (true) {
+    while (run) {
       Map<UUID, List<ResultEntity>> resultsToBeSend = new HashMap<>();
       Map<UUID, List<EmData>> emDataFromSIMONA = new HashMap<>();
       boolean sendAnyway = false;
@@ -302,6 +303,13 @@ public class MosaikSimulation extends ExtCoSimulation {
 
     if (!mosaikStateSupplier.get()) {
       log.info("Mosaik is finished! The external simulation will not be activated anymore!");
+
+      if (extEmDataConnection != null) {
+        // to prevent em agents from blocking the scheduler
+        extEmDataConnection.simulateInternal(tick);
+        extEmDataConnection.receiveWithType(EmCompletion.class);
+      }
+
       maybeNextTick = Optional.empty();
     }
 
