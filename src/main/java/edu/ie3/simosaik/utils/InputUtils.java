@@ -65,7 +65,7 @@ public final class InputUtils {
       // handling primary input data
       if (primaryType.containsKey(receiverId)) {
         handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
-        log.warn("Primary data: {}", container.primaryDataString());
+        log.debug("Primary data: {}", container.primaryDataString());
       } else {
         // handling of flex/em data
         handleFlexData(container, mapping, receiver, attrToData);

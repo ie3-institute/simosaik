@@ -101,7 +101,7 @@ public final class OutputUtils {
         }
 
       } else {
-        log.warn("No results or em data found for asset {}.", externalEntity);
+        log.debug("No results or em data found for asset {}.", externalEntity);
       }
     }
 

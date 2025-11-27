@@ -11,7 +11,7 @@ import edu.ie3.simona.api.data.ExtSimAdapterData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
-import java.util.function.Supplier;
+import java.util.Optional;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
 
@@ -34,17 +34,15 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // for synchronising both simulations
     Synchronizer synchronizer = new Synchronizer();
 
-    Runnable stopper = () -> extSim.run = false;
-
     // creating and starting the simulator
-    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
+    Runnable stopper = () -> Optional.ofNullable(extSim).ifPresent(sim -> sim.run = false);
 
+    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
     Thread.UncaughtExceptionHandler handler = (t, e) -> stopper.run();
-    Supplier<Boolean> mosaikStateSupplier =
-        SimosaikUtils.startMosaikSimulator(simulator, mosaikIP, handler);
+    SimosaikUtils.startMosaikSimulator(simulator, mosaikIP, handler);
 
     // creating the external simulation
-    extSim = new MosaikSimulation(synchronizer, mosaikStateSupplier);
+    extSim = new MosaikSimulation(synchronizer);
     extSim.setAdapterData(data);
   }
 }

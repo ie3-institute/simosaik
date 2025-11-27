@@ -26,7 +26,6 @@ import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.synchronization.SIMONAPart;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -44,7 +43,6 @@ public class MosaikSimulation extends ExtCoSimulation {
   protected final boolean sendUnchangedResults;
 
   private final SIMONAPart synchronizer;
-  private final Supplier<Boolean> mosaikStateSupplier;
   public boolean run = true;
 
   // connections
@@ -52,16 +50,14 @@ public class MosaikSimulation extends ExtCoSimulation {
   private final ExtEmDataConnection extEmDataConnection;
   private final ExtResultDataConnection extResultDataConnection;
 
-  public MosaikSimulation(SIMONAPart synchronizer, Supplier<Boolean> mosaikStateSupplier) {
-    this("MosaikSimulation", synchronizer, mosaikStateSupplier);
+  public MosaikSimulation(SIMONAPart synchronizer) {
+    this("MosaikSimulation", synchronizer);
   }
 
-  public MosaikSimulation(
-      String name, SIMONAPart synchronizer, Supplier<Boolean> mosaikStateSupplier) {
+  public MosaikSimulation(String name, SIMONAPart synchronizer) {
     super(name, "MosaikSimulator");
 
     this.synchronizer = synchronizer;
-    this.mosaikStateSupplier = mosaikStateSupplier;
 
     try {
       var initData = synchronizer.getInitializationData(InitializationData.SimulatorData.class);
@@ -213,7 +209,6 @@ public class MosaikSimulation extends ExtCoSimulation {
           }
 
           EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
-          log.warn("Received em response {}", received);
 
           switch (received) {
             case EmCompletion(Optional<Long> nextEmTick) -> {
@@ -229,7 +224,7 @@ public class MosaikSimulation extends ExtCoSimulation {
             case EmResultResponse(Map<UUID, List<EmData>> emResults) -> {
               emDataFromSIMONA.putAll(emResults);
 
-              log.info("Received em results: {}", emResults);
+              // log.info("Received em results: {}", emResults);
 
               if (emDataFromSIMONA.isEmpty()) {
                 sendAnyway = true;
@@ -301,7 +296,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       }
     }
 
-    if (!mosaikStateSupplier.get() || !run) {
+    if (!run) {
       log.info("Mosaik is finished! The external simulation will not be activated anymore!");
 
       if (extEmDataConnection != null) {
@@ -486,9 +481,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     try {
       do {
         container = queueToSimona.pollContainer(100, TimeUnit.MILLISECONDS);
-      } while (tick == synchronizer.currentMosaikTick()
-          && container.isEmpty()
-          && mosaikStateSupplier.get());
+      } while (tick == synchronizer.currentMosaikTick() && container.isEmpty() && !run);
 
     } catch (InterruptedException e) {
       container = Optional.empty();
