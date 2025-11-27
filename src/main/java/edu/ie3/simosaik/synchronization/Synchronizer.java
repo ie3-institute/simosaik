@@ -227,8 +227,10 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       // we don't need to update the time
       goToNextTick = true;
 
-      if (simonaTime < nextRegularMosaikTick) {
-        long scaledSimonaTime = (long) (time / mosaikTimeScaling);
+      long scaledNextRegularMosaikTime = (long) (time * mosaikTimeScaling);
+
+      if (simonaTime < scaledNextRegularMosaikTime) {
+        long scaledSimonaTime = (long) (simonaTime / mosaikTimeScaling);
 
         log.info("SIMONA requires an intermediate tick for: {}", scaledSimonaTime);
         nextMosaikTick = scaledSimonaTime;

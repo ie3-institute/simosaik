@@ -263,6 +263,7 @@ public class MosaikSimulation extends ExtCoSimulation {
         log.warn("Received inputs for previous tick: {}", extTick);
         break;
       } else {
+        log.warn("No inputs received!");
         break;
       }
 
