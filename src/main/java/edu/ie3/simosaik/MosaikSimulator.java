@@ -38,15 +38,18 @@ public class MosaikSimulator extends Simulator {
 
   private long time;
   private final MosaikPart synchronizer;
+  private final Runnable stopper;
 
-  public MosaikSimulator(MosaikPart synchronizer, ExtEntityMapping mapping) {
-    this("MosaikSimulator", synchronizer, mapping);
+  public MosaikSimulator(MosaikPart synchronizer, ExtEntityMapping mapping, Runnable stopper) {
+    this("MosaikSimulator", synchronizer, mapping, stopper);
   }
 
-  public MosaikSimulator(String name, MosaikPart synchronizer, ExtEntityMapping mapping) {
+  public MosaikSimulator(
+      String name, MosaikPart synchronizer, ExtEntityMapping mapping, Runnable stopper) {
     super(name);
     this.synchronizer = synchronizer;
     this.mapping = mapping;
+    this.stopper = stopper;
   }
 
   @Override
@@ -187,16 +190,6 @@ public class MosaikSimulator extends Simulator {
 
     simonaEntities.put(modelType, true);
 
-    boolean allInitialized = simonaEntities.values().stream().allMatch(x -> x == true);
-
-    if (allInitialized) {
-      try {
-        synchronizer.sendInitData(new InitializationData.ModelData(mapping));
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
     if (entities.size() != num) {
       logger.warning(
           "The number of entities to built '"
@@ -207,6 +200,24 @@ public class MosaikSimulator extends Simulator {
     }
 
     return entities;
+  }
+
+  @Override
+  public void setupDone() throws Exception {
+    List<SimonaEntity> entities = new ArrayList<>();
+
+    simonaEntities.forEach(
+        (entity, init) -> {
+          if (!init) {
+            entities.add(entity);
+          }
+        });
+
+    if (!entities.isEmpty()) {
+      logger.warning("The following models have not been initialized: " + entities);
+    }
+
+    synchronizer.sendInitData(new InitializationData.ModelData(mapping));
   }
 
   @Override
@@ -334,5 +345,11 @@ public class MosaikSimulator extends Simulator {
 
       return Collections.emptyMap();
     }
+  }
+
+  @Override
+  public void cleanup() {
+    // stops the external simulation
+    stopper.run();
   }
 }

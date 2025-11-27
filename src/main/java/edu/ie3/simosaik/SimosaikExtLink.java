@@ -34,9 +34,12 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // for synchronising both simulations
     Synchronizer synchronizer = new Synchronizer();
 
+    Runnable stopper = () -> extSim.run = false;
+
     // creating and starting the simulator
-    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping);
-    Thread.UncaughtExceptionHandler handler = (t, e) -> extSim.run = true;
+    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
+
+    Thread.UncaughtExceptionHandler handler = (t, e) -> stopper.run();
     Supplier<Boolean> mosaikStateSupplier =
         SimosaikUtils.startMosaikSimulator(simulator, mosaikIP, handler);
 

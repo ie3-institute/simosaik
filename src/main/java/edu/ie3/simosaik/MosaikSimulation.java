@@ -301,7 +301,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       }
     }
 
-    if (!mosaikStateSupplier.get()) {
+    if (!mosaikStateSupplier.get() || !run) {
       log.info("Mosaik is finished! The external simulation will not be activated anymore!");
 
       if (extEmDataConnection != null) {
