@@ -126,7 +126,7 @@ public final class InputUtils {
           yield null;
         }
       }
-      case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value, false);
+      case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
       case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
       default -> {
@@ -136,22 +136,15 @@ public final class InputUtils {
     };
   }
 
-  private static EmData parseFlexOptions(
-      ExtEntityMapping mapping, UUID receiver, Object value, boolean disaggregated) {
-    if (disaggregated) {
-      // not supported yet
-      // TODO: add handling of disaggregated flex options
-      return null;
-    } else {
-      UUID sender = mapping.get(extract(value, "model", "")).orElse(receiver);
+  private static EmData parseFlexOptions(ExtEntityMapping mapping, UUID receiver, Object value) {
+    UUID sender = mapping.get(extract(value, "model", "")).orElse(receiver);
 
-      return new PowerLimitFlexOptions(
-          receiver,
-          sender,
-          extractQuantity(value, FLEX_OPTION_P_REF),
-          extractQuantity(value, FLEX_OPTION_P_MIN),
-          extractQuantity(value, FLEX_OPTION_P_MAX));
-    }
+    return new PowerLimitFlexOptions(
+        receiver,
+        sender,
+        extractQuantity(value, FLEX_OPTION_P_REF),
+        extractQuantity(value, FLEX_OPTION_P_MIN),
+        extractQuantity(value, FLEX_OPTION_P_MAX));
   }
 
   private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
@@ -215,8 +208,6 @@ public final class InputUtils {
       } catch (Exception ignored) {
       }
 
-      log.info("Content {}", content);
-
       return new EmCommunicationMessage<>(receiver, sender, msgId, content);
     }
 
@@ -224,24 +215,6 @@ public final class InputUtils {
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-  @SuppressWarnings("unchecked")
-  private static <V> boolean compareFieldValue(Object obj, String field, V expectedValue) {
-    if (obj instanceof Map<?, ?> map) {
-      try {
-        V value = (V) map.get(field);
-
-        if (value == null) {
-          return false;
-        }
-
-        return value.equals(expectedValue);
-      } catch (ClassCastException ignored) {
-      }
-    }
-
-    return false;
-  }
 
   @SuppressWarnings("unchecked")
   private static <V> V extract(Object obj, String field, V defaultValue) {
