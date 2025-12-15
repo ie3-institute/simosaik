@@ -6,23 +6,22 @@
 
 package edu.ie3.simosaik.utils;
 
+import static edu.ie3.simosaik.SimosaikUnits.*;
+
 import edu.ie3.datamodel.io.naming.timeseries.ColumnScheme;
 import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import java.util.*;
+import java.util.function.BiFunction;
+import javax.measure.Quantity;
+import javax.measure.Unit;
+import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tech.units.indriya.ComparableQuantity;
 import tech.units.indriya.quantity.Quantities;
-
-import javax.measure.Quantity;
-import javax.measure.Unit;
-import javax.measure.quantity.Power;
-import java.util.*;
-import java.util.function.BiFunction;
-
-import static edu.ie3.simosaik.SimosaikUnits.*;
 
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);

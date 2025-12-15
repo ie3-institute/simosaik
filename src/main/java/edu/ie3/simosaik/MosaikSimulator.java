@@ -94,9 +94,9 @@ public class MosaikSimulator extends Simulator {
     Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
 
     if (simonaEntities.containsKey(EM_COMMUNICATION)) {
-        emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
+      emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
     } else if (simonaEntities.containsKey(EM) || simonaEntities.containsKey(EM_OPTIMIZER)) {
-        emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
+      emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
     }
 
     try {

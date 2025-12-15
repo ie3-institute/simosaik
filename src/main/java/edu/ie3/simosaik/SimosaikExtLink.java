@@ -6,12 +6,11 @@
 
 package edu.ie3.simosaik;
 
+import de.offis.mosaik.api.SimProcess;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.SetupData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
-import edu.ie3.simosaik.utils.SimosaikUtils;
-
 import java.util.Optional;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
@@ -40,10 +39,35 @@ public final class SimosaikExtLink implements ExtLinkInterface {
 
     MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
     Thread.UncaughtExceptionHandler handler = (t, e) -> stopper.run();
-    SimosaikUtils.startMosaikSimulator(simulator, mosaikIP, handler);
+    startMosaikSimulator(simulator, mosaikIP, handler);
 
     // creating the external simulation
     extSim = new MosaikSimulation(synchronizer);
     extSim.setSetupData(data);
+  }
+
+  /**
+   * Starts MOSAIK connection
+   *
+   * @param mosaikSimulator Simulator that extends the MOSAIK API
+   * @param mosaikIP IP address for the connection with MOSAIK
+   */
+  public static void startMosaikSimulator(
+      MosaikSimulator mosaikSimulator, String mosaikIP, Thread.UncaughtExceptionHandler handler) {
+
+    // mosaik simulator thread
+    Thread thread =
+        new Thread("Simosaik") {
+          @Override
+          public void run() {
+            try {
+              SimProcess.startSimulation(new String[] {mosaikIP}, mosaikSimulator);
+            } catch (Exception e) {
+              handler.uncaughtException(this, e);
+            }
+          }
+        };
+
+    thread.start();
   }
 }
