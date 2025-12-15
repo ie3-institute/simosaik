@@ -7,10 +7,11 @@
 package edu.ie3.simosaik;
 
 import edu.ie3.simona.api.ExtLinkInterface;
-import edu.ie3.simona.api.data.ExtSimAdapterData;
+import edu.ie3.simona.api.data.SetupData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
 import edu.ie3.simosaik.utils.SimosaikUtils;
+
 import java.util.Optional;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
@@ -23,13 +24,13 @@ public final class SimosaikExtLink implements ExtLinkInterface {
   }
 
   @Override
-  public void setup(ExtSimAdapterData data) {
-    ArgsParser.Arguments arguments = ArgsParser.parse(data.getMainArgs());
+  public void setup(SetupData data) {
+    ArgsParser.Arguments arguments = ArgsParser.parse(data.mainArgs());
 
     String mosaikIP = arguments.mosaikIP();
 
     // initial mapping from grid container
-    ExtEntityMapping mapping = new ExtEntityMapping(data.getGrid());
+    ExtEntityMapping mapping = new ExtEntityMapping(data.gridContainer());
 
     // for synchronising both simulations
     Synchronizer synchronizer = new Synchronizer();
@@ -43,6 +44,6 @@ public final class SimosaikExtLink implements ExtLinkInterface {
 
     // creating the external simulation
     extSim = new MosaikSimulation(synchronizer);
-    extSim.setAdapterData(data);
+    extSim.setSetupData(data);
   }
 }

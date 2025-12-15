@@ -6,7 +6,7 @@
 
 package edu.ie3.simosaik;
 
-import static edu.ie3.simosaik.SimonaEntity.RESULTS;
+import static edu.ie3.simosaik.SimonaEntity.*;
 import static edu.ie3.simosaik.utils.MetaUtils.*;
 
 import de.offis.mosaik.api.SimProcess;
@@ -59,7 +59,6 @@ public class MosaikSimulator extends Simulator {
     List<Model> models = new ArrayList<>();
 
     long stepSize;
-    Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
 
     if (simParams.containsKey("step_size")) {
       stepSize = (long) simParams.get("step_size");
@@ -83,20 +82,21 @@ public class MosaikSimulator extends Simulator {
 
       for (String model : modelTypes) {
         SimonaEntity simonaEntity = SimonaEntity.parseType(model);
-        simonaEntities.put(simonaEntity, false);
+        simonaEntities.put(simonaEntity, Boolean.FALSE);
         models.add(from(simonaEntity));
-
-        // setting up the em mode
-        switch (simonaEntity) {
-          case EM_COMMUNICATION ->
-              emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
-          case EM, EM_OPTIMIZER -> emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
-          default -> emMode = emMode;
-        }
       }
     } else {
       logger.warning(
           "No models provided! Valid models are: " + Arrays.toString(SimonaEntity.values()));
+    }
+
+    // setting up the em mode
+    Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
+
+    if (simonaEntities.containsKey(EM_COMMUNICATION)) {
+        emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
+    } else if (simonaEntities.containsKey(EM) || simonaEntities.containsKey(EM_OPTIMIZER)) {
+        emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
     }
 
     try {
@@ -186,7 +186,7 @@ public class MosaikSimulator extends Simulator {
           entities.add(entity);
         });
 
-    simonaEntities.put(modelType, true);
+    simonaEntities.put(modelType, Boolean.TRUE);
 
     if (entities.size() != num) {
       logger.warning(
