@@ -249,9 +249,6 @@ public class MosaikSimulator extends Simulator {
     } else {
       logger.info("[" + time + "] No inputs provided!");
       synchronizer.sendInputData(new ExtInputContainer(scaledTime, nextTick));
-
-      // setting the no input flag in the synchronizer for mosaik
-      synchronizer.setNoInputFlag();
     }
 
     // getting the next tick, could have changed since last request
@@ -305,6 +302,38 @@ public class MosaikSimulator extends Simulator {
       }
     }
 
+    // we have no data for the current tick
+    if (synchronizer.outputNextTick()) {
+      // to prevent sending this info twice
+      synchronizer.setHasSendNextTick();
+
+      long nextTick = synchronizer.getNextTick();
+
+      // we should output the next tick information for those entities, that are requesting this
+      // information
+      logger.info(
+          "["
+              + time
+              + "] Tick finished, sending only next tick information to mosaik. Next tick: "
+              + nextTick);
+
+      // we set the no output flag to true, since we need to return an empty map for mosaik to
+      // continue with the next tick
+      synchronizer.setNoOutputFlag();
+      return OutputUtils.onlyTickInformation(map, nextTick);
+    } else {
+
+      if (finished) {
+        // we will send an empty map, to signal mosaik, that this tick is finished
+        logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
+      } else {
+        logger.info("[" + time + "] Got no results from SIMONA!");
+      }
+
+      return Collections.emptyMap();
+    }
+
+    /*
     if (finished) {
       // we are finished for the current tick
       if (synchronizer.outputNextTick()) {
@@ -335,6 +364,7 @@ public class MosaikSimulator extends Simulator {
 
       return Collections.emptyMap();
     }
+     */
   }
 
   @Override

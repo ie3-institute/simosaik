@@ -185,58 +185,66 @@ public class MosaikSimulation extends ExtCoSimulation {
       if (extTick == tick && inputOption.isPresent()) {
         ExtInputContainer input = inputOption.get();
 
-        if (extPrimaryDataConnection != null && input.hasPrimaryData()) {
-          extPrimaryDataConnection.sendPrimaryData(
-              tick, input.extractPrimaryData(), input.getMaybeNextTick(), log);
-        }
+        if (input.isEmpty()) {
+          log.warn("Received no input data from Mosaik!");
+          sendAnyway = true;
 
-        if (extEmDataConnection != null && input.hasEmData()) {
-          // send received data to SIMONA
-          var requests = input.extractFlexRequests();
-          var options = input.extractFlexOptions();
-          var setPoints = input.extractSetPoints();
-          var emMessages = input.extractEmMessages();
+        } else {
 
-          boolean sentEmData = extEmDataConnection.sendEmData(tick, requests, options, setPoints);
-          boolean sentEmComData = extEmDataConnection.sendCommunicationMessage(tick, emMessages);
-
-          if (sentEmData || sentEmComData) {
-            log.info("Sending em messages: {}", emMessages);
-            log.info("Sending em data: {}, {}, {}", requests, options, setPoints);
-          } else {
-            log.info("Requesting a service completion for tick: {}.", tick);
-            extEmDataConnection.requestCompletion(tick, extTick);
+          if (extPrimaryDataConnection != null && input.hasPrimaryData()) {
+            extPrimaryDataConnection.sendPrimaryData(
+                tick, input.extractPrimaryData(), input.getMaybeNextTick(), log);
           }
 
-          EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
+          if (extEmDataConnection != null && input.hasEmData()) {
+            // send received data to SIMONA
+            var requests = input.extractFlexRequests();
+            var options = input.extractFlexOptions();
+            var setPoints = input.extractSetPoints();
+            var emMessages = input.extractEmMessages();
 
-          switch (received) {
-            case EmCompletion(Optional<Long> nextEmTick) -> {
-              if (nextEmTick.isPresent() && nextTick > nextEmTick.get()) {
-                maybeNextTick = nextEmTick;
-              }
+            boolean sentEmData = extEmDataConnection.sendEmData(tick, requests, options, setPoints);
+            boolean sentEmComData = extEmDataConnection.sendCommunicationMessage(tick, emMessages);
 
-              sendAnyway = true;
-
-              log.info(
-                  "Received completion for tick: {}. Next tick option: {}", tick, maybeNextTick);
+            if (sentEmData || sentEmComData) {
+              log.info("Sending em messages: {}", emMessages);
+              log.info("Sending em data: {}, {}, {}", requests, options, setPoints);
+            } else {
+              log.info("Requesting a service completion for tick: {}.", tick);
+              extEmDataConnection.requestCompletion(tick, extTick);
             }
-            case EmResultResponse(Map<UUID, List<EmData>> emResults) -> {
-              emDataFromSIMONA.putAll(emResults);
 
-              // log.info("Received em results: {}", emResults);
+            EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
 
-              if (emDataFromSIMONA.isEmpty()) {
+            switch (received) {
+              case EmCompletion(Optional<Long> nextEmTick) -> {
+                if (nextEmTick.isPresent() && nextTick > nextEmTick.get()) {
+                  maybeNextTick = nextEmTick;
+                  synchronizer.updateNextTickSIMONA(maybeNextTick);
+                }
+
                 sendAnyway = true;
+
+                log.info(
+                    "Received completion for tick: {}. Next tick option: {}", tick, maybeNextTick);
               }
+              case EmResultResponse(Map<UUID, List<EmData>> emResults) -> {
+                emDataFromSIMONA.putAll(emResults);
+
+                // log.info("Received em results: {}", emResults);
+
+                if (emDataFromSIMONA.isEmpty()) {
+                  sendAnyway = true;
+                }
+              }
+              case FlexOptionsResponse(Map<UUID, List<FlexOptions>> receiverToFlexOptions) ->
+                  receiverToFlexOptions.forEach(
+                      (receiver, data) ->
+                          emDataFromSIMONA
+                              .computeIfAbsent(receiver, k -> new ArrayList<>())
+                              .addAll(data));
+              default -> log.warn("Received unsupported data response: {}", received);
             }
-            case FlexOptionsResponse(Map<UUID, List<FlexOptions>> receiverToFlexOptions) ->
-                receiverToFlexOptions.forEach(
-                    (receiver, data) ->
-                        emDataFromSIMONA
-                            .computeIfAbsent(receiver, k -> new ArrayList<>())
-                            .addAll(data));
-            default -> log.warn("Received unsupported data response: {}", received);
           }
         }
       } else if (extTick > tick) {
@@ -293,6 +301,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       container.addEmData(emDataFromSIMONA);
 
       if (!container.isEmpty() || sendAnyway) {
+        log.warn("Sending output data.");
         queueToExt.queueData(container);
       }
     }

@@ -135,6 +135,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
     } else {
       simonaNextTick.set(maybeNextTick);
       hasNextTickChanged = true;
+      log.info("Next tick was changed to: {}", simonaNextTick.get());
     }
   }
 
@@ -295,6 +296,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       // clear all remaining results, since we received new input data
       queueToExt.clear();
 
+      if (inputData.isEmpty()) {
+        // setting the no input flag
+        noInputs = true;
+      }
+
       queueToSimona.queueData(inputData);
 
       return true;
@@ -350,6 +356,12 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   public boolean outputNextTick() {
     // we only output the next tick, if we can send outputs to mosaik and
     // if either the next tick has changed or if the next tick haven't been sent yet
+    log.info(
+        "Send not no outputs {} and has next tick changed {} or was next tick not sent {}?",
+        !noOutputs,
+        hasNextTickChanged,
+        !hasSendNextTick);
+
     return !noOutputs && (hasNextTickChanged || !hasSendNextTick);
   }
 
