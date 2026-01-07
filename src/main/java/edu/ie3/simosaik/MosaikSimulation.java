@@ -301,7 +301,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       container.addEmData(emDataFromSIMONA);
 
       if (!container.isEmpty() || sendAnyway) {
-        log.warn("Sending output data.");
+        log.debug("Sending output data.");
         queueToExt.queueData(container);
       }
     }
