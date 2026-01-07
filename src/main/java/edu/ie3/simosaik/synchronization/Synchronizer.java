@@ -12,6 +12,8 @@ import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
 import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,8 +39,8 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   // SIMONA fields
   private final AtomicLong simonaTick = new AtomicLong(-1);
-  private final AtomicReference<Optional<Long>> simonaNextTick =
-      new AtomicReference<>(Optional.empty());
+  private final AtomicReference<SortedSet<Long>> simonaNextTicks =
+      new AtomicReference<>(new TreeSet<>());
   private long stepSizeSIMONA = 0L;
   private boolean hasNextTickChanged;
   private boolean isFinished = false;
@@ -77,6 +79,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
     // set new SIMONA tick
     simonaTick.set(tick);
+
+    SortedSet<Long> sortedSet = simonaNextTicks.get();
+    while (sortedSet.getFirst() <= tick) {
+      sortedSet.removeFirst();
+    }
 
     // get simosaik lock
     while (!simosaikLock.tryLock()) {
@@ -127,15 +134,15 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   }
 
   @Override
-  public void updateNextTickSIMONA(Optional<Long> maybeNextTick) {
-    Optional<Long> oldValue = simonaNextTick.get();
+  public void updateNextTickSIMONA(long nextTick) {
+    SortedSet<Long> sortedSet = simonaNextTicks.get();
 
-    if (oldValue == maybeNextTick) {
-      hasNextTickChanged = false;
-    } else {
-      simonaNextTick.set(maybeNextTick);
+    if (sortedSet.isEmpty() || sortedSet.getFirst() != nextTick) {
+      sortedSet.add(nextTick);
       hasNextTickChanged = true;
-      log.info("Next tick was changed to: {}", simonaNextTick.get());
+      log.info("Next tick was added: {}", nextTick);
+    } else {
+      hasNextTickChanged = false;
     }
   }
 
@@ -332,24 +339,20 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   @Override
   public long getNextTick() {
-    Optional<Long> maybeNextTick = simonaNextTick.get();
+    SortedSet<Long> sortedSet = simonaNextTicks.get();
 
-    if (maybeNextTick.isPresent()) {
-      long tick = maybeNextTick.get();
+    long tick = sortedSet.getFirst();
+    log.warn("Set: {}", sortedSet);
 
-      if (tick == scaledMosaikTick.get()) {
-          log.debug("getNextTick() -> _nextMosaikTick={}", mosaikTick);
-        return nextMosaikTick;
-      } else {
-        long t = (long) (tick / mosaikTimeScaling);
-          log.debug("getNextTick() -> tick={}", t);
+    if (tick == scaledMosaikTick.get()) {
+      log.warn("getNextTick() -> _nextMosaikTick={}", mosaikTick);
+      return nextMosaikTick;
+    } else {
+      long t = (long) (tick / mosaikTimeScaling);
+      log.warn("getNextTick() -> tick={}", t);
 
-        return t;
-      }
+      return t;
     }
-
-      log.debug("getNextTick() -> nextMosaikTick={}", mosaikTick);
-    return nextMosaikTick;
   }
 
   @Override

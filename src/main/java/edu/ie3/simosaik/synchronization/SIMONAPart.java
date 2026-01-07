@@ -30,9 +30,18 @@ public sealed interface SIMONAPart permits Synchronizer {
   /**
    * Method for updating the next tick, SIMONA expects data.
    *
+   * @param nextTick the next SIMONA tick
+   */
+  void updateNextTickSIMONA(long nextTick);
+
+  /**
+   * Method for updating the next tick, SIMONA expects data.
+   *
    * @param maybeNextTick an option for the next SIMONA tick
    */
-  void updateNextTickSIMONA(Optional<Long> maybeNextTick);
+  default void updateNextTickSIMONA(Optional<Long> maybeNextTick) {
+    maybeNextTick.ifPresent(this::updateNextTickSIMONA);
+  }
 
   // getter methods
 

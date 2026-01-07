@@ -142,7 +142,11 @@ public class MosaikSimulation extends ExtCoSimulation {
 
     try {
       long nextTick = tick + stepSize;
-      synchronizer.updateNextTickSIMONA(Optional.empty());
+
+      if (tick % stepSize == 0) {
+        synchronizer.updateNextTickSIMONA(nextTick);
+      }
+
       synchronizer.updateTickSIMONA(tick);
 
       // clearing all previous data to prevent the usage of outdated data
@@ -218,8 +222,11 @@ public class MosaikSimulation extends ExtCoSimulation {
 
             switch (received) {
               case EmCompletion(Optional<Long> nextEmTick) -> {
-                if (nextEmTick.isPresent() && nextTick > nextEmTick.get()) {
-                  maybeNextTick = nextEmTick;
+                if (nextEmTick.isPresent()) {
+                  if (nextEmTick.get() < nextTick) {
+                    maybeNextTick = nextEmTick;
+                  }
+
                   synchronizer.updateNextTickSIMONA(maybeNextTick);
                 }
 
