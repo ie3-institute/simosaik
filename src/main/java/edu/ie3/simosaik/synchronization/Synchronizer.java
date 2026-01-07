@@ -338,17 +338,17 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       long tick = maybeNextTick.get();
 
       if (tick == scaledMosaikTick.get()) {
-        System.out.println("getNextTick() -> _nextMosaikTick=" + mosaikTick);
+          log.debug("getNextTick() -> _nextMosaikTick={}", mosaikTick);
         return nextMosaikTick;
       } else {
         long t = (long) (tick / mosaikTimeScaling);
-        System.out.println("getNextTick() -> tick=" + t);
+          log.debug("getNextTick() -> tick={}", t);
 
         return t;
       }
     }
 
-    System.out.println("getNextTick() -> nextMosaikTick=" + mosaikTick);
+      log.debug("getNextTick() -> nextMosaikTick={}", mosaikTick);
     return nextMosaikTick;
   }
 
@@ -356,12 +356,6 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   public boolean outputNextTick() {
     // we only output the next tick, if we can send outputs to mosaik and
     // if either the next tick has changed or if the next tick haven't been sent yet
-    log.info(
-        "Send not no outputs {} and has next tick changed {} or was next tick not sent {}?",
-        !noOutputs,
-        hasNextTickChanged,
-        !hasSendNextTick);
-
     return !noOutputs && (hasNextTickChanged || !hasSendNextTick);
   }
 
