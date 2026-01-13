@@ -34,6 +34,8 @@ public class MosaikSimulator extends Simulator {
   private ExtEntityMapping mapping;
   private final Map<String, ColumnScheme> primaryType = new HashMap<>();
 
+  private Optional<ExtOutputContainer> resultOption = Optional.empty();
+
   private long time;
   private final MosaikPart synchronizer;
   private final Runnable stopper;
@@ -226,16 +228,16 @@ public class MosaikSimulator extends Simulator {
     long scaledTime = synchronizer.updateMosaikTime(time);
 
     // the next tick we will expect data
-    long nextTick = synchronizer.getNextTick();
+    //long nextTick = synchronizer.getNextTick();
 
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
     // log the expected next tick
-    logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
+    // logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
     if (!inputs.isEmpty()) {
       ExtInputContainer extDataForSimona =
-          InputUtils.createInput(scaledTime, nextTick, mapping, inputs, primaryType);
+          InputUtils.createInput(scaledTime, mapping, inputs, primaryType);
 
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
 
@@ -248,11 +250,14 @@ public class MosaikSimulator extends Simulator {
       }
     } else {
       logger.info("[" + time + "] No inputs provided!");
-      synchronizer.sendInputData(new ExtInputContainer(scaledTime, nextTick));
+      synchronizer.sendInputData(new ExtInputContainer(scaledTime));
     }
 
+    // we need to wait until the results are there
+    resultOption = synchronizer.requestResults();
+
     // getting the next tick, could have changed since last request
-    nextTick = synchronizer.getNextTick();
+    long nextTick = synchronizer.getNextTick();
     logger.info("[" + time + "] Next tick: " + nextTick);
     return nextTick;
   }
@@ -262,26 +267,24 @@ public class MosaikSimulator extends Simulator {
     // requesting results from SIMONA
     // we will either get result for the current tick or no results, because SIMONA finished the
     // current tick
-    Optional<ExtOutputContainer> resultOption = synchronizer.requestResults();
 
     boolean finished = synchronizer.isFinished();
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
 
     if (finished) {
-      Optional<ExtOutputContainer> additionalResults = synchronizer.requestResults();
+        Optional<ExtOutputContainer> additionalResults = synchronizer.requestResults();
 
-      if (resultOption.isEmpty()) {
-        resultOption = additionalResults;
-      } else if (additionalResults.isPresent()) {
-        ExtOutputContainer additionalResult = additionalResults.get();
+        if (resultOption.isEmpty()) {
+            resultOption = additionalResults;
+        } else {
+            additionalResults.ifPresent(additionalResult -> resultOption.ifPresent(
+                    c -> {
+                        c.addResults(additionalResult.getResults());
+                        c.addEmData(additionalResult.getEmData());
+                    }));
 
-        resultOption.ifPresent(
-            c -> {
-              c.addResults(additionalResult.getResults());
-              c.addEmData(additionalResult.getEmData());
-            });
-      }
+        }
     }
 
     if (resultOption.isPresent()) {
