@@ -228,7 +228,7 @@ public class MosaikSimulator extends Simulator {
     long scaledTime = synchronizer.updateMosaikTime(time);
 
     // the next tick we will expect data
-    //long nextTick = synchronizer.getNextTick();
+    // long nextTick = synchronizer.getNextTick();
 
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
@@ -273,18 +273,19 @@ public class MosaikSimulator extends Simulator {
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
 
     if (finished) {
-        Optional<ExtOutputContainer> additionalResults = synchronizer.requestResults();
+      Optional<ExtOutputContainer> additionalResults = synchronizer.requestResults();
 
-        if (resultOption.isEmpty()) {
-            resultOption = additionalResults;
-        } else {
-            additionalResults.ifPresent(additionalResult -> resultOption.ifPresent(
+      if (resultOption.isEmpty()) {
+        resultOption = additionalResults;
+      } else {
+        additionalResults.ifPresent(
+            additionalResult ->
+                resultOption.ifPresent(
                     c -> {
-                        c.addResults(additionalResult.getResults());
-                        c.addEmData(additionalResult.getEmData());
+                      c.addResults(additionalResult.getResults());
+                      c.addEmData(additionalResult.getEmData());
                     }));
-
-        }
+      }
     }
 
     if (resultOption.isPresent()) {

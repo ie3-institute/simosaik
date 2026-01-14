@@ -26,33 +26,33 @@ import tech.units.indriya.quantity.Quantities;
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
-    @SuppressWarnings("unchecked")
-    public static ExtInputContainer createInput(
-            long tick,
-            ExtEntityMapping mapping,
-            Map<String, Object> inputData,
-            Map<String, ColumnScheme> primaryType) {
-        ExtInputContainer container = new ExtInputContainer(tick);
+  @SuppressWarnings("unchecked")
+  public static ExtInputContainer createInput(
+      long tick,
+      ExtEntityMapping mapping,
+      Map<String, Object> inputData,
+      Map<String, ColumnScheme> primaryType) {
+    ExtInputContainer container = new ExtInputContainer(tick);
 
-        // handling the input data
-        for (Map.Entry<String, Object> entry : inputData.entrySet()) {
-            String receiverId = entry.getKey();
-            UUID receiver = mapping.from(receiverId);
+    // handling the input data
+    for (Map.Entry<String, Object> entry : inputData.entrySet()) {
+      String receiverId = entry.getKey();
+      UUID receiver = mapping.from(receiverId);
 
-            Map<String, Object> attrToData = (Map<String, Object>) entry.getValue();
+      Map<String, Object> attrToData = (Map<String, Object>) entry.getValue();
 
-            // handling primary input data
-            if (primaryType.containsKey(receiverId)) {
-                handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
-                log.debug("Primary data: {}", container.primaryDataString());
-            } else {
-                // handling of flex/em data
-                handleFlexData(container, mapping, receiver, attrToData);
-            }
-        }
-
-        return container;
+      // handling primary input data
+      if (primaryType.containsKey(receiverId)) {
+        handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
+        log.debug("Primary data: {}", container.primaryDataString());
+      } else {
+        // handling of flex/em data
+        handleFlexData(container, mapping, receiver, attrToData);
+      }
     }
+
+    return container;
+  }
 
   @SuppressWarnings("unchecked")
   public static ExtInputContainer createInput(
