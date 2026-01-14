@@ -257,9 +257,12 @@ public class MosaikSimulation extends ExtCoSimulation {
       } else if (extTick > tick) {
         log.warn("Received inputs for next tick: {}", extTick);
 
+        // maybe unnecessary
+        synchronizer.updateNextTickSIMONA(extTick);
+
         if (extEmDataConnection != null) {
           log.info("External simulator finished tick {}. Request completion.", tick);
-          extEmDataConnection.sendExtMsg(new RequestEmCompletion(tick, Optional.of(nextTick)));
+          extEmDataConnection.sendExtMsg(new RequestEmCompletion(tick, Optional.of(extTick)));
 
           // used to empty the queue
           EmDataResponseMessageToExt msg = extEmDataConnection.receiveAny();
