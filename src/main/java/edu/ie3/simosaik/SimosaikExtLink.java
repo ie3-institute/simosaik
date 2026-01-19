@@ -31,7 +31,7 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // initial mapping from grid container
     ExtEntityMapping mapping = new ExtEntityMapping(data.gridContainer());
 
-    // for synchronising both simulations
+    // for synchronizing both simulations
     Synchronizer synchronizer = new Synchronizer();
 
     // creating and starting the simulator
