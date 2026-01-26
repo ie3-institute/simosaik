@@ -13,10 +13,12 @@ import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import edu.ie3.util.interval.ClosedInterval;
 import java.util.*;
 import java.util.function.BiFunction;
 import javax.measure.Quantity;
 import javax.measure.Unit;
+import javax.measure.quantity.Energy;
 import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,7 +157,7 @@ public final class InputUtils {
           disaggregated.put(dSender, parseFlexOptions(mapping, dReceiver, dSender, dValue));
         });
 
-    if (containsAny(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
+    if (containsAll(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
       // we have a power limit flex option
       return new PowerLimitFlexOptions(
           receiver,
@@ -164,6 +166,34 @@ public final class InputUtils {
           extractQuantity(value, FLEX_OPTION_P_MIN),
           extractQuantity(value, FLEX_OPTION_P_MAX),
           disaggregated);
+    } else if (containsAll(
+        value, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX, ETA_CHARGE, ETA_DISCHARGE)) {
+      // we have energy boundaries flex options
+      Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits = new HashMap<>();
+
+      Map<String, Object> tickToEnergy =
+          extract(value, "tickToEnergyLimits", Collections.emptyMap());
+      tickToEnergy.forEach(
+          (tickStr, dict) -> {
+            long tick = Long.parseLong(tickStr);
+
+            ComparableQuantity<Energy> l = extractQuantity(dict, LOWER_ENERGY_LIMIT);
+            ComparableQuantity<Energy> u = extractQuantity(dict, UPPER_ENERGY_LIMIT);
+
+            tickToEnergyLimits.put(tick, new ClosedInterval<>(l, u));
+          });
+
+      return new EnergyBoundariesFlexOptions(
+          receiver,
+          sender,
+          extract(value, "flexType", "-"),
+          extractQuantity(value, FLEX_OPTION_P_MIN),
+          extractQuantity(value, FLEX_OPTION_P_MAX),
+          extractQuantity(value, ETA_CHARGE),
+          extractQuantity(value, ETA_DISCHARGE),
+          tickToEnergyLimits,
+          disaggregated);
+
     } else {
       // can't specify the type of flex option
       // /returning only disaggregated flex options

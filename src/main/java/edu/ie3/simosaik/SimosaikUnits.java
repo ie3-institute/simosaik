@@ -13,6 +13,7 @@ import edu.ie3.simosaik.exceptions.ConversionException;
 import java.util.List;
 import javax.measure.Quantity;
 import javax.measure.Unit;
+import tech.units.indriya.unit.Units;
 
 public final class SimosaikUnits {
 
@@ -45,9 +46,10 @@ public final class SimosaikUnits {
   public static final String FLEX_OPTION_P_REF = "PRef[MW]";
   public static final String FLEX_OPTION_P_MAX = "PMax[MW]";
 
-  public static final String FLEX_OPTION_MAP_P_MIN = "idToPMin[MW]";
-  public static final String FLEX_OPTION_MAP_P_REF = "idToPRef[MW]";
-  public static final String FLEX_OPTION_MAP_P_MAX = "idToPMax[MW]";
+  public static final String ETA_CHARGE = "EtaCharge[%]";
+  public static final String ETA_DISCHARGE = "EtaDischarge[%]";
+  public static final String LOWER_ENERGY_LIMIT = "LowerEnergyLimit[MWh]";
+  public static final String UPPER_ENERGY_LIMIT = "UpperEnergyLimit[MWh]";
 
   public static final List<String> ALL_RESULTS_UNITS =
       List.of(
@@ -65,18 +67,13 @@ public final class SimosaikUnits {
   @SuppressWarnings("unchecked")
   public static <Q extends Quantity<Q>> Unit<Q> getPSDMUnit(String mosaikUnit) {
     return switch (mosaikUnit) {
-      case ACTIVE_POWER,
-              THERMAL_POWER,
-              FLEX_OPTION_P_MIN,
-              FLEX_OPTION_P_REF,
-              FLEX_OPTION_P_MAX,
-              FLEX_OPTION_MAP_P_MIN,
-              FLEX_OPTION_MAP_P_REF,
-              FLEX_OPTION_MAP_P_MAX ->
+      case ACTIVE_POWER, THERMAL_POWER, FLEX_OPTION_P_MIN, FLEX_OPTION_P_REF, FLEX_OPTION_P_MAX ->
           (Unit<Q>) ACTIVE_POWER_IN.multiply(1000);
       case REACTIVE_POWER -> (Unit<Q>) REACTIVE_POWER_IN.multiply(1000);
       case VOLTAGE_MAG -> (Unit<Q>) VOLTAGE_MAGNITUDE;
       case SOC -> (Unit<Q>) StandardUnits.SOC;
+      case ETA_CHARGE, ETA_DISCHARGE -> (Unit<Q>) Units.PERCENT;
+      case LOWER_ENERGY_LIMIT, UPPER_ENERGY_LIMIT -> (Unit<Q>) StandardUnits.ENERGY_RESULT;
       default ->
           throw new ConversionException("Cannot find psdm unit for mosaik unit: " + mosaikUnit);
     };

@@ -136,34 +136,71 @@ Option 2: {
     PMin[MW]: float,
     PRef[MW]: float,
     PMax[MW]: float, 
-    disaggregated: sender to flex option dict
+    disaggregated: { sender: str, flex option dict }
 }
 
 Option 3: {
     sender: str,
-    disaggregated: sender to flex option dict
+    disaggregated: { sender: str, flex option dict }
 }
 
-# eta is given in %, lowerEnergy and upperEnergy is given in MWh
 Option 4: {
     sender: str,
     flexType: str,
     PMin[MW]: float,
     PMax[MW]: float, 
-    etaCharge: float,
-    etaDischarge: float,
-    tickToEnergyLimits: { tick: long, lowerEnergy: float, upperEnergy: float }
-    disaggregated: sender to flex option dict
+    EtaCharge[%]: float,
+    EtaDischarge[%]: float,
+    tickToEnergyLimits: {
+        tick: long,
+        {
+            LowerEnergyLimit[MWh]: float,
+            UpperEnergyLimit[MWh]: float
+        }
+    ]
+    disaggregated: {
+        sender: str,
+        flex option dict 
+    }
 }
 ```
 
 **Set point dict:** <br>
 There are multiple options for the values of the set point dictionary.
 ```python 
-Option 1: { P[MW]: float, Q[MVAr]: float }
-Option 2: { P[MW]: float }
-Option 3: { Q[MVAr]: float }
-Option 4: { P[MW]: float, disaggregated: sender to set point dict }
-Option 5: { Q[MVAr]: float, disaggregated: sender to set point dict }
-Option 6: { disaggregated: receiver to set point dict }
+Option 1: {
+    P[MW]: float,
+    Q[MVAr]: float
+}
+    
+Option 2: {
+    P[MW]: float
+}
+
+Option 3: {
+    Q[MVAr]: float
+}
+
+Option 4: {
+    P[MW]: float,
+    disaggregated: {
+        receiver: str,
+        set point dict
+    }
+}
+
+Option 5: {
+    Q[MVAr]: float,
+    disaggregated: {
+        receiver : str,
+        set point dict
+    }
+}
+
+Option 6: {
+    disaggregated: {
+        receiver: str,
+        set point dict
+    }
+}
 ```
