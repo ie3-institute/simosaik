@@ -67,15 +67,22 @@ by mosaik. An overview of all available attributes with their units and values c
 
 ## Creating mosaik entities
 
-To create mosaik entities from the SIMONA model, you need to pass two arguments:
+To create mosaik entities from the SIMONA model, you need to pass the number of entities to create.
+
 ```
-simonaActivePowerEntities = simonaSimulation.ActivePower.create(2, mapping=active_power_mapping)
+simonaActivePowerEntities = simonaSimulation.ActivePower.create(2)
 ```
 
-The first is the number of entities, you want to create. The second argument is the mapping, that will be used by simosaik.
-The mapping contains a SIMONA `Universally Unique Identifier` (`UUID`), that is mapped to a mosaik `eid`. The given `eids`
-are used to identify the entities in mosaik, while the `UUIDs` are used by simosaik to route the data to the correct model
-in SIMONA.
+SIMONA will use the mapping from `Universally Unique Identifier` (`UUID`) to `id` that is present in the SIMONA input data.
+To override this mapping or to specify, which SIMONA models will exchange data with mosaik, you can add the `use` parameter:
+
+```
+simonaActivePowerEntities = simonaSimulation.ActivePower.create(2, use=active_power_mapping)
+```
+
+The `use` parameter takes either a list of mosaik `eid` that have to match the ids in the SIMONA input files or a mapping
+from SIMONA `Universally Unique Identifier` (`UUID`) to mosaik `eid`. With the second option, you can map your own id to
+a SIMONA `UUID`.
 
 An example for a mapping:
 ```

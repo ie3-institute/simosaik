@@ -13,7 +13,6 @@ gettingstarted
 usersguide
 models
 attributes
-dataexchange
 ```
 
 ## Contact the (Main) Maintainers
