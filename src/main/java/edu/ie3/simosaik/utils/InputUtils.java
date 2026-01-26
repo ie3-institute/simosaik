@@ -54,35 +54,6 @@ public final class InputUtils {
     return container;
   }
 
-  @SuppressWarnings("unchecked")
-  public static ExtInputContainer createInput(
-      long tick,
-      long nexTick,
-      ExtEntityMapping mapping,
-      Map<String, Object> inputData,
-      Map<String, ColumnScheme> primaryType) {
-    ExtInputContainer container = new ExtInputContainer(tick, nexTick);
-
-    // handling the input data
-    for (Map.Entry<String, Object> entry : inputData.entrySet()) {
-      String receiverId = entry.getKey();
-      UUID receiver = mapping.from(receiverId);
-
-      Map<String, Object> attrToData = (Map<String, Object>) entry.getValue();
-
-      // handling primary input data
-      if (primaryType.containsKey(receiverId)) {
-        handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
-        log.debug("Primary data: {}", container.primaryDataString());
-      } else {
-        // handling of flex/em data
-        handleFlexData(container, mapping, receiver, attrToData);
-      }
-    }
-
-    return container;
-  }
-
   private static void handlePrimaryData(
       ExtInputContainer container,
       UUID receiver,
@@ -164,15 +135,40 @@ public final class InputUtils {
     };
   }
 
-  private static EmData parseFlexOptions(ExtEntityMapping mapping, UUID receiver, Object value) {
-    UUID sender = mapping.get(extract(value, "model", "")).orElse(receiver);
+  private static FlexOptions parseFlexOptions(
+      ExtEntityMapping mapping, UUID receiver, Object value) {
+    UUID sender = mapping.get(extract(value, "sender", "")).orElse(receiver);
+    return parseFlexOptions(mapping, receiver, sender, value);
+  }
 
-    return new PowerLimitFlexOptions(
-        receiver,
-        sender,
-        extractQuantity(value, FLEX_OPTION_P_REF),
-        extractQuantity(value, FLEX_OPTION_P_MIN),
-        extractQuantity(value, FLEX_OPTION_P_MAX));
+  private static FlexOptions parseFlexOptions(
+      ExtEntityMapping mapping, UUID receiver, UUID sender, Object value) {
+    Map<UUID, FlexOptions> disaggregated = new HashMap<>();
+
+    Map<String, Object> disaggregatedAttrToData =
+        extract(value, "disaggregated", Collections.emptyMap());
+
+    disaggregatedAttrToData.forEach(
+        (dSenderId, dValue) -> {
+          UUID dSender = mapping.from(dSenderId);
+          UUID dReceiver = mapping.get(extract(value, "receiver", "")).orElse(receiver);
+          disaggregated.put(dSender, parseFlexOptions(mapping, dReceiver, dSender, dValue));
+        });
+
+    if (containsAny(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
+      // we have a power limit flex option
+      return new PowerLimitFlexOptions(
+          receiver,
+          sender,
+          extractQuantity(value, FLEX_OPTION_P_REF),
+          extractQuantity(value, FLEX_OPTION_P_MIN),
+          extractQuantity(value, FLEX_OPTION_P_MAX),
+          disaggregated);
+    } else {
+      // can't specify the type of flex option
+      // /returning only disaggregated flex options
+      return new MultiFlexOptions(receiver, disaggregated);
+    }
   }
 
   private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
@@ -243,6 +239,29 @@ public final class InputUtils {
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  @SuppressWarnings("unchecked")
+  private static boolean containsAll(Object obj, String... fields) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return ((Map<String, ?>) map).keySet().containsAll(List.of(fields));
+      } catch (Exception e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsAny(Object obj, String... fields) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return Arrays.stream(fields).anyMatch(map::containsKey);
+      } catch (Exception e) {
+        return false;
+      }
+    }
+    return false;
+  }
 
   @SuppressWarnings("unchecked")
   private static <V> V extract(Object obj, String field, V defaultValue) {
