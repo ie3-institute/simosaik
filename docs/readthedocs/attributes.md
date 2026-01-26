@@ -107,7 +107,7 @@ The structure of these can be found [here](#energy-management-flex-dictionaries)
 ### Energy management flex dictionaries
 
 Below are the structures of all types of dictionaries used for the energy management attributes. For each dictionary the
-keys with their corresponding value type is given. Each dictionary needs to contain a `sender`, which is the mosaik `id`.
+keys with their corresponding value type is given.
 
 **Flex request dict:** <br>
 There are multiple options for the values of the flex request dictionary.
@@ -133,13 +133,25 @@ Option 2: {
     PMax[MW]: float, 
     disaggregated: sender to flex option dict
 }
+
+Option 3: {
+    sender: str,
+    disaggregated: sender to flex option dict
+}
 ```
 
 **Set point dict:** <br>
 There are multiple options for the values of the set point dictionary.
 ```python 
 Option 1: { P[MW]: float, Q[MVAr]: float }
+
 Option 2: { P[MW]: float }
+
 Option 3: { Q[MVAr]: float }
-Option 4: { P[MW]: float, Q[MVAr]: float, disaggregated: sender to set point dict }
+
+Option 4: { P[MW]: float, disaggregated: sender to set point dict }
+
+Option 5: { Q[MVAr]: float, disaggregated: sender to set point dict }
+
+Option 6: { disaggregated: sender to set point dict }
 ```
