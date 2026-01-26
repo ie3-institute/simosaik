@@ -296,7 +296,18 @@ public final class OutputUtils {
         res.put("eta_charge", toPercent(etaCharge));
         res.put("eta_discharge", toPercent(etaDischarge));
 
-        log.warn("Tick to energy limits is currently not supported.");
+        Map<Long, Map<String, Object>> tickToEnergy = new HashMap<>();
+        res.put("tickToEnergyLimits", tickToEnergy);
+
+        tickToEnergyLimits.forEach(
+            (tick, interval) ->
+                tickToEnergy.put(
+                    tick,
+                    Map.of(
+                        "LowerEnergyLimit[MWh]",
+                        toEnergy(interval.getLower()),
+                        "UpperEnergyLimit[MWh]",
+                        toEnergy(interval.getUpper()))));
       }
 
       default -> log.warn("Result of type '{}' is currently not supported.", options);
@@ -364,12 +375,6 @@ public final class OutputUtils {
 
       if (attrs.contains(FLEX_OPTION_P_MAX)) data.put(FLEX_OPTION_P_MAX, pMax);
 
-      if (attrs.contains(FLEX_OPTION_MAP_P_MIN)) data.put(FLEX_OPTION_MAP_P_MIN, connectedPmin);
-
-      if (attrs.contains(FLEX_OPTION_MAP_P_REF)) data.put(FLEX_OPTION_MAP_P_REF, connectedPref);
-
-      if (attrs.contains(FLEX_OPTION_MAP_P_MAX)) data.put(FLEX_OPTION_MAP_P_MAX, connectedPmax);
-
       return data;
     }
   }
@@ -399,6 +404,10 @@ public final class OutputUtils {
 
   public static double toReactive(ComparableQuantity<Power> c) {
     return c.to(MEGAVAR).getValue().doubleValue();
+  }
+
+  public static double toEnergy(ComparableQuantity<Energy> c) {
+    return c.to(MEGAWATTHOUR).getValue().doubleValue();
   }
 
   public static double toPu(ComparableQuantity<Dimensionless> c) {
