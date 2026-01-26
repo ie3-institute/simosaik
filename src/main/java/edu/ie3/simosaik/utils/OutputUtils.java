@@ -72,7 +72,7 @@ public final class OutputUtils {
       List<ResultEntity> results = container.getResult(asset);
       List<EmData> emData = container.getEmData(asset);
 
-      // log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
+      log.debug("{} ({}): {}, {}", externalEntity, asset, results, emData);
 
       if (!results.isEmpty() || !emData.isEmpty()) {
         Map<String, Object> data = new HashMap<>();
