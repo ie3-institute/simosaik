@@ -31,6 +31,11 @@ These attribute can be used for input and output models.
   - P_th[MW]
   - float
   - Thermal power in MW
+  
+* - Energy
+  - E[MWh]
+  - float
+  - Energy in MWh.
 ```
 
 ## Result attributes
@@ -131,27 +136,71 @@ Option 2: {
     PMin[MW]: float,
     PRef[MW]: float,
     PMax[MW]: float, 
-    disaggregated: sender to flex option dict
+    disaggregated: { sender: str, flex option dict }
 }
 
 Option 3: {
     sender: str,
-    disaggregated: sender to flex option dict
+    disaggregated: { sender: str, flex option dict }
+}
+
+Option 4: {
+    sender: str,
+    flexType: str,
+    PMin[MW]: float,
+    PMax[MW]: float, 
+    EtaCharge[%]: float,
+    EtaDischarge[%]: float,
+    tickToEnergyLimits: {
+        tick: long,
+        {
+            LowerEnergyLimit[MWh]: float,
+            UpperEnergyLimit[MWh]: float
+        }
+    ]
+    disaggregated: {
+        sender: str,
+        flex option dict 
+    }
 }
 ```
 
 **Set point dict:** <br>
 There are multiple options for the values of the set point dictionary.
 ```python 
-Option 1: { P[MW]: float, Q[MVAr]: float }
+Option 1: {
+    P[MW]: float,
+    Q[MVAr]: float
+}
+    
+Option 2: {
+    P[MW]: float
+}
 
-Option 2: { P[MW]: float }
+Option 3: {
+    Q[MVAr]: float
+}
 
-Option 3: { Q[MVAr]: float }
+Option 4: {
+    P[MW]: float,
+    disaggregated: {
+        receiver: str,
+        set point dict
+    }
+}
 
-Option 4: { P[MW]: float, disaggregated: sender to set point dict }
+Option 5: {
+    Q[MVAr]: float,
+    disaggregated: {
+        receiver : str,
+        set point dict
+    }
+}
 
-Option 5: { Q[MVAr]: float, disaggregated: sender to set point dict }
-
-Option 6: { disaggregated: sender to set point dict }
+Option 6: {
+    disaggregated: {
+        receiver: str,
+        set point dict
+    }
+}
 ```
