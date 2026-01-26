@@ -11,6 +11,7 @@ import static edu.ie3.util.quantities.PowerSystemUnits.*;
 import static tech.units.indriya.unit.Units.AMPERE;
 import static tech.units.indriya.unit.Units.RADIAN;
 
+import edu.ie3.datamodel.models.result.CongestionResult;
 import edu.ie3.datamodel.models.result.NodeResult;
 import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.connector.ConnectorResult;
@@ -58,7 +59,7 @@ public final class OutputUtils {
       Map<String, List<String>> requestedAttributes,
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
-    log.warn("Result container: {}", container.getResults());
+    log.debug("Result container: {}", container.getResults());
 
     Map<String, Object> output = new HashMap<>();
 
@@ -70,8 +71,6 @@ public final class OutputUtils {
 
       List<ResultEntity> results = container.getResult(asset);
       List<EmData> emData = container.getEmData(asset);
-
-      log.info("{} ({}): {}, {}", externalEntity, asset, results, emData);
 
       if (!results.isEmpty() || !emData.isEmpty()) {
         Map<String, Object> data = new HashMap<>();
@@ -100,11 +99,9 @@ public final class OutputUtils {
         }
 
       } else {
-        log.warn("No results or em data found for asset {}.", externalEntity);
+        log.debug("No results or em data found for asset {}.", externalEntity);
       }
     }
-
-    log.warn("Output: {}", output);
 
     return output;
   }
@@ -129,6 +126,21 @@ public final class OutputUtils {
         yield data;
       }
       case ConnectorResult connector -> handleConnectorResult(connector, attrs);
+
+      case CongestionResult congestion -> {
+        Map<String, Object> data = new HashMap<>();
+
+        if (attrs.contains(CONGESTION)) {
+          data.put("model", mapping.from(congestion.getInputModel()));
+          data.put("subgrid", congestion.getSubgrid());
+          data.put("type", congestion.getType().type);
+          data.put("value", toPercent(congestion.getValue()));
+          data.put("min", toPercent(congestion.getMin()));
+          data.put("max", toPercent(congestion.getMax()));
+        }
+
+        yield Map.of(CONGESTION, data);
+      }
 
       case null, default -> {
         if (result != null) {
@@ -223,7 +235,7 @@ public final class OutputUtils {
         Map<String, Object> data = new HashMap<>();
         data.put("receiver", mapping.from(receiver));
         data.put("sender", mapping.from(sender));
-        data.put("msgId", msgId.toString());
+        data.put("msg_id", msgId.toString());
 
         // handle content
         ProcessedEmData processedContent = handleEmData(content, mapping);
@@ -364,16 +376,16 @@ public final class OutputUtils {
   public static Map<String, Double> fromPValue(PValue pValue) {
     Map<String, Double> data = new HashMap<>();
 
-    pValue.getP().ifPresent(p -> data.put("p", toActive(p)));
+    pValue.getP().ifPresent(p -> data.put(ACTIVE_POWER, toActive(p)));
 
     if (pValue instanceof SValue sValue) {
-      sValue.getQ().ifPresent(q -> data.put("q", toReactive(q)));
+      sValue.getQ().ifPresent(q -> data.put(REACTIVE_POWER, toReactive(q)));
     }
 
     if (pValue instanceof HeatAndPValue hValue) {
-      hValue.getHeatDemand().ifPresent(h -> data.put("h", toActive(h)));
+      hValue.getHeatDemand().ifPresent(h -> data.put(THERMAL_POWER, toActive(h)));
     } else if (pValue instanceof HeatAndSValue hValue) {
-      hValue.getHeatDemand().ifPresent(h -> data.put("h", toActive(h)));
+      hValue.getHeatDemand().ifPresent(h -> data.put(THERMAL_POWER, toActive(h)));
     }
 
     return data;

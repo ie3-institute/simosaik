@@ -6,6 +6,7 @@
 
 package edu.ie3.simosaik;
 
+import static edu.ie3.simosaik.SimonaEntity.*;
 import static edu.ie3.simosaik.utils.MetaUtils.*;
 
 import de.offis.mosaik.api.SimProcess;
@@ -32,20 +33,23 @@ public class MosaikSimulator extends Simulator {
 
   private ExtEntityMapping mapping;
   private final Map<String, ColumnScheme> primaryType = new HashMap<>();
-  private final Map<String, Object> cache = new HashMap<>();
+
+  private Optional<ExtOutputContainer> resultOption = Optional.empty();
 
   private long time;
-
   private final MosaikPart synchronizer;
+  private final Runnable stopper;
 
-  public MosaikSimulator(MosaikPart synchronizer, ExtEntityMapping mapping) {
-    this("MosaikSimulator", synchronizer, mapping);
+  public MosaikSimulator(MosaikPart synchronizer, ExtEntityMapping mapping, Runnable stopper) {
+    this("MosaikSimulator", synchronizer, mapping, stopper);
   }
 
-  public MosaikSimulator(String name, MosaikPart synchronizer, ExtEntityMapping mapping) {
+  public MosaikSimulator(
+      String name, MosaikPart synchronizer, ExtEntityMapping mapping, Runnable stopper) {
     super(name);
     this.synchronizer = synchronizer;
     this.mapping = mapping;
+    this.stopper = stopper;
   }
 
   @Override
@@ -57,7 +61,6 @@ public class MosaikSimulator extends Simulator {
     List<Model> models = new ArrayList<>();
 
     long stepSize;
-    Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
 
     if (simParams.containsKey("step_size")) {
       stepSize = (long) simParams.get("step_size");
@@ -68,6 +71,12 @@ public class MosaikSimulator extends Simulator {
       throw new IllegalArgumentException("Step size must be set!");
     }
 
+    boolean sendUnchangedResults = false;
+
+    if (simParams.containsKey("send_unchanged_results")) {
+      sendUnchangedResults = (boolean) simParams.get("send_unchanged_results");
+    }
+
     if (simParams.containsKey("models")) {
       List<String> modelTypes = (List<String>) simParams.get("models");
 
@@ -75,26 +84,27 @@ public class MosaikSimulator extends Simulator {
 
       for (String model : modelTypes) {
         SimonaEntity simonaEntity = SimonaEntity.parseType(model);
-        simonaEntities.put(simonaEntity, false);
+        simonaEntities.put(simonaEntity, Boolean.FALSE);
         models.add(from(simonaEntity));
-
-        // setting up the em mode
-        switch (simonaEntity) {
-          case EM_COMMUNICATION ->
-              emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
-          case EM, EM_OPTIMIZER -> emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
-          default -> emMode = Optional.empty();
-        }
       }
     } else {
       logger.warning(
           "No models provided! Valid models are: " + Arrays.toString(SimonaEntity.values()));
     }
 
+    // setting up the em mode
+    Optional<ExtEmDataConnection.EmMode> emMode = Optional.empty();
+
+    if (simonaEntities.containsKey(EM_COMMUNICATION)) {
+      emMode = Optional.of(ExtEmDataConnection.EmMode.EM_COMMUNICATION);
+    } else if (simonaEntities.containsKey(EM) || simonaEntities.containsKey(EM_OPTIMIZER)) {
+      emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
+    }
+
     try {
       synchronizer.sendInitData(
           new InitializationData.SimulatorData(
-              simonaEntities.containsKey(SimonaEntity.EM_OPTIMIZER), emMode));
+              simonaEntities.containsKey(RESULTS), sendUnchangedResults, emMode));
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }
@@ -121,8 +131,13 @@ public class MosaikSimulator extends Simulator {
 
     Object included = modelParams.get("use");
     if (included == null) {
-      // to support old field name
-      included = modelParams.get("mapping");
+      Object mapping = modelParams.get("mapping");
+
+      if (mapping != null) {
+        logger.warning("Using deprecated parameter 'mapping', please change this to 'use'.");
+        // to support old field name
+        included = mapping;
+      }
     }
 
     List<String> givenIds = new ArrayList<>();
@@ -173,17 +188,7 @@ public class MosaikSimulator extends Simulator {
           entities.add(entity);
         });
 
-    simonaEntities.put(modelType, true);
-
-    boolean allInitialized = simonaEntities.values().stream().allMatch(x -> x == true);
-
-    if (allInitialized) {
-      try {
-        synchronizer.sendInitData(new InitializationData.ModelData(mapping));
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    }
+    simonaEntities.put(modelType, Boolean.TRUE);
 
     if (entities.size() != num) {
       logger.warning(
@@ -198,31 +203,41 @@ public class MosaikSimulator extends Simulator {
   }
 
   @Override
-  public long step(long time, Map<String, Object> inputs, long maxAdvance) throws Exception {
-    if (time != this.time) {
-      // clearing cache at the start of the new tick
-      cache.clear();
-      this.time = time;
+  public void setupDone() throws Exception {
+    List<SimonaEntity> entities = new ArrayList<>();
+
+    simonaEntities.forEach(
+        (entity, init) -> {
+          if (!init) {
+            entities.add(entity);
+          }
+        });
+
+    if (!entities.isEmpty()) {
+      logger.warning("The following models have not been initialized: " + entities);
     }
 
-    // filtering the inputs
-    Map<String, Object> filteredInputs = InputUtils.filter(inputs, cache);
-    cache.putAll(filteredInputs);
+    synchronizer.sendInitData(new InitializationData.ModelData(mapping));
+  }
+
+  @Override
+  public long step(long time, Map<String, Object> inputs, long maxAdvance) throws Exception {
+    this.time = time;
 
     // updating the mosaik time
     long scaledTime = synchronizer.updateMosaikTime(time);
 
     // the next tick we will expect data
-    long nextTick = synchronizer.getNextTick();
+    // long nextTick = synchronizer.getNextTick();
 
     logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
     // log the expected next tick
-    logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
+    // logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
     if (!inputs.isEmpty()) {
       ExtInputContainer extDataForSimona =
-          InputUtils.createInput(scaledTime, nextTick, mapping, inputs, primaryType);
+          InputUtils.createInput(scaledTime, mapping, inputs, primaryType);
 
       logger.info("[" + time + "] Converted input for SIMONA! Now try to send it to SIMONA!");
 
@@ -234,12 +249,15 @@ public class MosaikSimulator extends Simulator {
         logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
       }
     } else {
-      // setting the no input flag in the synchronizer for mosaik
-      synchronizer.setNoInputFlag();
+      logger.info("[" + time + "] No inputs provided!");
+      synchronizer.sendInputData(new ExtInputContainer(scaledTime));
     }
 
+    // we need to wait until the results are there
+    resultOption = synchronizer.requestResults();
+
     // getting the next tick, could have changed since last request
-    nextTick = synchronizer.getNextTick();
+    long nextTick = synchronizer.getNextTick();
     logger.info("[" + time + "] Next tick: " + nextTick);
     return nextTick;
   }
@@ -249,11 +267,26 @@ public class MosaikSimulator extends Simulator {
     // requesting results from SIMONA
     // we will either get result for the current tick or no results, because SIMONA finished the
     // current tick
-    Optional<ExtOutputContainer> resultOption = synchronizer.requestResults();
 
     boolean finished = synchronizer.isFinished();
 
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
+
+    if (finished) {
+      Optional<ExtOutputContainer> additionalResults = synchronizer.requestResults();
+
+      if (resultOption.isEmpty()) {
+        resultOption = additionalResults;
+      } else {
+        additionalResults.ifPresent(
+            additionalResult ->
+                resultOption.ifPresent(
+                    c -> {
+                      c.addResults(additionalResult.getResults());
+                      c.addEmData(additionalResult.getEmData());
+                    }));
+      }
+    }
 
     if (resultOption.isPresent()) {
       ExtOutputContainer results = resultOption.get();
@@ -273,6 +306,38 @@ public class MosaikSimulator extends Simulator {
       }
     }
 
+    // we have no data for the current tick
+    if (synchronizer.outputNextTick()) {
+      // to prevent sending this info twice
+      synchronizer.setHasSendNextTick();
+
+      long nextTick = synchronizer.getNextTick();
+
+      // we should output the next tick information for those entities, that are requesting this
+      // information
+      logger.info(
+          "["
+              + time
+              + "] Tick finished, sending only next tick information to mosaik. Next tick: "
+              + nextTick);
+
+      // we set the no output flag to true, since we need to return an empty map for mosaik to
+      // continue with the next tick
+      synchronizer.setNoOutputFlag();
+      return OutputUtils.onlyTickInformation(map, nextTick);
+    } else {
+
+      if (finished) {
+        // we will send an empty map, to signal mosaik, that this tick is finished
+        logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
+      } else {
+        logger.info("[" + time + "] Got no results from SIMONA!");
+      }
+
+      return Collections.emptyMap();
+    }
+
+    /*
     if (finished) {
       // we are finished for the current tick
       if (synchronizer.outputNextTick()) {
@@ -303,5 +368,12 @@ public class MosaikSimulator extends Simulator {
 
       return Collections.emptyMap();
     }
+     */
+  }
+
+  @Override
+  public void cleanup() {
+    // stops the external simulation
+    stopper.run();
   }
 }

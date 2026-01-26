@@ -13,10 +13,8 @@ import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import java.util.*;
+import java.util.function.BiFunction;
 import javax.measure.Quantity;
 import javax.measure.Unit;
 import javax.measure.quantity.Power;
@@ -28,22 +26,32 @@ import tech.units.indriya.quantity.Quantities;
 public final class InputUtils {
   private static final Logger log = LoggerFactory.getLogger(InputUtils.class);
 
-  public static Map<String, Object> filter(Map<String, Object> inputs, Map<String, Object> cache) {
-    Predicate<Map.Entry<String, Object>> filterFcn =
-        e -> {
-          String key = e.getKey();
+  @SuppressWarnings("unchecked")
+  public static ExtInputContainer createInput(
+      long tick,
+      ExtEntityMapping mapping,
+      Map<String, Object> inputData,
+      Map<String, ColumnScheme> primaryType) {
+    ExtInputContainer container = new ExtInputContainer(tick);
 
-          if (cache.containsKey(key)) {
-            Object value = e.getValue();
-            return value != null && !cache.get(key).equals(value);
-          } else {
-            return false;
-          }
-        };
+    // handling the input data
+    for (Map.Entry<String, Object> entry : inputData.entrySet()) {
+      String receiverId = entry.getKey();
+      UUID receiver = mapping.from(receiverId);
 
-    return inputs.entrySet().stream()
-        .filter(filterFcn)
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+      Map<String, Object> attrToData = (Map<String, Object>) entry.getValue();
+
+      // handling primary input data
+      if (primaryType.containsKey(receiverId)) {
+        handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
+        log.debug("Primary data: {}", container.primaryDataString());
+      } else {
+        // handling of flex/em data
+        handleFlexData(container, mapping, receiver, attrToData);
+      }
+    }
+
+    return container;
   }
 
   @SuppressWarnings("unchecked")
@@ -65,7 +73,7 @@ public final class InputUtils {
       // handling primary input data
       if (primaryType.containsKey(receiverId)) {
         handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
-        log.warn("Primary data: {}", container.primaryDataString());
+        log.debug("Primary data: {}", container.primaryDataString());
       } else {
         // handling of flex/em data
         handleFlexData(container, mapping, receiver, attrToData);
@@ -139,8 +147,14 @@ public final class InputUtils {
   private static EmData handleFlexData(
       ExtEntityMapping mapping, UUID receiver, String attr, Object value) {
     return switch (attr) {
-      case FLEX_REQUEST -> new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
-      case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value, false);
+      case FLEX_REQUEST -> {
+        if (value != null) {
+          yield new FlexOptionRequest(receiver, extract(value, "disaggregated", false));
+        } else {
+          yield null;
+        }
+      }
+      case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
       case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
       default -> {
@@ -150,22 +164,15 @@ public final class InputUtils {
     };
   }
 
-  private static EmData parseFlexOptions(
-      ExtEntityMapping mapping, UUID receiver, Object value, boolean disaggregated) {
-    if (disaggregated) {
-      // not supported yet
-      // TODO: add handling of disaggregated flex options
-      return null;
-    } else {
-      UUID sender = mapping.get(extract(value, "sender", "")).orElse(receiver);
+  private static EmData parseFlexOptions(ExtEntityMapping mapping, UUID receiver, Object value) {
+    UUID sender = mapping.get(extract(value, "model", "")).orElse(receiver);
 
-      return new PowerLimitFlexOptions(
-          receiver,
-          sender,
-          extractQuantity(value, FLEX_OPTION_P_REF),
-          extractQuantity(value, FLEX_OPTION_P_MIN),
-          extractQuantity(value, FLEX_OPTION_P_MAX));
-    }
+    return new PowerLimitFlexOptions(
+        receiver,
+        sender,
+        extractQuantity(value, FLEX_OPTION_P_REF),
+        extractQuantity(value, FLEX_OPTION_P_MIN),
+        extractQuantity(value, FLEX_OPTION_P_MAX));
   }
 
   private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
@@ -173,19 +180,46 @@ public final class InputUtils {
       return null;
     }
 
-    // TODO: add handling of disaggregated set points
+    BiFunction<ComparableQuantity<Power>, ComparableQuantity<Power>, PValue> builder =
+        (active, reactive) -> {
+          if (reactive != null) {
+            return new SValue(active, reactive);
+          } else if (active != null) {
+            return new PValue(active);
+          } else {
+            return null;
+          }
+        };
+
+    // handling of disaggregated set points
+    Map<String, Object> disaggregated = extract(value, "disaggregated", Collections.emptyMap());
+    Map<UUID, PValue> disaggregatedSetPoints = new HashMap<>();
+
+    disaggregated.forEach(
+        (id, data) -> {
+          UUID model = mapping.from(id);
+
+          ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);
+          ComparableQuantity<Power> reactive = extractQuantity(value, REACTIVE_POWER);
+
+          Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
+
+          power.ifPresent(p -> disaggregatedSetPoints.put(model, p));
+        });
+
+    // handling of aggregated set point
     ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);
     ComparableQuantity<Power> reactive = extractQuantity(value, REACTIVE_POWER);
 
-    PValue power;
+    Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
 
-    if (reactive != null) {
-      power = new SValue(active, reactive);
-    } else {
-      power = new PValue(active);
+    if (power.isPresent() && !disaggregatedSetPoints.isEmpty()) {
+      log.warn(
+          "Got aggregated and disaggregated set point(s) at the same time for model '{}'. This could cause problems!",
+          reactive);
     }
 
-    return new EmSetPoint(receiver, power);
+    return new EmSetPoint(receiver, power, disaggregatedSetPoints);
   }
 
   private static EmData parseEmComMessage(ExtEntityMapping mapping, UUID receiver, Object value) {
@@ -197,12 +231,10 @@ public final class InputUtils {
       EmData content = null;
 
       try {
-        msgId = UUID.fromString((String) map.get("msgId"));
+        msgId = UUID.fromString((String) map.get("msg_id"));
         content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
       } catch (Exception ignored) {
       }
-
-      log.info("Content {}", content);
 
       return new EmCommunicationMessage<>(receiver, sender, msgId, content);
     }
@@ -216,7 +248,7 @@ public final class InputUtils {
   private static <V> V extract(Object obj, String field, V defaultValue) {
     if (obj instanceof Map<?, ?> map) {
       try {
-        return (V) map.get(field);
+        return Optional.ofNullable((V) map.get(field)).orElse(defaultValue);
       } catch (ClassCastException ignored) {
       }
     }
