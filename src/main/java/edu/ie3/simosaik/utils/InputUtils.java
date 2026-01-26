@@ -13,10 +13,12 @@ import edu.ie3.datamodel.models.value.*;
 import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import edu.ie3.util.interval.ClosedInterval;
 import java.util.*;
 import java.util.function.BiFunction;
 import javax.measure.Quantity;
 import javax.measure.Unit;
+import javax.measure.quantity.Energy;
 import javax.measure.quantity.Power;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,35 +35,6 @@ public final class InputUtils {
       Map<String, Object> inputData,
       Map<String, ColumnScheme> primaryType) {
     ExtInputContainer container = new ExtInputContainer(tick);
-
-    // handling the input data
-    for (Map.Entry<String, Object> entry : inputData.entrySet()) {
-      String receiverId = entry.getKey();
-      UUID receiver = mapping.from(receiverId);
-
-      Map<String, Object> attrToData = (Map<String, Object>) entry.getValue();
-
-      // handling primary input data
-      if (primaryType.containsKey(receiverId)) {
-        handlePrimaryData(container, receiver, primaryType.get(receiverId), attrToData);
-        log.debug("Primary data: {}", container.primaryDataString());
-      } else {
-        // handling of flex/em data
-        handleFlexData(container, mapping, receiver, attrToData);
-      }
-    }
-
-    return container;
-  }
-
-  @SuppressWarnings("unchecked")
-  public static ExtInputContainer createInput(
-      long tick,
-      long nexTick,
-      ExtEntityMapping mapping,
-      Map<String, Object> inputData,
-      Map<String, ColumnScheme> primaryType) {
-    ExtInputContainer container = new ExtInputContainer(tick, nexTick);
 
     // handling the input data
     for (Map.Entry<String, Object> entry : inputData.entrySet()) {
@@ -164,15 +137,68 @@ public final class InputUtils {
     };
   }
 
-  private static EmData parseFlexOptions(ExtEntityMapping mapping, UUID receiver, Object value) {
-    UUID sender = mapping.get(extract(value, "model", "")).orElse(receiver);
+  private static FlexOptions parseFlexOptions(
+      ExtEntityMapping mapping, UUID receiver, Object value) {
+    UUID sender = mapping.get(extract(value, "sender", "")).orElse(receiver);
+    return parseFlexOptions(mapping, receiver, sender, value);
+  }
 
-    return new PowerLimitFlexOptions(
-        receiver,
-        sender,
-        extractQuantity(value, FLEX_OPTION_P_REF),
-        extractQuantity(value, FLEX_OPTION_P_MIN),
-        extractQuantity(value, FLEX_OPTION_P_MAX));
+  private static FlexOptions parseFlexOptions(
+      ExtEntityMapping mapping, UUID receiver, UUID sender, Object value) {
+    Map<UUID, FlexOptions> disaggregated = new HashMap<>();
+
+    Map<String, Object> disaggregatedAttrToData =
+        extract(value, "disaggregated", Collections.emptyMap());
+
+    disaggregatedAttrToData.forEach(
+        (dSenderId, dValue) -> {
+          UUID dSender = mapping.from(dSenderId);
+          UUID dReceiver = mapping.get(extract(value, "receiver", "")).orElse(receiver);
+          disaggregated.put(dSender, parseFlexOptions(mapping, dReceiver, dSender, dValue));
+        });
+
+    if (containsAll(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
+      // we have a power limit flex option
+      return new PowerLimitFlexOptions(
+          receiver,
+          sender,
+          extractQuantity(value, FLEX_OPTION_P_REF),
+          extractQuantity(value, FLEX_OPTION_P_MIN),
+          extractQuantity(value, FLEX_OPTION_P_MAX),
+          disaggregated);
+    } else if (containsAll(
+        value, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX, ETA_CHARGE, ETA_DISCHARGE)) {
+      // we have energy boundaries flex options
+      Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits = new HashMap<>();
+
+      Map<String, Object> tickToEnergy =
+          extract(value, "tickToEnergyLimits", Collections.emptyMap());
+      tickToEnergy.forEach(
+          (tickStr, dict) -> {
+            long tick = Long.parseLong(tickStr);
+
+            ComparableQuantity<Energy> l = extractQuantity(dict, LOWER_ENERGY_LIMIT);
+            ComparableQuantity<Energy> u = extractQuantity(dict, UPPER_ENERGY_LIMIT);
+
+            tickToEnergyLimits.put(tick, new ClosedInterval<>(l, u));
+          });
+
+      return new EnergyBoundariesFlexOptions(
+          receiver,
+          sender,
+          extract(value, "flexType", "-"),
+          extractQuantity(value, FLEX_OPTION_P_MIN),
+          extractQuantity(value, FLEX_OPTION_P_MAX),
+          extractQuantity(value, ETA_CHARGE),
+          extractQuantity(value, ETA_DISCHARGE),
+          tickToEnergyLimits,
+          disaggregated);
+
+    } else {
+      // can't specify the type of flex option
+      // /returning only disaggregated flex options
+      return new MultiFlexOptions(receiver, disaggregated);
+    }
   }
 
   private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
@@ -243,6 +269,29 @@ public final class InputUtils {
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+  @SuppressWarnings("unchecked")
+  private static boolean containsAll(Object obj, String... fields) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return ((Map<String, ?>) map).keySet().containsAll(List.of(fields));
+      } catch (Exception e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsAny(Object obj, String... fields) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return Arrays.stream(fields).anyMatch(map::containsKey);
+      } catch (Exception e) {
+        return false;
+      }
+    }
+    return false;
+  }
 
   @SuppressWarnings("unchecked")
   private static <V> V extract(Object obj, String field, V defaultValue) {
