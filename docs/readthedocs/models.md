@@ -4,16 +4,19 @@ Simosaik can provide mosaik with SIMONA models. Due to the limitations of the in
 translation from mosaik to SIMONA and vise versa, most of the models provided by simosaik are either input or result models.
 Which can either provide SIMONA with input data or mosaik with result data.
 
+All models support the [tiered times](https://mosaik.readthedocs.io/en/latest/explanations/tiered-time.html) concept of
+mosaik.
+
+
 An overview of all available attributes with their values can be found [here](/attributes).
 
 
 ## Limitations
 
-There are currently two limitations:
+There are currently these limitations:
 
 1. For now only the energy management models support bidirectional data exchange.
-2. Currently, only the energy management communication model support the [tiered times](https://mosaik.readthedocs.io/en/latest/explanations/tiered-time.html)
-concept of mosaik.
+2. The order in which simosaik handles the data exchange needs to be considered. First, primary data is handles, then em data and lastly result data is sent to mosaik.
 
 
 ## Input models
@@ -67,25 +70,10 @@ Currently, we support these result models:
   - Output attributes
   - Additional information
 
-* - GridResults
-  - "grid", "Grid"
-  - u[pu], u[RAD], I[A], I[RAD]
+* - Results
+  - "res", "results"
+  - u[pu], u[RAD], I[A], I[RAD], Congestion, P[MW], Q[MVAr], P_th[MW], SOC[%]
   - The attributes for which an output is given, depends on the actual asset.
-
-* - NodeResults
-  - "node_res", "Node_res"
-  - u[pu], u[RAD]
-  - Only returns node results.
-
-* - LineResults
-  - "line_res", "Line_res"
-  - I[A], I[RAD]
-  - Only returns line results.
-
-* - ParticipantResults
-  - "participant", "Participant"
-  - P[MW], Q[MVAr], P_th[MW], SOC[%]
-  - The attributes for which an output is given, depends on the actual participant.
 ```
 
 ## Energy management models
@@ -106,19 +94,19 @@ energy management models:
 
 * - EM
   - "em"
-  - P[MW], Q[MVAr], EM[setPoint]
-  - PMin[MW], PRef[MW], PMax[MW], Flex[options]
+  - Flex[request], EM[setPoint]
+  - Flex[options], Simona[nextTick]
   -
 
 * - EmCommunication
   - "communication", "Communication"
-  - Flex[request], Flex[options], EM[setPoint]
-  - Flex[request], Flex[options], EM[setPoint]
+  - Flex[request], Flex[options], EM[setPoint], Flex[com]
+  - Flex[request], Flex[options], EM[setPoint], Flex[com], Simona[nextTick]
   -
   
 * - EmOptimizer
   - "em_optimizer"
-  - P[MW], Q[MVAr], EM[setPoint]
-  - idToPMin[MW], idToPRef[MW], idToPMax[MW], Flex[disaggregated]
+  - Flex[request], EM[setPoint]
+  - Flex[options], Simona[nextTick]
   -
 ```
