@@ -104,14 +104,17 @@ public final class InputUtils {
         // possible, since the map is not empty
         Object value = senderToValues.values().iterator().next();
 
-        EmData emData = handleFlexData(mapping, receiver, attr, value);
-        switch (emData) {
-          case FlexOptionRequest r -> container.addRequest(r);
-          case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
-          case EmSetPoint s -> container.addSetPoint(s);
-          case EmCommunicationMessage<?> c -> container.addFlexComMessage(c);
-          case null, default ->
-              log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
+        if (Objects.equals(attr, FLEX_COM)) {
+          parseEmComMessage(mapping, receiver, value).forEach(container::addFlexComMessage);
+        } else {
+          EmData emData = handleFlexData(mapping, receiver, attr, value);
+          switch (emData) {
+            case FlexOptionRequest r -> container.addRequest(r);
+            case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
+            case EmSetPoint s -> container.addSetPoint(s);
+            case null, default ->
+                log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
+          }
         }
       }
     }
@@ -129,7 +132,6 @@ public final class InputUtils {
       }
       case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
-      case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
       default -> {
         log.warn("Unexpected attribute value: {}", attr);
         yield null;
@@ -248,24 +250,37 @@ public final class InputUtils {
     return new EmSetPoint(receiver, power, disaggregatedSetPoints);
   }
 
-  private static EmData parseEmComMessage(ExtEntityMapping mapping, UUID receiver, Object value) {
-    if (value instanceof Map<?, ?> map) {
-      String senderId = (String) map.get("sender");
-      UUID sender = mapping.from(senderId);
+  private static List<EmCommunicationMessage<?>> parseEmComMessage(
+      ExtEntityMapping mapping, UUID receiver, Object value) {
+    List<EmCommunicationMessage<?>> messages = new ArrayList<>();
 
-      UUID msgId = null;
-      EmData content = null;
-
-      try {
-        msgId = UUID.fromString((String) map.get("msg_id"));
-        content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
-      } catch (Exception ignored) {
+    if (value instanceof List<?> list) {
+      for (Object item : list) {
+        messages.addAll(parseEmComMessage(mapping, receiver, item));
       }
 
-      return new EmCommunicationMessage<>(receiver, sender, msgId, content);
+    } else if (value instanceof Map<?, ?> map) {
+      messages.add(parseEmComMessage(mapping, receiver, map));
     }
 
-    return null;
+    return messages;
+  }
+
+  private static EmCommunicationMessage<?> parseEmComMessage(
+      ExtEntityMapping mapping, UUID receiver, Map<?, ?> map) {
+    String senderId = (String) map.get("sender");
+    UUID sender = mapping.from(senderId);
+
+    UUID msgId = null;
+    EmData content = null;
+
+    try {
+      msgId = UUID.fromString((String) map.get("msg_id"));
+      content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
+    } catch (Exception ignored) {
+    }
+
+    return new EmCommunicationMessage<>(receiver, sender, msgId, content);
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
