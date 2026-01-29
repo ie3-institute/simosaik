@@ -224,7 +224,7 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   public long step(long time, Map<String, Object> inputs, long maxAdvance) throws Exception {
-    log.warn("Input: {}", inputs);
+    log.warn("[{}] Input: {}", time, inputs);
 
     this.time = time;
 

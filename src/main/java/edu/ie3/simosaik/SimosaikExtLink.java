@@ -42,8 +42,7 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     Runnable stopper = () -> Optional.ofNullable(extSim).ifPresent(sim -> sim.run = false);
 
     MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
-    Thread.UncaughtExceptionHandler handler = (t, e) -> stopper.run();
-    startMosaikSimulator(simulator, mosaikIP, handler);
+    startMosaikSimulator(simulator, mosaikIP, stopper);
 
     // creating the external simulation
     extSim = new MosaikSimulation(synchronizer);
@@ -57,7 +56,7 @@ public final class SimosaikExtLink implements ExtLinkInterface {
    * @param mosaikIP IP address for the connection with MOSAIK
    */
   public static void startMosaikSimulator(
-      MosaikSimulator mosaikSimulator, String mosaikIP, Thread.UncaughtExceptionHandler handler) {
+      MosaikSimulator mosaikSimulator, String mosaikIP, Runnable stopper) {
 
     // mosaik simulator thread
     Thread thread =
@@ -67,7 +66,8 @@ public final class SimosaikExtLink implements ExtLinkInterface {
             try {
               SimProcess.startSimulation(new String[] {mosaikIP}, mosaikSimulator);
             } catch (Exception e) {
-              handler.uncaughtException(this, e);
+              stopper.run();
+              throw new RuntimeException(e);
             }
 
             log.info("Simosaik simulator has finished.");
