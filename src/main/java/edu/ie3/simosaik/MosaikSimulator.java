@@ -24,9 +24,11 @@ import edu.ie3.simosaik.utils.InputUtils;
 import edu.ie3.simosaik.utils.OutputUtils;
 import java.util.*;
 import java.util.logging.Logger;
+import org.slf4j.LoggerFactory;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator {
+  private static final org.slf4j.Logger log = LoggerFactory.getLogger(MosaikSimulator.class);
   private final Logger logger = SimProcess.logger;
 
   private final Map<SimonaEntity, Boolean> simonaEntities = new HashMap<>();
@@ -222,6 +224,8 @@ public class MosaikSimulator extends Simulator {
 
   @Override
   public long step(long time, Map<String, Object> inputs, long maxAdvance) throws Exception {
+    log.warn("Input: {}", inputs);
+
     this.time = time;
 
     // updating the mosaik time
