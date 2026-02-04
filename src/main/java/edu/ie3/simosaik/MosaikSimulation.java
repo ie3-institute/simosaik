@@ -173,7 +173,7 @@ public class MosaikSimulation extends ExtCoSimulation {
 
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
-    Set<ResultEntity> cache = new HashSet<>();
+    boolean hasSentResults = false;
 
     while (run) {
       Map<UUID, List<ResultEntity>> resultsToBeSend = new HashMap<>();
@@ -286,23 +286,12 @@ public class MosaikSimulation extends ExtCoSimulation {
 
       // handle results
       if (extResultDataConnection != null) {
-        Map<UUID, List<ResultEntity>> results = extResultDataConnection.requestResults(tick);
+          boolean includeUnchanged = sendUnchangedResults && !hasSentResults;
 
-        if (sendUnchangedResults) {
-          resultsToBeSend.putAll(results);
-        } else {
-          results.forEach(
-              (uuid, res) -> {
-                List<ResultEntity> filtered = res.stream().filter(r -> !cache.contains(r)).toList();
+        resultsToBeSend.putAll(extResultDataConnection.requestResults(tick, includeUnchanged));
+        log.warn("Results (includeUnchanged={}) to be send: {}", includeUnchanged, resultsToBeSend);
 
-                if (!filtered.isEmpty()) {
-                  resultsToBeSend.put(uuid, filtered);
-
-                  // update cache
-                  cache.addAll(filtered);
-                }
-              });
-        }
+        hasSentResults = true;
       }
 
       ExtOutputContainer container = new ExtOutputContainer(tick, maybeNextTick);
