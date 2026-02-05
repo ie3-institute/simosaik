@@ -286,7 +286,7 @@ public class MosaikSimulation extends ExtCoSimulation {
 
       // handle results
       if (extResultDataConnection != null) {
-          boolean includeUnchanged = sendUnchangedResults && !hasSentResults;
+          boolean includeUnchanged = sendUnchangedResults;// && !hasSentResults;
 
         resultsToBeSend.putAll(extResultDataConnection.requestResults(tick, includeUnchanged));
         log.warn("Results (includeUnchanged={}) to be send: {}", includeUnchanged, resultsToBeSend);
