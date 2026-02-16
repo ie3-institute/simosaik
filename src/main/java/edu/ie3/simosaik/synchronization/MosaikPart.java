@@ -63,6 +63,8 @@ public sealed interface MosaikPart permits Synchronizer {
 
   // setter methods
 
+  void setLastTick(long tick);
+
   /**
    * Method for setting the no input flag in the {@link Synchronizer} to {@code true}. This flag
    * signals, that mosaik has until now not provided any input for the current tick.

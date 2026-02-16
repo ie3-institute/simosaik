@@ -73,6 +73,10 @@ public class MosaikSimulator extends Simulator {
       throw new IllegalArgumentException("Step size must be set!");
     }
 
+    if (simParams.containsKey("last_tick")) {
+      synchronizer.setLastTick((long) simParams.get("last_tick"));
+    }
+
     boolean sendUnchangedResults = false;
 
     if (simParams.containsKey("send_unchanged_results")) {

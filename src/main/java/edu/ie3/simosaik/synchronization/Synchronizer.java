@@ -31,6 +31,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private final AtomicLong scaledMosaikTick = new AtomicLong(-1);
   private double mosaikTimeScaling = 1d;
   private long mosaikStepSize = 0L;
+  private long lastTick = Long.MAX_VALUE;
   private long nextRegularMosaikTick = 0L;
   private long nextMosaikTick = 0L;
   private boolean noInputs = false;
@@ -67,6 +68,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public boolean isFinished() {
     return goToNextTick || isFinished;
+  }
+
+  @Override
+  public void setLastTick(long tick) {
+    lastTick = tick;
   }
 
   // SIMONA part
@@ -155,6 +161,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public long getStepSize() {
     return stepSizeSIMONA;
+  }
+
+  @Override
+  public boolean isLastTick() {
+    return mosaikTick.get() >= lastTick;
   }
 
   @Override
