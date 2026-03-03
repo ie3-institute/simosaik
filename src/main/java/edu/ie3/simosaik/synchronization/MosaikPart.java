@@ -77,6 +77,8 @@ public sealed interface MosaikPart permits Synchronizer {
    */
   void setNoOutputFlag();
 
+  void setDebugFlag(boolean value);
+
   void setHasSendNextTick();
 
   /**

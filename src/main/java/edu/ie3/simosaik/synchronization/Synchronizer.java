@@ -11,6 +11,7 @@ import edu.ie3.simona.api.data.container.ExtInputContainer;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationQueue;
+import edu.ie3.simosaik.utils.ConfigurableLogger;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -19,12 +20,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class Synchronizer implements SIMONAPart, MosaikPart {
 
-  private final Logger log = LoggerFactory.getLogger(Synchronizer.class);
+  private static final ConfigurableLogger log =
+      new ConfigurableLogger(false, LoggerFactory.getLogger(Synchronizer.class));
 
   // mosaik fields
   private final AtomicLong mosaikTick = new AtomicLong(-1);
@@ -47,6 +48,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   private boolean isFinished = false;
 
   // general fields
+  private boolean debugFlag = false;
   private final ReentrantLock simosaikLock = new ReentrantLock();
   private final Condition continueSIMONA = simosaikLock.newCondition();
   private boolean simonaIsWaiting = false;
@@ -161,6 +163,11 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public long getStepSize() {
     return stepSizeSIMONA;
+  }
+
+  @Override
+  public boolean getDebugFlag() {
+    return debugFlag;
   }
 
   @Override
@@ -376,6 +383,12 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
   @Override
   public void setNoOutputFlag() {
     noOutputs = true;
+  }
+
+  @Override
+  public void setDebugFlag(boolean value) {
+    debugFlag = value;
+    log.setFlag(value);
   }
 
   @Override

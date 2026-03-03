@@ -64,6 +64,8 @@ public class MosaikSimulator extends Simulator {
 
     long stepSize;
 
+    synchronizer.setDebugFlag((boolean) simParams.getOrDefault("debug", false));
+
     if (simParams.containsKey("step_size")) {
       stepSize = (long) simParams.get("step_size");
 
@@ -172,7 +174,7 @@ public class MosaikSimulator extends Simulator {
     }
 
     if (scheme.isPresent() && givenIds.isEmpty()) {
-      throw new IllegalArgumentException("Missing parameter 'use' primary input!");
+      throw new IllegalArgumentException("Missing parameter 'use' for primary input!");
     }
 
     List<String> ids = new ArrayList<>();
@@ -344,39 +346,6 @@ public class MosaikSimulator extends Simulator {
 
       return Collections.emptyMap();
     }
-
-    /*
-    if (finished) {
-      // we are finished for the current tick
-      if (synchronizer.outputNextTick()) {
-        // to prevent sending this info twice
-        synchronizer.setHasSendNextTick();
-
-        long nextTick = synchronizer.getNextTick();
-
-        // we should output the next tick information for those entities, that are requesting this
-        // information
-        logger.info(
-            "["
-                + time
-                + "] Tick finished, sending only next tick information to mosaik. Next tick: "
-                + nextTick);
-
-        // we set the no output flag to true, since we need to return an empty map for mosaik to
-        // continue with the next tick
-        synchronizer.setNoOutputFlag();
-        return OutputUtils.onlyTickInformation(map, nextTick);
-      } else {
-        // we will send an empty map, to signal mosaik, that this tick is finished
-        logger.info("[" + time + "] Tick finished, sending no data to mosaik.");
-        return Collections.emptyMap();
-      }
-    } else {
-      logger.info("[" + time + "] Got no results from SIMONA!");
-
-      return Collections.emptyMap();
-    }
-     */
   }
 
   @Override

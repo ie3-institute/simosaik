@@ -57,7 +57,11 @@ public final class MetaUtils {
   public static Model from(SimonaEntity entity) {
     List<String> attributes = getAttributes(entity);
 
-    Model model = Model.of(entity.name).params("mapping", "include", "use").attrs(attributes).nonPersistent(attributes);
+    Model model =
+        Model.of(entity.name)
+            .params("mapping", "include", "use")
+            .attrs(attributes)
+            .nonPersistent(attributes);
 
     if (entity.equals(EM_COMMUNICATION)) {
       return model.triggers(attributes);

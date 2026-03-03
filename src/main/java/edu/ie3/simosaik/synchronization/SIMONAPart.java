@@ -59,6 +59,8 @@ public sealed interface SIMONAPart permits Synchronizer {
   /** Returns the regular step size of the data provision. */
   long getStepSize();
 
+  boolean getDebugFlag();
+
   boolean isLastTick();
 
   /** Returns {@code true}, if SIMONA is finished for the current tick. */

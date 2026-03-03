@@ -11,15 +11,14 @@ import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.SetupData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simosaik.synchronization.Synchronizer;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
-
 public final class SimosaikExtLink implements ExtLinkInterface {
 
-    private static final Logger log = LoggerFactory.getLogger(SimosaikExtLink.class);
-    private MosaikSimulation extSim;
+  private static final Logger log = LoggerFactory.getLogger(SimosaikExtLink.class);
+  private MosaikSimulation extSim;
 
   @Override
   public MosaikSimulation getExtSimulation() {
