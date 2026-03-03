@@ -78,7 +78,7 @@ public final class InputUtils {
                   extractQuantity(attrToData, REACTIVE_POWER),
                   extractQuantity(attrToData, THERMAL_POWER));
           default -> {
-            log.warn("Unsupported primary type: {}", primaryType);
+            log.debug("Unsupported primary type: {}", primaryType);
             yield null;
           }
         };
@@ -113,7 +113,7 @@ public final class InputUtils {
             case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
             case EmSetPoint s -> container.addSetPoint(s);
             case null, default ->
-                log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
+                log.debug("Could not process data for attribute '{}': {}", attr, senderToValues);
           }
         }
       }
@@ -133,7 +133,7 @@ public final class InputUtils {
       case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
       default -> {
-        log.warn("Unexpected attribute value: {}", attr);
+        log.debug("Unexpected attribute value: {}", attr);
         yield null;
       }
     };
@@ -242,7 +242,7 @@ public final class InputUtils {
     Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
 
     if (power.isPresent() && !disaggregatedSetPoints.isEmpty()) {
-      log.warn(
+      log.debug(
           "Got aggregated and disaggregated set point(s) at the same time for model '{}'. This could cause problems!",
           reactive);
     }
