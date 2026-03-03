@@ -146,9 +146,11 @@ public class MosaikSimulation extends ExtCoSimulation {
     try {
       long nextTick = tick + stepSize;
 
-      if (tick % stepSize == 0) {
-        synchronizer.updateNextTickSIMONA(nextTick);
+      if (nextTick % stepSize != 0) {
+        nextTick = Math.floorDiv(nextTick, stepSize) * stepSize;
       }
+
+      synchronizer.updateNextTickSIMONA(nextTick);
 
       synchronizer.updateTickSIMONA(tick);
 
@@ -177,6 +179,7 @@ public class MosaikSimulation extends ExtCoSimulation {
 
   protected Optional<Long> activity(long tick, long nextTick) throws InterruptedException {
     Optional<Long> maybeNextTick = Optional.of(nextTick);
+    boolean emCompleted = false;
 
     while (run) {
       Map<UUID, List<ResultEntity>> resultsToBeSend = new HashMap<>();
@@ -235,12 +238,12 @@ public class MosaikSimulation extends ExtCoSimulation {
                   if (nextEmTick.isPresent()) {
                     if (nextEmTick.get() < nextTick) {
                       maybeNextTick = nextEmTick;
+                      synchronizer.updateNextTickSIMONA(maybeNextTick);
                     }
-
-                    synchronizer.updateNextTickSIMONA(maybeNextTick);
                   }
 
                   sendAnyway = true;
+                  emCompleted = true;
 
                   logger.info(
                       "Received completion for tick: {}. Next tick option: {}",
@@ -316,6 +319,10 @@ public class MosaikSimulation extends ExtCoSimulation {
       if (!container.isEmpty() || sendAnyway) {
         log.debug("Sending output data.");
         queueToExt.queueData(container);
+      }
+
+      if (emCompleted) {
+        break;
       }
     }
 

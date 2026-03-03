@@ -89,8 +89,10 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
     simonaTick.set(tick);
 
     SortedSet<Long> sortedSet = simonaNextTicks.get();
-    while (sortedSet.getFirst() <= tick) {
-      sortedSet.removeFirst();
+    if (!sortedSet.isEmpty()) {
+      while (sortedSet.getFirst() <= tick) {
+        sortedSet.removeFirst();
+      }
     }
 
     // get simosaik lock
