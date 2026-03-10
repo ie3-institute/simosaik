@@ -353,7 +353,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     try {
       do {
         container = queueToSimona.pollContainer(100, TimeUnit.MILLISECONDS);
-      } while (tick == synchronizer.currentMosaikTick() && container.isEmpty() && run);
+      } while (tick == synchronizer.currentMosaikTick() && synchronizer.expectInput() && container.isEmpty() && run);
 
     } catch (InterruptedException e) {
       container = Optional.empty();
