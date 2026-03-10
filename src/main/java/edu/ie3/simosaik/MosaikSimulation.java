@@ -172,8 +172,9 @@ public class MosaikSimulation extends ExtCoSimulation {
     }
 
     log.info(
-        "+++++++++++++++++++++++++++ Activities in External simulation finished for tick {}. +++++++++++++++++++++++++++",
-        tick);
+        "++++++++++++++++++++++ Activities in External simulation finished for tick {}. Next tick option: {} ++++++++++++++++++++++",
+        tick,
+        maybeNextTick);
     return maybeNextTick;
   }
 
@@ -196,6 +197,13 @@ public class MosaikSimulation extends ExtCoSimulation {
 
         if (input.isEmpty()) {
           logger.warn("Received no input data from Mosaik!");
+
+          if (input.getTick() > tick) {
+            queueToSimona.queueData(input);
+          }
+
+          simulateEmInternally(tick);
+          synchronizer.updateNextTickSIMONA(maybeNextTick);
 
           sendAnyway = true;
 
@@ -235,12 +243,10 @@ public class MosaikSimulation extends ExtCoSimulation {
 
               switch (received) {
                 case EmCompletion(Optional<Long> nextEmTick) -> {
-                  if (nextEmTick.isPresent()) {
-                    if (nextEmTick.get() < nextTick) {
-                      maybeNextTick = nextEmTick;
-                      synchronizer.updateNextTickSIMONA(maybeNextTick);
-                    }
-                  }
+                  log.info("Next em tick: {}", nextEmTick);
+
+                  maybeNextTick = getNextTickOption(nextTick, nextEmTick);
+                  synchronizer.updateNextTickSIMONA(maybeNextTick);
 
                   sendAnyway = true;
                   emCompleted = true;
@@ -272,6 +278,10 @@ public class MosaikSimulation extends ExtCoSimulation {
         }
       } else if (extTick > tick) {
         log.warn("Received inputs for next tick: {}", extTick);
+
+        if (inputOption.isPresent()) {
+          queueToSimona.queueData(inputOption.get());
+        }
 
         // maybe unnecessary
         synchronizer.updateNextTickSIMONA(extTick);
@@ -329,11 +339,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     if (!run) {
       log.info("Mosaik is finished! The external simulation will not be activated anymore!");
 
-      if (extEmDataConnection != null) {
-        // to prevent em agents from blocking the scheduler
-        extEmDataConnection.simulateInternal(tick);
-        extEmDataConnection.receiveWithType(EmCompletion.class);
-      }
+      simulateEmInternally(tick);
 
       maybeNextTick = Optional.empty();
     }
@@ -354,5 +360,30 @@ public class MosaikSimulation extends ExtCoSimulation {
     }
 
     return container;
+  }
+
+  private void simulateEmInternally(long tick) throws InterruptedException {
+    if (extEmDataConnection != null) {
+      // to prevent em agents from blocking the scheduler
+      extEmDataConnection.simulateInternal(tick);
+
+      Optional<Long> nextEmTick = extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
+      log.info("Next em tick after internal simulation: {}", nextEmTick);
+    }
+  }
+
+  private Optional<Long> getNextTickOption(long nextTick, Optional<Long> otherOption) {
+    if (otherOption.isEmpty()) {
+      return Optional.of(nextTick);
+    }
+
+    long other = otherOption.get();
+
+    if (other < nextTick && other > 0) {
+      return otherOption;
+    } else {
+      return Optional.of(nextTick);
+    }
+
   }
 }
