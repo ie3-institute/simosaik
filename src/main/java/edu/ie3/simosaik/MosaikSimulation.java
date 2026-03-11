@@ -131,7 +131,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
     return 0L;
   }
 
-  public final ExtOutputContainer handleExternalData(ExtInputContainer input) throws Exception {
+  public final ExtOutputContainer handleExternalData(ExtInputContainer input) throws InterruptedException {
     long tick = input.getTick();
     long nextTick = determineNextTick(tick);
     OptionalLong maybeNextTick = OptionalLong.of(determineNextTick(tick));
@@ -213,7 +213,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
     }
   }
 
-  public final ExtOutputContainer handleNoExternalData(long tick) throws Exception {
+  public final ExtOutputContainer handleNoExternalData(long tick) throws InterruptedException {
     // simulateEmInternally(tick); ?
 
     ExtOutputContainer container =
@@ -224,7 +224,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
   }
 
   @Override
-  public final void finishSimulation(long tick) throws Exception {
+  public final void finishSimulation(long tick) throws InterruptedException {
     log.info("Mosaik is finished! The external simulation will not be activated anymore!");
     simulateEmInternally(tick);
   }
