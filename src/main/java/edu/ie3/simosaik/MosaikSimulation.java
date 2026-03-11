@@ -30,6 +30,7 @@ import edu.ie3.simosaik.initialization.InitializationData.ModelData;
 import edu.ie3.simosaik.initialization.InitializationData.SimulatorData;
 import edu.ie3.simosaik.initialization.InitializationData.TickInformation;
 import edu.ie3.simosaik.utils.ConfigurableLogger;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -140,7 +141,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
 
     if (extPrimaryDataConnection != null && input.hasPrimaryData()) {
       extPrimaryDataConnection.sendPrimaryData(
-          tick, input.extractPrimaryData(), from(input.getMaybeNextTick()), log);
+          tick, input.extractPrimaryData(), input.getMaybeNextTick(), log);
     }
 
     if (extEmDataConnection != null && input.hasEmData()) {
@@ -169,10 +170,10 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
         EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
 
         switch (received) {
-          case EmCompletion(Optional<Long> nextEmTick) -> {
+          case EmCompletion(OptionalLong nextEmTick) -> {
             log.info("Next em tick: {}", nextEmTick);
 
-            maybeNextTick = getNextTickOption(maybeNextTick, to(nextEmTick));
+            maybeNextTick = getNextTickOption(maybeNextTick, nextEmTick);
             sendAnyway = true;
             lastFinishedTick = tick;
 
@@ -213,7 +214,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
   }
 
   public final ExtOutputContainer handleNoExternalData(long tick) throws Exception {
-    simulateEmInternally(tick);
+    // simulateEmInternally(tick); ?
 
     ExtOutputContainer container =
         new ExtOutputContainer(tick, OptionalLong.of(determineNextTick(tick)));
@@ -258,17 +259,9 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
       // to prevent em agents from blocking the scheduler
       extEmDataConnection.simulateInternal(tick);
 
-      Optional<Long> nextEmTick =
-          extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
+      OptionalLong nextEmTick = extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
       log.info("Next em tick after internal simulation: {}", nextEmTick);
     }
   }
 
-  public static Optional<Long> from(OptionalLong optionalLong) {
-    return optionalLong.isPresent() ? Optional.of(optionalLong.getAsLong()) : Optional.empty();
-  }
-
-  public static OptionalLong to(Optional<Long> optional) {
-    return optional.map(OptionalLong::of).orElseGet(OptionalLong::empty);
-  }
 }

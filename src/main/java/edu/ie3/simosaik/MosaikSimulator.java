@@ -289,7 +289,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
     OptionalLong maybeNextTick = currentOutputData.getMaybeNextTick();
 
     if (maybeNextTick.isPresent()) {
-      long nextTick = maybeNextTick.getAsLong();
+      long nextTick = tickConverter.toExtTick(maybeNextTick.getAsLong());
       hasNextTickChanged = nextTick != nextSimonaTick;
       nextSimonaTick = nextTick;
 
@@ -300,7 +300,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
       nextSimonaTick = Long.MAX_VALUE;
     }
 
-    return tickConverter.toExtTick(nextSimonaTick);
+    return nextSimonaTick;
   }
 
   @Override
