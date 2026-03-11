@@ -25,6 +25,7 @@ import edu.ie3.simona.api.ontology.em.EmResultResponse;
 import edu.ie3.simona.api.ontology.em.FlexOptionsResponse;
 import edu.ie3.simona.api.simulation.ExtCoSimFramework;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
+import edu.ie3.simosaik.initialization.InitializationData;
 import edu.ie3.simosaik.initialization.InitializationData.ModelData;
 import edu.ie3.simosaik.initialization.InitializationData.SimulatorData;
 import edu.ie3.simosaik.initialization.InitializationData.TickInformation;
@@ -37,7 +38,7 @@ import java.util.stream.Stream;
  * Simple external mosaik simulation. This external simulation is capable to provide SIMONA with
  * primary and em data. Also, this simulation can send result data back to mosaik.
  */
-public class MosaikSimulation extends ExtCoSimulation {
+public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
 
   private final long stepSize;
   private final long lastTick;
@@ -52,7 +53,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   private final ExtEmDataConnection extEmDataConnection;
   private final ExtResultDataConnection extResultDataConnection;
 
-  public MosaikSimulation(ExtCoSimFramework extCoSimFramework) {
+  public MosaikSimulation(ExtCoSimFramework<InitializationData> extCoSimFramework) {
     super("MosaikSimulation", extCoSimFramework);
 
     try {
@@ -108,7 +109,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   }
 
   @Override
-  protected final Long initialize() {
+  protected final long initialize() {
     log.info(
         "++++++++++++++++++++++++ Initialization of the external simulation ++++++++++++++++++++++++++");
 
@@ -132,14 +133,14 @@ public class MosaikSimulation extends ExtCoSimulation {
   public final ExtOutputContainer handleExternalData(ExtInputContainer input) throws Exception {
     long tick = input.getTick();
     long nextTick = determineNextTick(tick);
-    Optional<Long> maybeNextTick = Optional.of(determineNextTick(tick));
+    OptionalLong maybeNextTick = OptionalLong.of(determineNextTick(tick));
 
     Map<UUID, List<EmData>> emDataFromSIMONA = new HashMap<>();
     boolean sendAnyway = false;
 
     if (extPrimaryDataConnection != null && input.hasPrimaryData()) {
       extPrimaryDataConnection.sendPrimaryData(
-          tick, input.extractPrimaryData(), input.getMaybeNextTick(), log);
+          tick, input.extractPrimaryData(), from(input.getMaybeNextTick()), log);
     }
 
     if (extEmDataConnection != null && input.hasEmData()) {
@@ -171,7 +172,7 @@ public class MosaikSimulation extends ExtCoSimulation {
           case EmCompletion(Optional<Long> nextEmTick) -> {
             log.info("Next em tick: {}", nextEmTick);
 
-            maybeNextTick = getNextTickOption(maybeNextTick, nextEmTick);
+            maybeNextTick = getNextTickOption(maybeNextTick, to(nextEmTick));
             sendAnyway = true;
             lastFinishedTick = tick;
 
@@ -196,8 +197,8 @@ public class MosaikSimulation extends ExtCoSimulation {
       }
     }
 
-    if (maybeNextTick.isPresent() && maybeNextTick.get() >= lastTick) {
-      maybeNextTick = Optional.empty();
+    if (maybeNextTick.isPresent() && maybeNextTick.getAsLong() >= lastTick) {
+      maybeNextTick = OptionalLong.empty();
     }
 
     ExtOutputContainer container = new ExtOutputContainer(tick, maybeNextTick);
@@ -207,7 +208,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     if (!container.isEmpty() || sendAnyway) {
       return container;
     } else {
-      return new ExtOutputContainer(tick, Optional.of(determineNextTick(tick)));
+      return new ExtOutputContainer(tick, OptionalLong.of(determineNextTick(tick)));
     }
   }
 
@@ -215,7 +216,7 @@ public class MosaikSimulation extends ExtCoSimulation {
     simulateEmInternally(tick);
 
     ExtOutputContainer container =
-        new ExtOutputContainer(tick, Optional.of(determineNextTick(tick)));
+        new ExtOutputContainer(tick, OptionalLong.of(determineNextTick(tick)));
     container.addResults(requestResults(tick));
 
     return container;
@@ -261,5 +262,13 @@ public class MosaikSimulation extends ExtCoSimulation {
           extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
       log.info("Next em tick after internal simulation: {}", nextEmTick);
     }
+  }
+
+  public static Optional<Long> from(OptionalLong optionalLong) {
+    return optionalLong.isPresent() ? Optional.of(optionalLong.getAsLong()) : Optional.empty();
+  }
+
+  public static OptionalLong to(Optional<Long> optional) {
+    return optional.map(OptionalLong::of).orElseGet(OptionalLong::empty);
   }
 }

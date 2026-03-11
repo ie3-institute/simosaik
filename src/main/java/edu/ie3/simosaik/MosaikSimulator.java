@@ -31,12 +31,12 @@ import java.util.logging.Logger;
 import org.slf4j.LoggerFactory;
 
 /** The mosaik simulator that exchanges information with mosaik. */
-public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
+public class MosaikSimulator extends Simulator implements ExtCoSimFramework<InitializationData> {
   private static final ConfigurableLogger log =
       new ConfigurableLogger(false, LoggerFactory.getLogger(MosaikSimulator.class));
   private final Logger logger = SimProcess.logger;
 
-  private Queue<InitData> initDataQueue;
+  private Queue<InitializationData> initDataQueue;
   private TickConverter tickConverter;
   private long lastTick = Long.MAX_VALUE;
 
@@ -286,10 +286,10 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
     newStatusPresent.set(false);
 
     // getting the next tick, could have changed since last request
-    Optional<Long> maybeNextTick = currentOutputData.getMaybeNextTick();
+    OptionalLong maybeNextTick = currentOutputData.getMaybeNextTick();
 
     if (maybeNextTick.isPresent()) {
-      long nextTick = maybeNextTick.get();
+      long nextTick = maybeNextTick.getAsLong();
       hasNextTickChanged = nextTick != nextSimonaTick;
       nextSimonaTick = nextTick;
 
@@ -354,7 +354,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
   }
 
   @Override
-  public void setInitDataQueue(Queue<InitData> initDataQueue) {
+  public void setInitDataQueue(Queue<InitializationData> initDataQueue) {
     this.initDataQueue = initDataQueue;
   }
 
@@ -401,6 +401,6 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
   @Override
   public void goToNextTick(long simonaTick) {
     // provide empty output to tell mosaik to go to the next tick
-    provideOutputData(new ExtOutputContainer(simonaTick, Optional.of(simonaTick)));
+    provideOutputData(new ExtOutputContainer(simonaTick, OptionalLong.of(simonaTick)));
   }
 }
