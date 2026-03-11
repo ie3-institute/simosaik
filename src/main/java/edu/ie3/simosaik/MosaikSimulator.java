@@ -359,7 +359,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
   }
 
   @Override
-  public Status getStatus(long simonaTick) throws Exception {
+  public Status getStatus(long simonaTick) throws InterruptedException {
     if (newStatusPresent.get()) {
       newStatusPresent.set(false);
     } else {
