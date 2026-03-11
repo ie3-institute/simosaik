@@ -10,10 +10,10 @@ import de.offis.mosaik.api.SimProcess;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.SetupData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.synchronization.Synchronizer;
-import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
 
@@ -34,17 +34,14 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // initial mapping from grid container
     ExtEntityMapping mapping = new ExtEntityMapping(data.gridContainer());
 
-    // for synchronizing both simulations
-    Synchronizer synchronizer = new Synchronizer();
-
     // creating and starting the simulator
     Runnable stopper = () -> Optional.ofNullable(extSim).ifPresent(sim -> sim.run = false);
 
-    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
+    MosaikSimulator simulator = new MosaikSimulator(mapping, stopper);
     startMosaikSimulator(simulator, mosaikIP, stopper);
 
     // creating the external simulation
-    extSim = new MosaikSimulation(synchronizer);
+    extSim = new MosaikSimulation(simulator);
     extSim.setSetupData(data);
   }
 

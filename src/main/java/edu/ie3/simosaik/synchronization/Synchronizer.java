@@ -22,6 +22,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.LoggerFactory;
 
+@Deprecated
 public final class Synchronizer implements SIMONAPart, MosaikPart {
 
   private static final ConfigurableLogger log =
@@ -114,14 +115,7 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
       // signal, because mosaik might wait for SIMONA
       continueMosaik.signal();
 
-      if (mosaikIsWaiting) {
-        // mosaik is waiting for the next SIMONA tick
-        log.warn(
-            "Mosaik with time '{}' is waiting for SIMONA, but SIMONA provided data for tick '{}'!",
-            mosaikTime,
-            tick);
-
-      } else {
+      if (!mosaikIsWaiting) {
         // wait for mosaik
         log.info("Mosaik is behind SIMONA. SIMONA will wait.");
 
@@ -131,6 +125,14 @@ public final class Synchronizer implements SIMONAPart, MosaikPart {
         simonaIsWaiting = true;
         continueSIMONA.await();
         simonaIsWaiting = false;
+      } else {
+        // mosaik is waiting for the next SIMONA tick
+        log.warn(
+                "Mosaik with time '{}' is waiting for SIMONA, but SIMONA provided data for tick '{}'!",
+                mosaikTime,
+                tick);
+
+        continueMosaik.signal();
       }
     } else {
       // both simulators are synced

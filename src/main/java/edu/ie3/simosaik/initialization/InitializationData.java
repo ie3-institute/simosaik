@@ -8,10 +8,14 @@ package edu.ie3.simosaik.initialization;
 
 import edu.ie3.simona.api.data.connection.ExtEmDataConnection;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import edu.ie3.simona.api.simulation.ExtCoSimFramework;
+
 import java.util.Optional;
 
 /** Data send to SIMONA by mosaik. This data is necessary to initialize the external simulation. */
-public interface InitializationData {
+public interface InitializationData extends ExtCoSimFramework.InitData {
+
+  record TickInformation(long stepSize, long lastTick) implements InitializationData {}
 
   /**
    * Simulator data that is use.
@@ -21,6 +25,7 @@ public interface InitializationData {
   record SimulatorData(
       boolean sendResults,
       boolean sendUnchangedResults,
+      boolean debugFlag,
       Optional<ExtEmDataConnection.EmMode> emMode)
       implements InitializationData {}
 
