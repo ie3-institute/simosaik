@@ -10,10 +10,9 @@ import de.offis.mosaik.api.SimProcess;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.SetupData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Optional;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
 

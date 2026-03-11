@@ -29,7 +29,6 @@ import edu.ie3.simosaik.initialization.InitializationData.ModelData;
 import edu.ie3.simosaik.initialization.InitializationData.SimulatorData;
 import edu.ie3.simosaik.initialization.InitializationData.TickInformation;
 import edu.ie3.simosaik.utils.ConfigurableLogger;
-
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -139,7 +138,8 @@ public class MosaikSimulation extends ExtCoSimulation {
     boolean sendAnyway = false;
 
     if (extPrimaryDataConnection != null && input.hasPrimaryData()) {
-      extPrimaryDataConnection.sendPrimaryData(tick, input.extractPrimaryData(), input.getMaybeNextTick(), log);
+      extPrimaryDataConnection.sendPrimaryData(
+          tick, input.extractPrimaryData(), input.getMaybeNextTick(), log);
     }
 
     if (extEmDataConnection != null && input.hasEmData()) {
@@ -154,10 +154,8 @@ public class MosaikSimulation extends ExtCoSimulation {
         var setPoints = input.extractSetPoints();
         var emMessages = input.extractEmMessages();
 
-        boolean sentEmData =
-                extEmDataConnection.sendEmData(tick, requests, options, setPoints);
-        boolean sentEmComData =
-                extEmDataConnection.sendCommunicationMessage(tick, emMessages);
+        boolean sentEmData = extEmDataConnection.sendEmData(tick, requests, options, setPoints);
+        boolean sentEmComData = extEmDataConnection.sendCommunicationMessage(tick, emMessages);
 
         if (sentEmData || sentEmComData) {
           logger.info("Sending em messages: {}", emMessages);
@@ -178,9 +176,7 @@ public class MosaikSimulation extends ExtCoSimulation {
             lastFinishedTick = tick;
 
             logger.info(
-                    "Received completion for tick: {}. Next tick option: {}",
-                    tick,
-                    maybeNextTick);
+                "Received completion for tick: {}. Next tick option: {}", tick, maybeNextTick);
           }
           case EmResultResponse(Map<UUID, List<EmData>> emResults) -> {
             emDataFromSIMONA.putAll(emResults);
@@ -189,11 +185,12 @@ public class MosaikSimulation extends ExtCoSimulation {
               sendAnyway = true;
             }
           }
-          case FlexOptionsResponse(Map<UUID, List<FlexOptions>> receiverToFlexOptions) -> receiverToFlexOptions.forEach(
+          case FlexOptionsResponse(Map<UUID, List<FlexOptions>> receiverToFlexOptions) ->
+              receiverToFlexOptions.forEach(
                   (receiver, data) ->
-                          emDataFromSIMONA
-                                  .computeIfAbsent(receiver, k -> new ArrayList<>())
-                                  .addAll(data));
+                      emDataFromSIMONA
+                          .computeIfAbsent(receiver, k -> new ArrayList<>())
+                          .addAll(data));
           default -> log.warn("Received unsupported data response: {}", received);
         }
       }
@@ -217,7 +214,8 @@ public class MosaikSimulation extends ExtCoSimulation {
   public final ExtOutputContainer handleNoExternalData(long tick) throws Exception {
     simulateEmInternally(tick);
 
-    ExtOutputContainer container = new ExtOutputContainer(tick, Optional.of(determineNextTick(tick)));
+    ExtOutputContainer container =
+        new ExtOutputContainer(tick, Optional.of(determineNextTick(tick)));
     container.addResults(requestResults(tick));
 
     return container;
@@ -238,6 +236,7 @@ public class MosaikSimulation extends ExtCoSimulation {
   public boolean continueActivity(long tick) {
     return lastFinishedTick < tick && run;
   }
+
   private Map<UUID, List<ResultEntity>> requestResults(long tick) throws InterruptedException {
     Map<UUID, List<ResultEntity>> resultsToBeSend = new HashMap<>();
 
@@ -247,7 +246,7 @@ public class MosaikSimulation extends ExtCoSimulation {
       resultsToBeSend.putAll(extResultDataConnection.requestResults(tick, includeUnchanged));
 
       logger.info(
-              "Results (includeUnchanged={}) to be send: {}", includeUnchanged, resultsToBeSend);
+          "Results (includeUnchanged={}) to be send: {}", includeUnchanged, resultsToBeSend);
     }
 
     return resultsToBeSend;
@@ -258,7 +257,8 @@ public class MosaikSimulation extends ExtCoSimulation {
       // to prevent em agents from blocking the scheduler
       extEmDataConnection.simulateInternal(tick);
 
-      Optional<Long> nextEmTick = extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
+      Optional<Long> nextEmTick =
+          extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick();
       log.info("Next em tick after internal simulation: {}", nextEmTick);
     }
   }

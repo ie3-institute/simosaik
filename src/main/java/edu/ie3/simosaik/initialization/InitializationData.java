@@ -9,7 +9,6 @@ package edu.ie3.simosaik.initialization;
 import edu.ie3.simona.api.data.connection.ExtEmDataConnection;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
 import edu.ie3.simona.api.simulation.ExtCoSimFramework;
-
 import java.util.Optional;
 
 /** Data send to SIMONA by mosaik. This data is necessary to initialize the external simulation. */

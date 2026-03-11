@@ -32,7 +32,8 @@ import org.slf4j.LoggerFactory;
 
 /** The mosaik simulator that exchanges information with mosaik. */
 public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
-  private static final ConfigurableLogger log = new ConfigurableLogger(false, LoggerFactory.getLogger(MosaikSimulator.class));
+  private static final ConfigurableLogger log =
+      new ConfigurableLogger(false, LoggerFactory.getLogger(MosaikSimulator.class));
   private final Logger logger = SimProcess.logger;
 
   private Queue<InitData> initDataQueue;
@@ -95,13 +96,16 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
       this.lastTick = (long) simParams.get("last_tick");
     }
 
-    initDataQueue.add(new InitializationData.TickInformation(tickConverter.toSimonaTick(stepSize), tickConverter.toSimonaTick(lastTick)));
+    initDataQueue.add(
+        new InitializationData.TickInformation(
+            tickConverter.toSimonaTick(stepSize), tickConverter.toSimonaTick(lastTick)));
 
     // set up simulator data
     boolean debugFlag = (boolean) simParams.getOrDefault("debug", false);
     log.setFlag(debugFlag);
 
-    boolean sendUnchangedResults = (boolean) simParams.getOrDefault("send_unchanged_results", false);
+    boolean sendUnchangedResults =
+        (boolean) simParams.getOrDefault("send_unchanged_results", false);
 
     if (simParams.containsKey("models")) {
       List<String> modelTypes = (List<String>) simParams.get("models");
@@ -127,7 +131,9 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
       emMode = Optional.of(ExtEmDataConnection.EmMode.BASE);
     }
 
-    initDataQueue.add(new InitializationData.SimulatorData(simonaEntities.containsKey(RESULTS), sendUnchangedResults, debugFlag, emMode));
+    initDataQueue.add(
+        new InitializationData.SimulatorData(
+            simonaEntities.containsKey(RESULTS), sendUnchangedResults, debugFlag, emMode));
     return createMeta(getType(simonaEntities.keySet()), models);
   }
 
@@ -310,17 +316,21 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework {
 
       Map<String, Object> data = OutputUtils.createOutput(currentOutputData, map, mapping);
 
-      logger.info("[" + time + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: " + data);
+      logger.info(
+          "["
+              + time
+              + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
+              + data);
 
       return data;
     } else if (hasNextTickChanged || !hasSendNextTick) {
       // we should output the next tick information for those entities, that are requesting this
       // information
       logger.info(
-              "["
-                      + time
-                      + "] Tick finished, sending only next tick information to mosaik. Next tick: "
-                      + nextSimonaTick);
+          "["
+              + time
+              + "] Tick finished, sending only next tick information to mosaik. Next tick: "
+              + nextSimonaTick);
 
       // we set the no output flag to true, since we need to return an empty map for mosaik to
       // continue with the next tick
