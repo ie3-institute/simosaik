@@ -145,7 +145,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
     }
 
     if (extEmDataConnection != null && input.hasEmData()) {
-      if (tick >= lastTick) {
+      if (tick > lastTick) {
         extEmDataConnection.simulateInternal(tick);
         extEmDataConnection.receiveWithType(EmCompletion.class);
       } else {
@@ -198,7 +198,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
       }
     }
 
-    if (maybeNextTick.isPresent() && maybeNextTick.getAsLong() >= lastTick) {
+    if (maybeNextTick.isPresent() && maybeNextTick.getAsLong() > lastTick) {
       maybeNextTick = OptionalLong.empty();
     }
 
