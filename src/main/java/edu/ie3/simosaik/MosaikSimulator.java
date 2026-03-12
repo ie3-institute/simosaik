@@ -274,7 +274,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
 
     // get the synchronization lock
     while (!synchronizationLock.tryLock()) {
-      log.warn("SIMONA: Waiting for synchronization lock.");
+      log.warn("MOSAIK: Waiting for synchronization lock.");
     }
 
     // sent signal that status can be retrieved now
