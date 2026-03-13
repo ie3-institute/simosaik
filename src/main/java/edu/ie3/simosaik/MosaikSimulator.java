@@ -310,6 +310,8 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
     // current tick
     logger.info("[" + time + "] Got a request from MOSAIK to provide data!");
 
+    log.warnDirect("Results: {}", currentOutputData);
+
     if (!currentOutputData.isEmpty()) {
       hasSendNextTick = false;
       logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");

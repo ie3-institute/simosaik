@@ -36,4 +36,8 @@ public final class ConfigurableLogger {
       log.debug(var1, var2);
     }
   }
+
+  public void warnDirect(String var1, Object... var2) {
+    log.warn(var1, var2);
+  }
 }
