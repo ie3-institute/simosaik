@@ -181,7 +181,11 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
                 "Received completion for tick: {}. Next tick option: {}", tick, maybeNextTick);
           }
           case EmResultResponse(Map<UUID, List<EmData>> emResults) -> {
-            emDataFromSIMONA.putAll(emResults);
+            emResults.forEach(
+                    (receiver, data) ->
+                            emDataFromSIMONA
+                                    .computeIfAbsent(receiver, k -> new ArrayList<>())
+                                    .addAll(data));
 
             if (emDataFromSIMONA.isEmpty()) {
               sendAnyway = true;
@@ -253,6 +257,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
 
     return resultsToBeSend;
   }
+
 
   private void simulateEmInternally(long tick) throws InterruptedException {
     if (extEmDataConnection != null) {
