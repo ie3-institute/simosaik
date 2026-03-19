@@ -110,8 +110,8 @@ public final class InputUtils {
           EmData emData = handleFlexData(mapping, receiver, attr, value);
           switch (emData) {
             case FlexOptionRequest r -> container.addRequest(r);
-            case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
-            case EmSetPoint s -> container.addSetPoint(s);
+            case FlexOptions o -> container.addFlexOptions(o);
+            case SetPoint s -> container.addSetPoint(s);
             case null, default ->
                 log.debug("Could not process data for attribute '{}': {}", attr, senderToValues);
           }
@@ -159,47 +159,49 @@ public final class InputUtils {
           disaggregated.put(dSender, parseFlexOptions(mapping, dReceiver, dSender, dValue));
         });
 
-    if (containsAll(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
+    if (!disaggregated.isEmpty()) {
+      // we received disaggregated flex options
+      return new DisaggregatedFlexOptions<>(receiver, disaggregated);
+    } else if (containsAll(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
       // we have a power limit flex option
       return new PowerLimitFlexOptions(
           receiver,
           sender,
           extractQuantity(value, FLEX_OPTION_P_REF),
           extractQuantity(value, FLEX_OPTION_P_MIN),
-          extractQuantity(value, FLEX_OPTION_P_MAX),
-          disaggregated);
-    } else if (containsAll(
-        value, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX, ETA_CHARGE, ETA_DISCHARGE)) {
-      // we have energy boundaries flex options
-      Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits = new HashMap<>();
-
-      Map<String, Object> tickToEnergy =
-          extract(value, "tickToEnergyLimits", Collections.emptyMap());
-      tickToEnergy.forEach(
-          (tickStr, dict) -> {
-            long tick = Long.parseLong(tickStr);
-
-            ComparableQuantity<Energy> l = extractQuantity(dict, LOWER_ENERGY_LIMIT);
-            ComparableQuantity<Energy> u = extractQuantity(dict, UPPER_ENERGY_LIMIT);
-
-            tickToEnergyLimits.put(tick, new ClosedInterval<>(l, u));
-          });
-
-      return new EnergyBoundariesFlexOptions(
-          receiver,
-          sender,
-          extract(value, "flexType", "-"),
-          extractQuantity(value, FLEX_OPTION_P_MIN),
-          extractQuantity(value, FLEX_OPTION_P_MAX),
-          extractQuantity(value, ETA_CHARGE),
-          extractQuantity(value, ETA_DISCHARGE),
-          tickToEnergyLimits,
-          disaggregated);
-
+          extractQuantity(value, FLEX_OPTION_P_MAX));
     } else {
-      // can't specify the type of flex option
-      // /returning only disaggregated flex options
-      return new MultiFlexOptions(receiver, disaggregated);
+      Map<String, Object> energyBoundaryData = extract(value, "energyBoundaries", Collections.emptyMap());
+      List<EnergyBoundariesFlexOptions.AssetEnergyBoundaries> energyBoundaries = new ArrayList<>();
+
+
+      energyBoundaryData.forEach((receiverId, data) -> {
+        Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits = new HashMap<>();
+
+        Map<String, Object> tickToEnergy = extract(data, "tickToEnergyLimits", Collections.emptyMap());
+        tickToEnergy.forEach(
+                (tickStr, dict) -> {
+                  long tick = Long.parseLong(tickStr);
+
+                  ComparableQuantity<Energy> l = extractQuantity(dict, LOWER_ENERGY_LIMIT);
+                  ComparableQuantity<Energy> u = extractQuantity(dict, UPPER_ENERGY_LIMIT);
+
+                  tickToEnergyLimits.put(tick, new ClosedInterval<>(l, u));
+                });
+
+        ComparableQuantity<Power> pMin = extractQuantity(data, FLEX_OPTION_P_MIN);
+        ComparableQuantity<Power> pMax = extractQuantity(data, FLEX_OPTION_P_MAX);
+
+        energyBoundaries.add(new EnergyBoundariesFlexOptions.AssetEnergyBoundaries(
+                tickToEnergyLimits,
+                new ClosedInterval<>(pMin, pMax),
+                extractQuantity(data, ETA_CHARGE),
+                extractQuantity(data, ETA_DISCHARGE),
+                extractOptional(data, "tickDisconnect")
+        ));
+      });
+
+      return new EnergyBoundariesFlexOptions(receiver, sender, energyBoundaries);
     }
   }
 
@@ -243,16 +245,17 @@ public final class InputUtils {
 
     if (power.isPresent() && !disaggregatedSetPoints.isEmpty()) {
       log.debug(
-          "Got aggregated and disaggregated set point(s) at the same time for model '{}'. This could cause problems!",
+          "Got aggregated and disaggregated set point(s) at the same time for model '{}'. Only the disaggregated set points are sent. This might cause problems or unexpected behaviors!",
           reactive);
+      return new SetPoint.DisaggregatedSetPoints(receiver, disaggregatedSetPoints);
+    } else {
+      return new SetPoint.AggregatedSetPoint(receiver, power);
     }
-
-    return new EmSetPoint(receiver, power, disaggregatedSetPoints);
   }
 
-  private static List<EmCommunicationMessage<?>> parseEmComMessage(
+  private static List<EmCommunicationMessage> parseEmComMessage(
       ExtEntityMapping mapping, UUID receiver, Object value) {
-    List<EmCommunicationMessage<?>> messages = new ArrayList<>();
+    List<EmCommunicationMessage> messages = new ArrayList<>();
 
     if (value instanceof List<?> list) {
       for (Object item : list) {
@@ -266,7 +269,7 @@ public final class InputUtils {
     return messages;
   }
 
-  private static EmCommunicationMessage<?> parseEmComMessage(
+  private static EmCommunicationMessage parseEmComMessage(
       ExtEntityMapping mapping, UUID receiver, Map<?, ?> map) {
     String senderId = (String) map.get("sender");
     UUID sender = mapping.from(senderId);
@@ -280,7 +283,7 @@ public final class InputUtils {
     } catch (Exception ignored) {
     }
 
-    return new EmCommunicationMessage<>(receiver, sender, msgId, content);
+    return new EmCommunicationMessage(receiver, sender, msgId, content);
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -317,6 +320,16 @@ public final class InputUtils {
       }
     }
     return defaultValue;
+  }
+
+  private static OptionalLong extractOptional(Object obj, String field) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return OptionalLong.of(Long.parseLong((String) map.get(field)));
+      } catch (ClassCastException | NumberFormatException ignored) {
+      }
+    }
+    return OptionalLong.empty();
   }
 
   private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(

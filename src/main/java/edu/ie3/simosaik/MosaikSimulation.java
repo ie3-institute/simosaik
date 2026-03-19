@@ -19,10 +19,7 @@ import edu.ie3.simona.api.data.model.em.EmData;
 import edu.ie3.simona.api.data.model.em.FlexOptions;
 import edu.ie3.simona.api.mapping.DataType;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simona.api.ontology.em.EmCompletion;
-import edu.ie3.simona.api.ontology.em.EmDataResponseMessageToExt;
-import edu.ie3.simona.api.ontology.em.EmResultResponse;
-import edu.ie3.simona.api.ontology.em.FlexOptionsResponse;
+import edu.ie3.simona.api.ontology.em.*;
 import edu.ie3.simona.api.simulation.ExtCoSimFramework;
 import edu.ie3.simona.api.simulation.ExtCoSimulation;
 import edu.ie3.simosaik.initialization.InitializationData;
@@ -191,6 +188,8 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
               sendAnyway = true;
             }
           }
+          case EmCommunicationMessages com ->
+                  com.messages().forEach(msg -> emDataFromSIMONA.computeIfAbsent(msg.receiver(), k -> new ArrayList<>()).add(msg));
           case FlexOptionsResponse(Map<UUID, List<FlexOptions>> receiverToFlexOptions) ->
               receiverToFlexOptions.forEach(
                   (receiver, data) ->
