@@ -107,7 +107,7 @@ public final class InputUtils {
         if (Objects.equals(attr, FLEX_COM)) {
           parseEmComMessage(mapping, receiver, value).forEach(container::addFlexComMessage);
         } else {
-          EmData emData = handleFlexData(mapping, receiver, attr, value);
+          EmMessageContent emData = handleFlexData(mapping, receiver, attr, value);
           switch (emData) {
             case FlexOptionRequest r -> container.addRequest(r);
             case FlexOptions o -> container.addFlexOptions(o);
@@ -120,7 +120,7 @@ public final class InputUtils {
     }
   }
 
-  private static EmData handleFlexData(
+  private static EmMessageContent handleFlexData(
       ExtEntityMapping mapping, UUID receiver, String attr, Object value) {
     return switch (attr) {
       case FLEX_REQUEST -> {
@@ -205,7 +205,7 @@ public final class InputUtils {
     }
   }
 
-  private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
+  private static EmMessageContent parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
     if (value == null) {
       return null;
     }
@@ -275,7 +275,7 @@ public final class InputUtils {
     UUID sender = mapping.from(senderId);
 
     UUID msgId = null;
-    EmData content = null;
+    EmMessageContent content = null;
 
     try {
       msgId = UUID.fromString((String) map.get("msg_id"));
