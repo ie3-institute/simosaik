@@ -4,7 +4,7 @@ The following content will give you all information you need to couple SIMONA wi
 
 ## Why is simosaik needed?
 
-Mosaik and SIMONA are written in different programming languages, that cannot be connected directly. Therefore, in order
+Mosaik and SIMONA are written in different programming languages that cannot be connected directly. Therefore, in order
 to couple SIMONA with mosaik, simosaik is used.
 
 Simosaik uses the following APIs:
@@ -13,7 +13,7 @@ Simosaik uses the following APIs:
 - [simonaAPI](https://github.com/ie3-institute/simonaAPI): The API used by SIMONA, to add external simulations.
 
 To connect these two APIs, we created simoasik. During the co-simulation simosaik is treated like every other simulator
-by mosaik, while SIMONA on the other hands, sees simosaik as an external simulation.
+by mosaik, while SIMONA on the other hand, sees simosaik as an external simulation.
 
 To exchange data between mosaik and SIMONA, simosaik translates all supported information into the corresponding data format
 used by either mosaik or SIMONA. Simosaik also handles the synchronisation of both mosaik and SIMONA during the co-simulation.
@@ -52,17 +52,31 @@ Add the following configuration to the SIMONA config file:
 
 - ``simona.input.extSimDir = "path/to/simosaikJar"``
 
+**Step 5:** <br>
+To start the SIMONA simulator, you need to call the start method of the mosaik world:
+
+```
+world.start('SimonaPowerGrid', models=[...], step_size=ticks, send_unchanged_results=False, last_tick=LAST_TICK, debug=False)
+```
+
+There are some parameters that can be used to tailor the behavior of the simulation.
+- `models`: Definition of available models (see: [here](#configure-simona-models))
+- `step_size`: The regular step size of the simulation. If you are using energy management models, SIMONA may be called with steps in between the regular steps.
+- `send_unchanged_results`: To specify, if SIMONA should send results that have not been changed since the last request.
+- `last_tick`: The last tick of the mosaik simulation.
+- `debug`: If true additional information is logged to the console and file output.
+
 
 ## Configure SIMONA models
 
-Simosaik can provide different models and combinations of models to mosaik. In order to specify the models, that are available
+Simosaik can provide different models and combinations of models to mosaik. In order to specify the models that are available
 to mosaik, you need to add the `models` argument with a list of selected models to the `world.start` method:
 
 ```
 world.start('SimonaPowerGrid', models=["p"])
 ```
 
-An overview of the available models can be found [here](/models). Each model has a list of attributes, that can be used
+An overview of the available models can be found [here](/models). Each model has a list of attributes that can be used
 by mosaik. An overview of all available attributes with their units and values can be found [here](/attributes).
 
 ## Creating mosaik entities

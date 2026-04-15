@@ -107,6 +107,11 @@ The structure of these can be found [here](#energy-management-flex-dictionaries)
   - EM[setPoint]
   - set point dict
   - Currently, SIMONA only supportes active power for set points. The reactive power value is currently ingnored.
+
+* - Energy management communication message
+  - Flex[com]
+  - em com dict
+  - Only the content can be dropped.
 ```
 
 ### Energy management flex dictionaries
@@ -133,19 +138,6 @@ Option 1: {
 
 Option 2: {
     sender: str,
-    PMin[MW]: float,
-    PRef[MW]: float,
-    PMax[MW]: float, 
-    disaggregated: { sender: str, flex option dict }
-}
-
-Option 3: {
-    sender: str,
-    disaggregated: { sender: str, flex option dict }
-}
-
-Option 4: {
-    sender: str,
     flexType: str,
     PMin[MW]: float,
     PMax[MW]: float, 
@@ -157,11 +149,11 @@ Option 4: {
             LowerEnergyLimit[MWh]: float,
             UpperEnergyLimit[MWh]: float
         }
-    ]
-    disaggregated: {
-        sender: str,
-        flex option dict 
     }
+
+Option 3: {
+    receiver: str,
+    disaggregated (dict): { receiver: flex option dict }
 }
 ```
 
@@ -190,17 +182,19 @@ Option 4: {
 }
 
 Option 5: {
-    Q[MVAr]: float,
-    disaggregated: {
-        receiver : str,
-        set point dict
-    }
+    receiver: str,
+    disaggregated (dict): { receiver: P[MW] }
 }
+```
 
-Option 6: {
-    disaggregated: {
-        receiver: str,
-        set point dict
-    }
+**Em com dict:** <br>
+There is only one option for the values of the em com dictionary.
+```python 
+Option 1: {
+    receiver: str,
+    sender: str,
+    msg_id: str,
+    type: str,
+    content: any em dict exept em com dict
 }
 ```
