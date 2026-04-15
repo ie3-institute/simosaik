@@ -2,9 +2,9 @@ plugins {
   id 'java' // java support
   id 'groovy'
   id 'maven-publish' // publish to a maven repo (local or mvn central, has to be defined)
-  id "com.gradleup.shadow" version "8.3.6"
-  id 'com.diffplug.spotless' version '6.25.0'// code format
-  id "de.undercouch.download" version "5.6.0" // downloads plugin
+  id 'com.gradleup.shadow' version '9.4.1' // fat jar
+  id 'com.diffplug.spotless' version '8.4.0' // code format
+  id "de.undercouch.download" version "5.7.0" // downloads plugin
   id 'kr.motd.sphinx' version '2.10.1' // documentation generation
 }
 
@@ -34,8 +34,6 @@ configurations {
 
 repositories {
   mavenCentral() // searches in Sonatype's central repository
-  maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' } // sonatype snapshot repo
-  maven { url 'https://packages.confluent.io/maven' } // confluent repo (kafka)
   maven { url "https://gitlab.com/api/v4/projects/16916947/packages/maven" }
 }
 
@@ -58,7 +56,7 @@ dependencies {
     /* Exclude our own nested dependencies */
     exclude group: 'com.github.ie3-institute'
   }
-  implementation('com.github.ie3-institute:simonaAPI:0.13.0') {
+  implementation('com.github.ie3-institute:simonaAPI:0.14.0') {
     exclude group: 'org.apache.logging.log4j'
     exclude group: 'org.slf4j'
     /* Exclude our own nested dependencies */
