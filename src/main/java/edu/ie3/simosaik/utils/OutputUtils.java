@@ -17,7 +17,6 @@ import edu.ie3.datamodel.models.result.ResultEntity;
 import edu.ie3.datamodel.models.result.connector.ConnectorResult;
 import edu.ie3.datamodel.models.result.connector.LineResult;
 import edu.ie3.datamodel.models.result.system.ElectricalEnergyStorageResult;
-import edu.ie3.datamodel.models.result.system.FlexOptionsResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantResult;
 import edu.ie3.datamodel.models.result.system.SystemParticipantWithHeatResult;
 import edu.ie3.datamodel.models.value.HeatAndPValue;
@@ -27,7 +26,6 @@ import edu.ie3.datamodel.models.value.SValue;
 import edu.ie3.simona.api.data.container.ExtOutputContainer;
 import edu.ie3.simona.api.data.model.em.*;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.util.interval.ClosedInterval;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.measure.quantity.*;
@@ -111,8 +109,6 @@ public final class OutputUtils {
   private static Map<String, Object> handleResult(
       ResultEntity result, List<String> attrs, ExtEntityMapping mapping) {
     return switch (result) {
-      case FlexOptionsResult options ->
-          handleFlexOptionResults(options, attrs, mapping.getExtUuid2IdMapping());
       case SystemParticipantResult participant -> handleParticipantResult(participant, attrs);
       case NodeResult n -> {
         Map<String, Object> data = new HashMap<>();
@@ -213,14 +209,21 @@ public final class OutputUtils {
         data.put("disaggregated", disaggregated);
         yield new ProcessedEmData(FLEX_REQUEST, data);
       }
-      case FlexOptions o -> new ProcessedEmData(FLEX_OPTIONS, handleFlexOptions(o, mapping, true));
+      case FlexOptions o -> new ProcessedEmData(FLEX_OPTIONS, handleFlexOptions(o, mapping));
 
-      case EmSetPoint(UUID receiver, Optional<PValue> power, Map<UUID, PValue> disaggregated) -> {
+      case SetPoint.AggregatedSetPoint(UUID receiver, Optional<PValue> power) -> {
         Map<String, Object> data = new HashMap<>();
         data.put("receiver", mapping.from(receiver));
 
         // only add power if it is not empty
         power.ifPresent(powerValue -> data.putAll(fromPValue(powerValue)));
+
+        yield new ProcessedEmData(FLEX_SET_POINT, data);
+      }
+
+      case SetPoint.DisaggregatedSetPoints(UUID receiver, Map<UUID, PValue> disaggregated) -> {
+        Map<String, Object> data = new HashMap<>();
+        data.put("receiver", mapping.from(receiver));
 
         // handle disaggregated set points
         Map<String, Map<String, Double>> disaggregatedSetPoints = new HashMap<>();
@@ -256,21 +259,33 @@ public final class OutputUtils {
   }
 
   private static Map<String, Object> handleFlexOptions(
-      FlexOptions options, ExtEntityMapping mapping, boolean considerDisaggregated) {
-    Map<UUID, FlexOptions> disaggregated = options.disaggregated();
+      FlexOptions options, ExtEntityMapping mapping) {
     Map<String, Object> res = new HashMap<>();
 
     // handling of receiver
     res.put("receiver", mapping.from(options.receiver()));
 
     switch (options) {
+      case DisaggregatedFlexOptions(
+              UUID receiver,
+              Map<UUID, ? extends FlexOptions> disaggregated) -> {
+        Map<String, Object> disaggregatedData =
+            disaggregated.entrySet().stream()
+                .collect(
+                    Collectors.toMap(
+                        e -> mapping.from(e.getKey()),
+                        e -> handleFlexOptions(e.getValue(), mapping)));
+
+        // handling of disaggregated flex options
+        res.put("disaggregated", disaggregatedData);
+      }
+
       case PowerLimitFlexOptions(
-          UUID receiver,
-          UUID model,
-          ComparableQuantity<Power> pRef,
-          ComparableQuantity<Power> pMin,
-          ComparableQuantity<Power> pMax,
-          Map<UUID, FlexOptions> d) -> {
+              UUID receiver,
+              UUID model,
+              ComparableQuantity<Power> pRef,
+              ComparableQuantity<Power> pMin,
+              ComparableQuantity<Power> pMax) -> {
         res.put("model", mapping.from(model));
         res.put(FLEX_OPTION_P_REF, toActive(pRef));
         res.put(FLEX_OPTION_P_MIN, toActive(pMin));
@@ -278,105 +293,50 @@ public final class OutputUtils {
       }
 
       case EnergyBoundariesFlexOptions(
-          UUID receiver,
-          UUID model,
-          String flexType,
-          ComparableQuantity<Power> pMin,
-          ComparableQuantity<Power> pMax,
-          ComparableQuantity<Dimensionless> etaCharge,
-          ComparableQuantity<Dimensionless> etaDischarge,
-          Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits,
-          Map<UUID, FlexOptions> d) -> {
+              UUID receiver,
+              UUID model,
+              List<EnergyBoundariesFlexOptions.AssetEnergyBoundaries> energyBoundaries) -> {
         res.put("model", mapping.from(model));
-        res.put("flexType", flexType);
-
-        res.put(FLEX_OPTION_P_MIN, toActive(pMin));
-        res.put(FLEX_OPTION_P_MAX, toActive(pMax));
-
-        res.put("eta_charge", toPercent(etaCharge));
-        res.put("eta_discharge", toPercent(etaDischarge));
-
-        Map<Long, Map<String, Object>> tickToEnergy = new HashMap<>();
-        res.put("tickToEnergyLimits", tickToEnergy);
-
-        tickToEnergyLimits.forEach(
-            (tick, interval) ->
-                tickToEnergy.put(
-                    tick,
-                    Map.of(
-                        "LowerEnergyLimit[MWh]",
-                        toEnergy(interval.getLower()),
-                        "UpperEnergyLimit[MWh]",
-                        toEnergy(interval.getUpper()))));
+        res.put("energyBoundaries", handleEnergyBoundaries(energyBoundaries));
       }
 
       default -> log.warn("Result of type '{}' is currently not supported.", options);
     }
 
-    // handling of disaggregated flex options
-    if (considerDisaggregated) {
-      res.put(
-          "disaggregated",
-          disaggregated.entrySet().stream()
-              .collect(
-                  Collectors.toMap(
-                      Map.Entry::getKey, e -> handleFlexOptions(e.getValue(), mapping, false))));
-    }
-
     return res;
   }
 
-  private static Map<String, Object> handleFlexOptionResults(
-      FlexOptionsResult result, List<String> attrs, Map<UUID, String> uuidToId) {
-    // get all information
-    double pMin = toActive(result.getpMin());
-    double pRef = toActive(result.getpRef());
-    double pMax = toActive(result.getpMax());
+  private static List<Map<String, Object>> handleEnergyBoundaries(
+      List<EnergyBoundariesFlexOptions.AssetEnergyBoundaries> boundaries) {
+    return boundaries.stream()
+        .map(
+            boundary -> {
+              Map<String, Object> data = new HashMap<>();
 
-    Map<String, Double> connectedPmin = new HashMap<>();
-    Map<String, Double> connectedPref = new HashMap<>();
-    Map<String, Double> connectedPmax = new HashMap<>();
+              data.put(FLEX_OPTION_P_MIN, toActive(boundary.powerLimits().getLower()));
+              data.put(FLEX_OPTION_P_MAX, toActive(boundary.powerLimits().getUpper()));
 
-    // add aggregated flex options
-    connectedPmin.put("EM", pMin);
-    connectedPref.put("EM", pRef);
-    connectedPmax.put("EM", pMax);
+              data.put("eta_charge", toPercent(boundary.etaCharge()));
+              data.put("eta_discharge", toPercent(boundary.etaDischarge()));
 
-    if (result instanceof ExtendedFlexOptionsResult extended) {
-      // add disaggregated flex options
-      Map<UUID, FlexOptionsResult> disaggregatedOptions = extended.getDisaggregated();
+              Map<Long, Map<String, Object>> tickToEnergy = new HashMap<>();
+              data.put("tickToEnergyLimits", tickToEnergy);
 
-      for (UUID uuid : disaggregatedOptions.keySet()) {
-        String id = uuidToId.get(uuid);
-        FlexOptionsResult partialOption = disaggregatedOptions.get(uuid);
+              boundary
+                  .energyLimits()
+                  .forEach(
+                      (tick, interval) ->
+                          tickToEnergy.put(
+                              tick,
+                              Map.of(
+                                  "LowerEnergyLimit[MWh]",
+                                  toEnergy(interval.getLower()),
+                                  "UpperEnergyLimit[MWh]",
+                                  toEnergy(interval.getUpper()))));
 
-        connectedPmin.put(id, toActive(partialOption.getpMin()));
-        connectedPref.put(id, toActive(partialOption.getpRef()));
-        connectedPmax.put(id, toActive(partialOption.getpMax()));
-      }
-    }
-
-    Map<String, Object> data = new HashMap<>();
-
-    if (result instanceof ExtendedFlexOptionsResult extended && attrs.contains(FLEX_OPTIONS)) {
-      String model = uuidToId.get(extended.getInputModel());
-      data.put("model", model);
-
-      data.put(FLEX_OPTION_P_MIN, pMin);
-      data.put(FLEX_OPTION_P_REF, pRef);
-      data.put(FLEX_OPTION_P_MAX, pMax);
-
-      return Map.of(FLEX_OPTIONS, data);
-
-    } else {
-      if (attrs.contains(FLEX_OPTION_P_MIN)) data.put(FLEX_OPTION_P_MIN, pMin);
-
-      if (attrs.contains(FLEX_OPTION_P_REF)) data.put(FLEX_OPTION_P_REF, pRef);
-
-      if (attrs.contains(FLEX_OPTION_P_MAX)) data.put(FLEX_OPTION_P_MAX, pMax);
-
-      return data;
-    }
+              return data;
+            })
+        .toList();
   }
 
   // converting results

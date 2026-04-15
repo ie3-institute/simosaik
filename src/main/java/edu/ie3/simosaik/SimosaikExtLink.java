@@ -10,11 +10,13 @@ import de.offis.mosaik.api.SimProcess;
 import edu.ie3.simona.api.ExtLinkInterface;
 import edu.ie3.simona.api.data.SetupData;
 import edu.ie3.simona.api.mapping.ExtEntityMapping;
-import edu.ie3.simosaik.synchronization.Synchronizer;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class SimosaikExtLink implements ExtLinkInterface {
 
+  private static final Logger log = LoggerFactory.getLogger(SimosaikExtLink.class);
   private MosaikSimulation extSim;
 
   @Override
@@ -31,18 +33,14 @@ public final class SimosaikExtLink implements ExtLinkInterface {
     // initial mapping from grid container
     ExtEntityMapping mapping = new ExtEntityMapping(data.gridContainer());
 
-    // for synchronizing both simulations
-    Synchronizer synchronizer = new Synchronizer();
-
     // creating and starting the simulator
     Runnable stopper = () -> Optional.ofNullable(extSim).ifPresent(sim -> sim.run = false);
 
-    MosaikSimulator simulator = new MosaikSimulator(synchronizer, mapping, stopper);
-    Thread.UncaughtExceptionHandler handler = (t, e) -> stopper.run();
-    startMosaikSimulator(simulator, mosaikIP, handler);
+    MosaikSimulator simulator = new MosaikSimulator(mapping, stopper);
+    startMosaikSimulator(simulator, mosaikIP, stopper);
 
     // creating the external simulation
-    extSim = new MosaikSimulation(synchronizer);
+    extSim = new MosaikSimulation(simulator);
     extSim.setSetupData(data);
   }
 
@@ -53,7 +51,7 @@ public final class SimosaikExtLink implements ExtLinkInterface {
    * @param mosaikIP IP address for the connection with MOSAIK
    */
   public static void startMosaikSimulator(
-      MosaikSimulator mosaikSimulator, String mosaikIP, Thread.UncaughtExceptionHandler handler) {
+      MosaikSimulator mosaikSimulator, String mosaikIP, Runnable stopper) {
 
     // mosaik simulator thread
     Thread thread =
@@ -63,8 +61,11 @@ public final class SimosaikExtLink implements ExtLinkInterface {
             try {
               SimProcess.startSimulation(new String[] {mosaikIP}, mosaikSimulator);
             } catch (Exception e) {
-              handler.uncaughtException(this, e);
+              stopper.run();
+              throw new RuntimeException(e);
             }
+
+            log.info("Simosaik simulator has finished.");
           }
         };
 

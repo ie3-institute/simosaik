@@ -78,7 +78,7 @@ public final class InputUtils {
                   extractQuantity(attrToData, REACTIVE_POWER),
                   extractQuantity(attrToData, THERMAL_POWER));
           default -> {
-            log.warn("Unsupported primary type: {}", primaryType);
+            log.debug("Unsupported primary type: {}", primaryType);
             yield null;
           }
         };
@@ -104,20 +104,23 @@ public final class InputUtils {
         // possible, since the map is not empty
         Object value = senderToValues.values().iterator().next();
 
-        EmData emData = handleFlexData(mapping, receiver, attr, value);
-        switch (emData) {
-          case FlexOptionRequest r -> container.addRequest(r);
-          case FlexOptions o -> container.addFlexOptions(o.receiver(), o);
-          case EmSetPoint s -> container.addSetPoint(s);
-          case EmCommunicationMessage<?> c -> container.addFlexComMessage(c);
-          case null, default ->
-              log.warn("Could not process data for attribute '{}': {}", attr, senderToValues);
+        if (Objects.equals(attr, FLEX_COM)) {
+          parseEmComMessage(mapping, receiver, value).forEach(container::addFlexComMessage);
+        } else {
+          EmMessageContent emData = handleFlexData(mapping, receiver, attr, value);
+          switch (emData) {
+            case FlexOptionRequest r -> container.addRequest(r);
+            case FlexOptions o -> container.addFlexOptions(o);
+            case SetPoint s -> container.addSetPoint(s);
+            case null, default ->
+                log.debug("Could not process data for attribute '{}': {}", attr, senderToValues);
+          }
         }
       }
     }
   }
 
-  private static EmData handleFlexData(
+  private static EmMessageContent handleFlexData(
       ExtEntityMapping mapping, UUID receiver, String attr, Object value) {
     return switch (attr) {
       case FLEX_REQUEST -> {
@@ -129,9 +132,8 @@ public final class InputUtils {
       }
       case FLEX_OPTIONS -> parseFlexOptions(mapping, receiver, value);
       case FLEX_SET_POINT -> parseEmSetPoints(mapping, receiver, value);
-      case FLEX_COM -> parseEmComMessage(mapping, receiver, value);
       default -> {
-        log.warn("Unexpected attribute value: {}", attr);
+        log.debug("Unexpected attribute value: {}", attr);
         yield null;
       }
     };
@@ -157,51 +159,57 @@ public final class InputUtils {
           disaggregated.put(dSender, parseFlexOptions(mapping, dReceiver, dSender, dValue));
         });
 
-    if (containsAll(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
+    if (!disaggregated.isEmpty()) {
+      // we received disaggregated flex options
+      return new DisaggregatedFlexOptions<>(receiver, disaggregated);
+    } else if (containsAll(value, FLEX_OPTION_P_REF, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX)) {
       // we have a power limit flex option
       return new PowerLimitFlexOptions(
           receiver,
           sender,
           extractQuantity(value, FLEX_OPTION_P_REF),
           extractQuantity(value, FLEX_OPTION_P_MIN),
-          extractQuantity(value, FLEX_OPTION_P_MAX),
-          disaggregated);
-    } else if (containsAll(
-        value, FLEX_OPTION_P_MIN, FLEX_OPTION_P_MAX, ETA_CHARGE, ETA_DISCHARGE)) {
-      // we have energy boundaries flex options
-      Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits = new HashMap<>();
+          extractQuantity(value, FLEX_OPTION_P_MAX));
+    } else {
+      Map<String, Object> energyBoundaryData =
+          extract(value, "energyBoundaries", Collections.emptyMap());
+      List<EnergyBoundariesFlexOptions.AssetEnergyBoundaries> energyBoundaries = new ArrayList<>();
 
-      Map<String, Object> tickToEnergy =
-          extract(value, "tickToEnergyLimits", Collections.emptyMap());
-      tickToEnergy.forEach(
-          (tickStr, dict) -> {
-            long tick = Long.parseLong(tickStr);
+      energyBoundaryData.forEach(
+          (receiverId, data) -> {
+            Map<Long, ClosedInterval<ComparableQuantity<Energy>>> tickToEnergyLimits =
+                new HashMap<>();
 
-            ComparableQuantity<Energy> l = extractQuantity(dict, LOWER_ENERGY_LIMIT);
-            ComparableQuantity<Energy> u = extractQuantity(dict, UPPER_ENERGY_LIMIT);
+            Map<String, Object> tickToEnergy =
+                extract(data, "tickToEnergyLimits", Collections.emptyMap());
+            tickToEnergy.forEach(
+                (tickStr, dict) -> {
+                  long tick = Long.parseLong(tickStr);
 
-            tickToEnergyLimits.put(tick, new ClosedInterval<>(l, u));
+                  ComparableQuantity<Energy> l = extractQuantity(dict, LOWER_ENERGY_LIMIT);
+                  ComparableQuantity<Energy> u = extractQuantity(dict, UPPER_ENERGY_LIMIT);
+
+                  tickToEnergyLimits.put(tick, new ClosedInterval<>(l, u));
+                });
+
+            ComparableQuantity<Power> pMin = extractQuantity(data, FLEX_OPTION_P_MIN);
+            ComparableQuantity<Power> pMax = extractQuantity(data, FLEX_OPTION_P_MAX);
+
+            energyBoundaries.add(
+                new EnergyBoundariesFlexOptions.AssetEnergyBoundaries(
+                    tickToEnergyLimits,
+                    new ClosedInterval<>(pMin, pMax),
+                    extractQuantity(data, ETA_CHARGE),
+                    extractQuantity(data, ETA_DISCHARGE),
+                    extractOptional(data, "tickDisconnect")));
           });
 
-      return new EnergyBoundariesFlexOptions(
-          receiver,
-          sender,
-          extract(value, "flexType", "-"),
-          extractQuantity(value, FLEX_OPTION_P_MIN),
-          extractQuantity(value, FLEX_OPTION_P_MAX),
-          extractQuantity(value, ETA_CHARGE),
-          extractQuantity(value, ETA_DISCHARGE),
-          tickToEnergyLimits,
-          disaggregated);
-
-    } else {
-      // can't specify the type of flex option
-      // /returning only disaggregated flex options
-      return new MultiFlexOptions(receiver, disaggregated);
+      return new EnergyBoundariesFlexOptions(receiver, sender, energyBoundaries);
     }
   }
 
-  private static EmData parseEmSetPoints(ExtEntityMapping mapping, UUID receiver, Object value) {
+  private static EmMessageContent parseEmSetPoints(
+      ExtEntityMapping mapping, UUID receiver, Object value) {
     if (value == null) {
       return null;
     }
@@ -240,32 +248,46 @@ public final class InputUtils {
     Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
 
     if (power.isPresent() && !disaggregatedSetPoints.isEmpty()) {
-      log.warn(
-          "Got aggregated and disaggregated set point(s) at the same time for model '{}'. This could cause problems!",
+      log.debug(
+          "Got aggregated and disaggregated set point(s) at the same time for model '{}'. Only the disaggregated set points are sent. This might cause problems or unexpected behaviors!",
           reactive);
+      return new SetPoint.DisaggregatedSetPoints(receiver, disaggregatedSetPoints);
+    } else {
+      return new SetPoint.AggregatedSetPoint(receiver, power);
     }
-
-    return new EmSetPoint(receiver, power, disaggregatedSetPoints);
   }
 
-  private static EmData parseEmComMessage(ExtEntityMapping mapping, UUID receiver, Object value) {
-    if (value instanceof Map<?, ?> map) {
-      String senderId = (String) map.get("sender");
-      UUID sender = mapping.from(senderId);
+  private static List<EmCommunicationMessage> parseEmComMessage(
+      ExtEntityMapping mapping, UUID receiver, Object value) {
+    List<EmCommunicationMessage> messages = new ArrayList<>();
 
-      UUID msgId = null;
-      EmData content = null;
-
-      try {
-        msgId = UUID.fromString((String) map.get("msg_id"));
-        content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
-      } catch (Exception ignored) {
+    if (value instanceof List<?> list) {
+      for (Object item : list) {
+        messages.addAll(parseEmComMessage(mapping, receiver, item));
       }
 
-      return new EmCommunicationMessage<>(receiver, sender, msgId, content);
+    } else if (value instanceof Map<?, ?> map) {
+      messages.add(parseEmComMessage(mapping, receiver, map));
     }
 
-    return null;
+    return messages;
+  }
+
+  private static EmCommunicationMessage parseEmComMessage(
+      ExtEntityMapping mapping, UUID receiver, Map<?, ?> map) {
+    String senderId = (String) map.get("sender");
+    UUID sender = mapping.from(senderId);
+
+    UUID msgId = null;
+    EmMessageContent content = null;
+
+    try {
+      msgId = UUID.fromString((String) map.get("msg_id"));
+      content = handleFlexData(mapping, receiver, (String) map.get("type"), map.get("content"));
+    } catch (Exception ignored) {
+    }
+
+    return new EmCommunicationMessage(receiver, sender, msgId, content);
   }
 
   // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -302,6 +324,16 @@ public final class InputUtils {
       }
     }
     return defaultValue;
+  }
+
+  private static OptionalLong extractOptional(Object obj, String field) {
+    if (obj instanceof Map<?, ?> map) {
+      try {
+        return OptionalLong.of(Long.parseLong((String) map.get(field)));
+      } catch (ClassCastException | NumberFormatException ignored) {
+      }
+    }
+    return OptionalLong.empty();
   }
 
   private static <Q extends Quantity<Q>> ComparableQuantity<Q> extractQuantity(
