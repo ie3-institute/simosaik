@@ -257,13 +257,13 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
     // the next tick we will expect data
     // long nextTick = synchronizer.getNextTick();
 
-    logger.info("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
+    logger.fine("[" + time + "] Got inputs from MOSAIK for tick = " + time + ". Inputs: " + inputs);
 
     // log the expected next tick
     // logger.info("[" + time + "] Expected next simulation tick = " + nextTick);
 
     if (!inputs.isEmpty()) {
-      logger.info("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
+      logger.fine("[" + time + "] Sent converted input for tick " + time + " to SIMONA!");
 
       this.currentInputData = InputUtils.createInput(scaledTime, mapping, inputs, primaryType);
     } else {
@@ -293,7 +293,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
       hasNextTickChanged = nextTick != nextSimonaTick;
       nextSimonaTick = nextTick;
 
-      logger.info("[" + time + "] Next tick: " + nextSimonaTick);
+      logger.fine("[" + time + "] Next tick: " + nextSimonaTick);
       return nextSimonaTick;
     } else {
       logger.warning("[" + time + "] No next tick information provided!");
@@ -312,11 +312,11 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
 
     if (!currentOutputData.isEmpty()) {
       hasSendNextTick = false;
-      logger.info("[" + time + "] Got results from SIMONA for MOSAIK!");
+      logger.fine("[" + time + "] Got results from SIMONA for MOSAIK!");
 
       Map<String, Object> data = OutputUtils.createOutput(currentOutputData, map, mapping);
 
-      logger.info(
+      logger.fine(
           "["
               + time
               + "] Converted results for MOSAIK! Now send it to MOSAIK! Data for MOSAIK: "
@@ -326,7 +326,7 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
     } else if (hasNextTickChanged || !hasSendNextTick) {
       // we should output the next tick information for those entities, that are requesting this
       // information
-      logger.info(
+      logger.fine(
           "["
               + time
               + "] Tick finished, sending only next tick information to mosaik. Next tick: "
