@@ -40,6 +40,7 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
   private final long stepSize;
   private final long lastTick;
   protected final boolean sendUnchangedResults;
+  private long nextEmTick = 0;
 
   private final ConfigurableLogger logger;
   public boolean run = true;
@@ -167,10 +168,11 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
         EmDataResponseMessageToExt received = extEmDataConnection.receiveAny();
 
         switch (received) {
-          case EmCompletion(OptionalLong nextEmTick) -> {
-            log.info("Next em tick: {}", nextEmTick);
+          case EmCompletion(OptionalLong maybeNextEmTick) -> {
+            log.info("Next em tick: {}", maybeNextEmTick);
+            maybeNextEmTick.ifPresent(emTick -> nextEmTick = emTick);
 
-            maybeNextTick = getNextTickOption(maybeNextTick, nextEmTick);
+            maybeNextTick = getNextTickOption(maybeNextTick, maybeNextEmTick);
             sendAnyway = true;
             lastFinishedTick = tick;
 
@@ -222,7 +224,11 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
   }
 
   public final ExtOutputContainer handleNoExternalData(long tick) throws InterruptedException {
-    // simulateEmInternally(tick); ?
+    if (extEmDataConnection != null && tick == nextEmTick) {
+      log.warn("Internal em simulation ...");
+      extEmDataConnection.simulateInternal(tick);
+      extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick().ifPresent(emTick -> nextEmTick = emTick);
+    }
 
     ExtOutputContainer container =
         new ExtOutputContainer(tick, OptionalLong.of(determineNextTick(tick)));
