@@ -227,7 +227,10 @@ public class MosaikSimulation extends ExtCoSimulation<InitializationData> {
     if (extEmDataConnection != null && tick == nextEmTick) {
       log.warn("Internal em simulation ...");
       extEmDataConnection.simulateInternal(tick);
-      extEmDataConnection.receiveWithType(EmCompletion.class).maybeNextTick().ifPresent(emTick -> nextEmTick = emTick);
+      extEmDataConnection
+          .receiveWithType(EmCompletion.class)
+          .maybeNextTick()
+          .ifPresent(emTick -> nextEmTick = emTick);
     }
 
     ExtOutputContainer container =

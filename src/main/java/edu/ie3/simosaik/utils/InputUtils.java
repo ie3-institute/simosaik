@@ -233,8 +233,8 @@ public final class InputUtils {
         (id, data) -> {
           UUID model = mapping.from(id);
 
-          ComparableQuantity<Power> active = extractQuantity(value, ACTIVE_POWER);
-          ComparableQuantity<Power> reactive = extractQuantity(value, REACTIVE_POWER);
+          ComparableQuantity<Power> active = extractQuantity(data, ACTIVE_POWER);
+          ComparableQuantity<Power> reactive = extractQuantity(data, REACTIVE_POWER);
 
           Optional<PValue> power = Optional.ofNullable(builder.apply(active, reactive));
 
