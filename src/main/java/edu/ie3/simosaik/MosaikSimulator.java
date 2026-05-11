@@ -314,7 +314,12 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
       hasSendNextTick = false;
       logger.fine("[" + time + "] Got results from SIMONA for MOSAIK!");
 
-      Map<String, Object> data = OutputUtils.createOutput(currentOutputData, map, mapping);
+      Map<String, Object> data =
+          OutputUtils.createOutput(
+              currentOutputData,
+              map,
+              tickConverter.toExtTick(currentOutputData.getTick()),
+              mapping);
 
       logger.fine(
           "["

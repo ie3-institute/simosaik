@@ -55,6 +55,7 @@ public final class OutputUtils {
   public static Map<String, Object> createOutput(
       ExtOutputContainer container,
       Map<String, List<String>> requestedAttributes,
+      long tick,
       ExtEntityMapping mapping) {
     log.debug("Requested attributes: {}", requestedAttributes);
     log.debug("Result container: {}", container.getResults());
@@ -77,7 +78,7 @@ public final class OutputUtils {
 
         // handle results
         for (ResultEntity result : results) {
-          data.putAll(handleResult(result, attrs, mapping));
+          data.putAll(handleResult(result, attrs, tick, mapping));
         }
 
         // handle em data
@@ -107,7 +108,7 @@ public final class OutputUtils {
   }
 
   private static Map<String, Object> handleResult(
-      ResultEntity result, List<String> attrs, ExtEntityMapping mapping) {
+      ResultEntity result, List<String> attrs, long tick, ExtEntityMapping mapping) {
     return switch (result) {
       case SystemParticipantResult participant -> handleParticipantResult(participant, attrs);
       case NodeResult n -> {
@@ -130,6 +131,7 @@ public final class OutputUtils {
 
         if (attrs.contains(CONGESTION)) {
           data.put("model", mapping.from(congestion.getInputModel()));
+          data.put("tick", tick);
           data.put("subgrid", congestion.getSubgrid());
           data.put("type", congestion.getType().type);
           data.put("value", toPercent(congestion.getValue()));
