@@ -382,8 +382,10 @@ public class MosaikSimulator extends Simulator implements ExtCoSimFramework<Init
     if (simonaTick == scaledTime) {
       return new HasData(currentInputData);
     } else if (simonaTick < scaledTime) {
+      log.info("SIMONA is behind. SIMONA: {}, mosaik: {}", simonaTick, scaledTime);
       return new SimonaIsBehind(scaledTime);
     } else {
+      log.info("SIMONA is ahead. SIMONA: {}, mosaik: {}", simonaTick, scaledTime);
       return new SimonaIsAhead();
     }
   }

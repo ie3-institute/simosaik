@@ -46,6 +46,7 @@ public final class SimosaikUnits {
   public static final String FLEX_OPTION_P_REF = "PRef[MW]";
   public static final String FLEX_OPTION_P_MAX = "PMax[MW]";
 
+  public static final String CURRENT_ENERGY = "E[MhW]";
   public static final String ETA_CHARGE = "EtaCharge[%]";
   public static final String ETA_DISCHARGE = "EtaDischarge[%]";
   public static final String LOWER_ENERGY_LIMIT = "LowerEnergyLimit[MWh]";
@@ -73,7 +74,7 @@ public final class SimosaikUnits {
       case VOLTAGE_MAG -> (Unit<Q>) VOLTAGE_MAGNITUDE;
       case SOC -> (Unit<Q>) StandardUnits.SOC;
       case ETA_CHARGE, ETA_DISCHARGE -> (Unit<Q>) Units.PERCENT;
-      case LOWER_ENERGY_LIMIT, UPPER_ENERGY_LIMIT -> (Unit<Q>) StandardUnits.ENERGY_RESULT;
+      case CURRENT_ENERGY, LOWER_ENERGY_LIMIT, UPPER_ENERGY_LIMIT -> (Unit<Q>) StandardUnits.ENERGY_RESULT;
       default ->
           throw new ConversionException("Cannot find psdm unit for mosaik unit: " + mosaikUnit);
     };

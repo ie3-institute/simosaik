@@ -197,6 +197,7 @@ public final class InputUtils {
 
             energyBoundaries.add(
                 new EnergyBoundariesFlexOptions.AssetEnergyBoundaries(
+                    extractQuantity(data, CURRENT_ENERGY),
                     tickToEnergyLimits,
                     new ClosedInterval<>(pMin, pMax),
                     extractQuantity(data, ETA_CHARGE),

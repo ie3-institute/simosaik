@@ -318,6 +318,8 @@ public final class OutputUtils {
               data.put(FLEX_OPTION_P_MIN, toActive(boundary.powerLimits().getLower()));
               data.put(FLEX_OPTION_P_MAX, toActive(boundary.powerLimits().getUpper()));
 
+              data.put(CURRENT_ENERGY, toEnergy(boundary.currentEnergy()));
+
               data.put("eta_charge", toPercent(boundary.etaCharge()));
               data.put("eta_discharge", toPercent(boundary.etaDischarge()));
 
@@ -331,9 +333,9 @@ public final class OutputUtils {
                           tickToEnergy.put(
                               tick,
                               Map.of(
-                                  "LowerEnergyLimit[MWh]",
+                                  LOWER_ENERGY_LIMIT,
                                   toEnergy(interval.getLower()),
-                                  "UpperEnergyLimit[MWh]",
+                                  UPPER_ENERGY_LIMIT,
                                   toEnergy(interval.getUpper()))));
 
               return data;
