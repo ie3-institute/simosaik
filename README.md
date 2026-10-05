@@ -12,12 +12,3 @@ Simosaik takes care of the communication and value conversion between SIMONA and
 
 
 More information are provided in the project's [documentation](https://simosaik.readthedocs.io/en/latest/).
-
-## How to use
-
-Currently, to use simosaik you need to use the development repository ([here](https://github.com/ie3-institute/simosaik_dev))
-and select the following branches:
-
-- simosaik: `main`
-- simonaAPI: `main`
-- simona: `main`

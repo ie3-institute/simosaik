@@ -58,8 +58,7 @@ Currently, we support these input models:
 ## Result models
 
 Result models are used to provide mosaik with SIMONA data. Therefore, these models are only supporting output attributes.
-The result model is a general purpose model that can be used for any result that is produced by SIMONA. Therefore, it depends
-on the actual underlying asset model, if results are provided for a requested attribute.
+Currently, we support these result models:
 
 ```{list-table}
 :widths: auto
@@ -97,11 +96,17 @@ energy management models:
   - "em"
   - Flex[request], EM[setPoint]
   - Flex[options], Simona[nextTick]
-  - General purpose model that enable external energy management models to be uesed with SIMONA.
+  -
 
 * - EmCommunication
   - "communication", "Communication"
   - Flex[request], Flex[options], EM[setPoint], Flex[com]
   - Flex[request], Flex[options], EM[setPoint], Flex[com], Simona[nextTick]
-  - An extension of the normnal EM model. With this model the communication between energy management units can be done externally.
+  -
+  
+* - EmOptimizer
+  - "em_optimizer"
+  - Flex[request], EM[setPoint]
+  - Flex[options], Simona[nextTick]
+  -
 ```
