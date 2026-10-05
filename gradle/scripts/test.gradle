@@ -1,10 +1,11 @@
+//Configure test reporting
 test {
-  useJUnitPlatform()
-  testLogging {
-    events "skipped", "failed"
+	useJUnitPlatform()
+	testLogging {
+		events "skipped", "failed"
+	}
 
-    testLogging {
-      exceptionFormat "full"
-    }
-  }
+	testLogging {
+		exceptionFormat "full"
+	}
 }

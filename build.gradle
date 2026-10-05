@@ -1,89 +1,99 @@
 plugins {
-  id 'java' // java support
-  id 'groovy'
-  id 'maven-publish' // publish to a maven repo (local or mvn central, has to be defined)
-  id 'com.gradleup.shadow' version '9.4.1' // fat jar
-  id 'com.diffplug.spotless' version '8.4.0' // code format
-  id "de.undercouch.download" version "5.7.0" // downloads plugin
-  id 'kr.motd.sphinx' version '2.10.1' // documentation generation
+	id 'java' // java support
+	id 'groovy'
+	id 'maven-publish' // publish to a maven repo (local or mvn central, has to be defined)
+	id 'com.gradleup.shadow' version '9.4.1' // fat jar
+	id 'com.diffplug.spotless' version '8.4.0' // code format
+	id 'com.github.spotbugs' version '6.5.12' //code check, working on byte code
+	id "de.undercouch.download" version "5.7.0" // downloads plugin
+	id 'kr.motd.sphinx' version '2.10.1' // documentation generation
+	id 'net.thauvin.erik.gradle.semver' version '1.0.4' // semantic versioning
+	id "org.sonarqube" version "7.5.0.8588" // sonarqube
+	id 'pmd' //code check, working on source code
 }
 
 ext {
-  //version (changing these should be considered thoroughly!)
-  javaVersion = JavaVersion.VERSION_21
-  groovyVersion = "4.0"
-  groovyBinaryVersion = "4.0.28"
+	//version (changing these should be considered thoroughly!)
+	javaVersion = JavaVersion.VERSION_25
 
-  scriptsLocation = 'gradle' + File.separator + 'scripts' + File.separator // location of script plugins
+	scriptsLocation = 'gradle' + File.separator + 'scripts' + File.separator // location of script plugins
 }
 
 group = 'com.github.ie3-institute'
 description = 'simosaik'
 
 java {
-  sourceCompatibility = javaVersion
-  targetCompatibility = javaVersion
+	sourceCompatibility = javaVersion
+	targetCompatibility = javaVersion
 }
 
+apply from: scriptsLocation + 'pmd.gradle'
+apply from: scriptsLocation + 'spotbugs.gradle'
 apply from: scriptsLocation + 'spotless.gradle'
-apply from: scriptsLocation + 'documentation.gradle'
+apply from: scriptsLocation + 'checkJavaVersion.gradle'
+apply from: scriptsLocation + 'test.gradle'
+apply from: scriptsLocation + 'uploadToMavenCentralPortal.gradle' // upload for deploy
+apply from: scriptsLocation + 'stagingAtMavenCentralPortal.gradle' // stage for deploy
+apply from: scriptsLocation + 'sonarqube.gradle'
+apply from: scriptsLocation + 'semVer.gradle'
+apply from: scriptsLocation + 'branchName.gradle'
 
 configurations {
-  scalaCompilerPlugin
+	scalaCompilerPlugin
 }
 
 repositories {
-  mavenCentral() // searches in Sonatype's central repository
-  maven { url "https://gitlab.com/api/v4/projects/16916947/packages/maven" }
+	mavenCentral() // searches in Sonatype's central repository
+	maven { url "https://gitlab.com/api/v4/projects/16916947/packages/maven" }
 }
 
 dependencies {
-  implementation 'tech.units:indriya:2.2.3' // quantities
+	implementation 'tech.units:indriya:2.2.4' // quantities
 
-  /* Mosaik dependencies */
-  implementation("de.offis.mosaik.api:mosaik-api-java:3.1")
+	/* Mosaik dependencies */
+	implementation("de.offis.mosaik.api:mosaik-api-java:3.1")
 
-  // ie³ internal repository
-  implementation('com.github.ie3-institute:PowerSystemUtils:3.2.2') {
-    exclude group: 'org.apache.logging.log4j'
-    exclude group: 'org.slf4j'
-    /* Exclude our own nested dependencies */
-    exclude group: 'com.github.ie3-institute'
-  }
-  implementation('com.github.ie3-institute:PowerSystemDataModel:9.1.0') {
-    exclude group: 'org.apache.logging.log4j'
-    exclude group: 'org.slf4j'
-    /* Exclude our own nested dependencies */
-    exclude group: 'com.github.ie3-institute'
-  }
-  implementation('com.github.ie3-institute:simonaAPI:0.15.0') {
-    exclude group: 'org.apache.logging.log4j'
-    exclude group: 'org.slf4j'
-    /* Exclude our own nested dependencies */
-    exclude group: 'edu.ie3'
-  }
+	// ie³ internal repository
+	implementation('com.github.ie3-institute:PowerSystemUtils:3.2.3') {
+		exclude group: 'org.apache.logging.log4j'
+		exclude group: 'org.slf4j'
+		/* Exclude our own nested dependencies */
+		exclude group: 'com.github.ie3-institute'
+	}
+	implementation('com.github.ie3-institute:PowerSystemDataModel:9.2.0') {
+		exclude group: 'org.apache.logging.log4j'
+		exclude group: 'org.slf4j'
+		/* Exclude our own nested dependencies */
+		exclude group: 'com.github.ie3-institute'
+	}
+	implementation('com.github.ie3-institute:simonaAPI:0.16.0') {
+		exclude group: 'org.apache.logging.log4j'
+		exclude group: 'org.slf4j'
+		/* Exclude our own nested dependencies */
+		exclude group: 'edu.ie3'
+	}
 
-  /* logging */
-  implementation platform('org.apache.logging.log4j:log4j-bom:2.24.2')
-  implementation 'org.apache.logging.log4j:log4j-api' // log4j
-  implementation 'org.apache.logging.log4j:log4j-core' // log4j
-  implementation 'org.apache.logging.log4j:log4j-slf4j-impl' // log4j -> slf4j
+	/* logging */
+	implementation platform('org.apache.logging.log4j:log4j-bom:2.26.1')
+	implementation 'org.apache.logging.log4j:log4j-api' // log4j
+	implementation 'org.apache.logging.log4j:log4j-core' // log4j
+	implementation 'org.apache.logging.log4j:log4j-slf4j-impl' // log4j -> slf4j
 
-  /* config */
-  implementation 'com.typesafe:config:1.4.3'
+	/* config */
+	implementation 'com.typesafe:config:1.4.9'
 
 
-  /* testing */
-  testImplementation "org.apache.groovy:groovy:$groovyBinaryVersion"
-  testImplementation "org.spockframework:spock-core:2.3-groovy-$groovyVersion"
+	/* testing */
+	testImplementation "org.apache.groovy:groovy:5.1.3"
+	testImplementation "org.spockframework:spock-core:2.4-groovy-5.0"
 }
 
 tasks.withType(JavaCompile).configureEach {
-  options.encoding = 'UTF-8'
+	options.encoding = 'UTF-8'
 }
 
 shadowJar {
-  zip64 = true
-  archiveBaseName.set('simosaik')
-  archiveClassifier.set('')
+	zip64 = true
+	archiveBaseName.set('simosaik')
+	archiveClassifier.set('')
 }

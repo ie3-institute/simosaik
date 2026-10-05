@@ -19,5 +19,5 @@ Currently, to use simosaik you need to use the development repository ([here](ht
 and select the following branches:
 
 - simosaik: `main`
-- simonaAPI: `ms/ReCoDe`
-- simona: `ms/ReCoDe`
+- simonaAPI: `main`
+- simona: `main`

@@ -1,0 +1,18 @@
+version: 2
+updates:
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "04:00"
+  open-pull-requests-limit: 10
+  reviewers:
+  - t-ober
+  - staudtMarius
+  - sebastian-peter
+  - danielfeismann
+  - jo-bao
+  ignore:
+  - dependency-name: org.scalatest:scalatest_2.13
+    versions:
+      - "3.3.0-SNAP+"

@@ -2,8 +2,7 @@
  * © 2025. TU Dortmund University,
  * Institute of Energy Systems, Energy Efficiency and Energy Economics,
  * Research group Distribution grid planning and operation
- */
-
+*/
 package edu.ie3.simosaik;
 
 import static edu.ie3.datamodel.models.StandardUnits.*;
@@ -74,7 +73,8 @@ public final class SimosaikUnits {
       case VOLTAGE_MAG -> (Unit<Q>) VOLTAGE_MAGNITUDE;
       case SOC -> (Unit<Q>) StandardUnits.SOC;
       case ETA_CHARGE, ETA_DISCHARGE -> (Unit<Q>) Units.PERCENT;
-      case CURRENT_ENERGY, LOWER_ENERGY_LIMIT, UPPER_ENERGY_LIMIT -> (Unit<Q>) StandardUnits.ENERGY_RESULT;
+      case CURRENT_ENERGY, LOWER_ENERGY_LIMIT, UPPER_ENERGY_LIMIT ->
+          (Unit<Q>) StandardUnits.ENERGY_RESULT;
       default ->
           throw new ConversionException("Cannot find psdm unit for mosaik unit: " + mosaikUnit);
     };
