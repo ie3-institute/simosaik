@@ -1,0 +1,43 @@
+@startuml
+
+participant OpSim
+participant Simopsim
+participant SIMONA
+
+== Setup ==
+
+SIMONA -> SIMONA: starts SIMONA via cmd
+activate SIMONA
+
+SIMONA -> Simopsim: initializes
+deactivate SIMONA
+
+activate Simopsim
+Simopsim -> OpSim: connects
+
+deactivate Simopsim
+
+== Simulation ==
+
+OpSim -> Simopsim: step at time t with input data
+activate Simopsim
+
+Simopsim -> Simopsim: converts input data
+Simopsim -> SIMONA: sends input data
+
+activate SIMONA
+Simopsim -> SIMONA: requests results
+
+deactivate Simopsim
+SIMONA -> Simopsim: result data
+
+deactivate SIMONA
+activate Simopsim
+
+Simopsim -> Simopsim: converts result data
+Simopsim -> OpSim: return result data
+
+deactivate Simopsim
+
+
+@enduml

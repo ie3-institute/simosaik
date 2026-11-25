@@ -1,0 +1,53 @@
+@startuml
+
+participant mosaik
+participant Simosaik
+participant SIMONA
+
+== Setup ==
+
+mosaik -> SIMONA: starts SIMONA via cmd
+activate SIMONA
+
+SIMONA -> Simosaik: initializes
+deactivate SIMONA
+
+activate Simosaik
+Simosaik -> mosaik: connects
+
+Simosaik -> mosaik: meta data
+mosaik -> Simosaik: create entities
+
+Simosaik -> mosaik: entities
+deactivate Simosaik
+
+== Simulation ==
+
+mosaik -> Simosaik: step at time t with input data
+activate Simosaik
+
+Simosaik -> Simosaik: converts input data
+Simosaik -> SIMONA: sends input data
+
+activate SIMONA
+Simosaik -> SIMONA: requests results
+
+deactivate Simosaik
+SIMONA -> Simosaik: result data
+
+deactivate SIMONA
+activate Simosaik
+
+Simosaik -> Simosaik: converts result data
+Simosaik -> mosaik: return t + step_size
+
+deactivate Simosaik
+mosaik -> Simosaik: get_data
+
+activate Simosaik
+Simosaik -> mosaik: return result data
+
+deactivate Simosaik
+
+
+@enduml

@@ -2,39 +2,75 @@
 
 participant mosaik
 box "simosaik" #LightBlue
-participant mosaikAPI
-participant simonaAPI
+participant "mosaik Simulator"
+participant "Externe Simulation"
 end box
 participant SIMONA
 
 == Setup / Initialisierung ==
 
 mosaik -> SIMONA: Starte SIMONA als Anwendung (cmd)
+activate SIMONA
 
-SIMONA -> SIMONA: Initialisierung von SIMONA
-SIMONA -> simonaAPI: Initialisierung
-simonaAPI -> mosaikAPI: Start des mosaikAPI-Simulators
-mosaikAPI -> mosaik: Verbindungsaufbau
-mosaik -> mosaikAPI: Initialisierung
-mosaikAPI --> mosaik: Meta-Daten
+SIMONA -> SIMONA: Initialisierung\nvon SIMONA
+SIMONA -> SIMONA: Lädt externe Simulation
 
-mosaik -> mosaikAPI: Erstellung der Entities
-mosaikAPI --> mosaik: Entities
+SIMONA -> "Externe Simulation": Initialisierung
+deactivate SIMONA
 
+activate "Externe Simulation"
+"Externe Simulation" -> "mosaik Simulator": Start des Simulators
+
+activate "mosaik Simulator"
+deactivate "Externe Simulation"
+
+"mosaik Simulator" -> mosaik: Verbindungsaufbau
+mosaik -> "mosaik Simulator": Initialisierung
+
+"mosaik Simulator" -> mosaik: Meta-Daten
+mosaik -> "mosaik Simulator": Erstellung der Entities
+
+"mosaik Simulator" -> mosaik: Entities
+deactivate "mosaik Simulator"
 
 == Simulation ==
 
-mosaik -> mosaikAPI: Aufruf von step() inkl. Input-Daten
-mosaikAPI --> simonaAPI: Input-Daten
-SIMONA -> simonaAPI: Aufruf von doPreActivity()
-simonaAPI --> SIMONA: Input-Daten
-SIMONA --> SIMONA: Verteilung der Input-Daten
-SIMONA -> SIMONA: Simulation im Multi-Agenten-System
-SIMONA -> simonaAPI: Aufruf von doPostActivity()
-simonaAPI -> SIMONA: Anfrage von Output-Daten
-SIMONA --> simonaAPI: Output-Daten
-simonaAPI --> mosaikAPI: Output-Daten
-mosaik -> mosaikAPI: Aufruf von getData()
-mosaikAPI --> mosaik: Output-Daten
+mosaik -> "mosaik Simulator": Aufruf von step() inkl. Input-Daten
+activate "mosaik Simulator"
+
+"mosaik Simulator" -> "mosaik Simulator": Aufbereitung und\nKonvertierung der\nEingangsdaten
+"mosaik Simulator" -> "Externe Simulation": Sendet Input-Daten
+
+deactivate "mosaik Simulator"
+activate "Externe Simulation"
+
+"Externe Simulation" -> SIMONA: Sendet Input-Daten
+activate SIMONA
+
+"Externe Simulation" -> SIMONA: Erfragt Ergebnisse
+deactivate "Externe Simulation"
+
+SIMONA -> SIMONA: Verteilung der\nInput-Daten
+SIMONA -> SIMONA: Simulation im\nMulti-Agenten-System
+
+SIMONA -> "Externe Simulation": Sendet Ergebnisse
+deactivate SIMONA
+
+activate "Externe Simulation"
+"Externe Simulation" --> "mosaik Simulator": Sendet Ergebnisse
+
+deactivate "Externe Simulation"
+activate "mosaik Simulator"
+
+"mosaik Simulator" -> mosaik: Nächster Aufrufzeitpunkt
+deactivate "mosaik Simulator"
+
+mosaik -> "mosaik Simulator": Aufruf von getData()
+activate "mosaik Simulator"
+
+"mosaik Simulator" --> mosaik: Output-Daten
+deactivate "mosaik Simulator"
+
+deactivate mosaik
 
 @enduml

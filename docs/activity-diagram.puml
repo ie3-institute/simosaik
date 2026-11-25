@@ -1,0 +1,53 @@
+@startuml
+'https://plantuml.com/activity-diagram-beta
+
+
+label eins [{{
+start
+
+repeat
+
+    :   wait for new status
+     fom co-sim-framework;
+
+    if (SimonaIsBehind) then (yes)
+        :signal SIMONA to go
+            to the next tick;
+        break
+    else (no)
+        (A)
+        detach
+        (B)
+        :determine next SIMONA tick;
+    endif
+
+
+repeat while (same SIMONA tick) is (yes) not (no)
+
+stop
+}}]
+
+
+label zwei [{{
+(A)
+if (HasData) then (yes)
+    :handle external data;
+else (no)
+endif
+
+    if (SimonaIsAhead) then (yes)
+        :signal co-sim-framework
+           to go to the next tick;
+    else (no)
+    endif
+
+    if (Finished) then (yes)
+        :signal SIMONA that the external
+          co-sim-framework is finished;
+    else (no)
+    endif
+
+(B)
+}}]
+
+@enduml
